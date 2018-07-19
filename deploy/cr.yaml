@@ -1,0 +1,4 @@
+apiVersion: "node.storageos.com/v1alpha1"
+kind: "StorageOS"
+metadata:
+  name: "example"

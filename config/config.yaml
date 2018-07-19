@@ -1,0 +1,3 @@
+apiVersion: node.storageos.com/v1alpha1
+kind: StorageOS
+projectName: storageos-operator
