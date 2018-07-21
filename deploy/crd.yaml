@@ -9,5 +9,19 @@ spec:
     listKind: StorageOSList
     plural: storageoses
     singular: storageos
+    shortNames:
+    - stos
   scope: Namespaced
   version: v1alpha1
+  additionalPrinterColumns:
+  - name: Ready
+    type: string
+    description: Ready status of the storageos nodes.
+    JSONPath: .status.ready
+  - name: Status
+    type: string
+    description: Status of the whole cluster.
+    JSONPath: .status.phase
+  - name: Age
+    type: date
+    JSONPath: .metadata.creationTimestamp

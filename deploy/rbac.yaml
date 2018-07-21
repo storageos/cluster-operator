@@ -19,6 +19,7 @@ rules:
   - events
   - configmaps
   - secrets
+  - serviceaccounts
   verbs:
   - "*"
 - apiGroups:
@@ -28,6 +29,12 @@ rules:
   - daemonsets
   - replicasets
   - statefulsets
+  verbs:
+  - "*"
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - "*"
   verbs:
   - "*"
 

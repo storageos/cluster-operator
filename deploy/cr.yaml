@@ -1,4 +1,19 @@
 apiVersion: "node.storageos.com/v1alpha1"
 kind: "StorageOS"
 metadata:
-  name: "example"
+  name: "example-storageos"
+spec:
+  join:
+  enableCSI: true
+  api:
+    secretName: "storageos-api"
+    secretNamespace: "default"
+    address: "storageos:5705"
+    username: "storageos"
+    password: "storageos"
+  namespace: "storageos"
+  service:
+    name: "storageos"
+    type: "ClusterIP"
+    externalPort: 5705
+    internalPort: 5705
