@@ -2,6 +2,7 @@ apiVersion: "node.storageos.com/v1alpha1"
 kind: "StorageOS"
 metadata:
   name: "example-storageos"
+  namespace: "default"
 spec:
   join:
   enableCSI: true

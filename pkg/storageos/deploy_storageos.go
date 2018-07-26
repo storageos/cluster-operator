@@ -8,11 +8,17 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 func deployStorageOS(m *api.StorageOS) error {
+	if err := createNamespace(m); err != nil {
+		return err
+	}
+
 	if err := createServiceAccountForDaemonSet(m); err != nil {
 		return err
 	}
@@ -29,11 +35,80 @@ func deployStorageOS(m *api.StorageOS) error {
 		return err
 	}
 
+	if err := createService(m); err != nil {
+		return err
+	}
+
+	// Create API secret for legacy setup only.
+	if !m.Spec.EnableCSI {
+		if err := createAPISecret(m); err != nil {
+			return err
+		}
+	} else {
+		// Create CSI exclusive resources.
+		if err := createClusterRoleForDriverRegistrar(m); err != nil {
+			return err
+		}
+
+		if err := createClusterRoleBindingForDriverRegistrar(m); err != nil {
+			return err
+		}
+
+		if err := createServiceAccountForStatefulSet(m); err != nil {
+			return err
+		}
+
+		if err := createClusterRoleForProvisioner(m); err != nil {
+			return err
+		}
+
+		if err := createClusterRoleForAttacher(m); err != nil {
+			return err
+		}
+
+		if err := createClusterRoleBindingForProvisioner(m); err != nil {
+			return err
+		}
+
+		if err := createClusterRoleBindingForAttacher(m); err != nil {
+			return err
+		}
+
+		if err := createStatefulSet(m); err != nil {
+			return err
+		}
+	}
+
+	if err := createStorageClass(m); err != nil {
+		return err
+	}
+
 	status, err := getStorageOSStatus(m)
 	if err != nil {
 		return fmt.Errorf("failed to get storageos status: %v", err)
 	}
 	return updateStorageOSStatus(m, status)
+}
+
+func createNamespace(m *api.StorageOS) error {
+	ns := &v1.Namespace{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Namespace",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: m.Spec.GetResourceNS(),
+			Labels: map[string]string{
+				"app": "storageos",
+			},
+		},
+	}
+
+	addOwnerRefToObject(ns, asOwner(m))
+	if err := sdk.Create(ns); err != nil && !apierrors.IsAlreadyExists(err) {
+		return fmt.Errorf("failed to create namespace: %v", err)
+	}
+	return nil
 }
 
 func createServiceAccountForDaemonSet(m *api.StorageOS) error {
@@ -44,7 +119,29 @@ func createServiceAccountForDaemonSet(m *api.StorageOS) error {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "storageos-daemonset-sa",
-			Namespace: m.Namespace,
+			Namespace: m.Spec.GetResourceNS(),
+			Labels: map[string]string{
+				"app": "storageos",
+			},
+		},
+	}
+
+	addOwnerRefToObject(sa, asOwner(m))
+	if err := sdk.Create(sa); err != nil && !apierrors.IsAlreadyExists(err) {
+		return fmt.Errorf("failed to create service account: %v", err)
+	}
+	return nil
+}
+
+func createServiceAccountForStatefulSet(m *api.StorageOS) error {
+	sa := &v1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ServiceAccount",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "storageos-statefulset-sa",
+			Namespace: m.Spec.GetResourceNS(),
 			Labels: map[string]string{
 				"app": "storageos",
 			},
@@ -66,7 +163,7 @@ func createRoleForKeyMgmt(m *api.StorageOS) error {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "key-management-role",
-			Namespace: m.Namespace,
+			Namespace: m.Spec.GetResourceNS(),
 			Labels: map[string]string{
 				"app": "storageos",
 			},
@@ -87,6 +184,135 @@ func createRoleForKeyMgmt(m *api.StorageOS) error {
 	return nil
 }
 
+func createClusterRoleForDriverRegistrar(m *api.StorageOS) error {
+	role := &rbacv1.ClusterRole{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "rbac.authorization.k8s.io/v1",
+			Kind:       "ClusterRole",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "driver-registrar-role",
+			Labels: map[string]string{
+				"app": "storageos",
+			},
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"nodes"},
+				Verbs:     []string{"get", "update"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"events"},
+				Verbs:     []string{"list", "watch", "create", "update", "patch"},
+			},
+		},
+	}
+
+	addOwnerRefToObject(role, asOwner(m))
+	if err := sdk.Create(role); err != nil && !apierrors.IsAlreadyExists(err) {
+		return fmt.Errorf("failed to create cluster role: %v", err)
+	}
+	return nil
+}
+
+func createClusterRoleForProvisioner(m *api.StorageOS) error {
+	role := &rbacv1.ClusterRole{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "rbac.authorization.k8s.io/v1",
+			Kind:       "ClusterRole",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "csi-provisioner-role",
+			Labels: map[string]string{
+				"app": "storageos",
+			},
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"persistentvolumes"},
+				Verbs:     []string{"list", "watch", "create", "delete"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"persistentvolumeclaims"},
+				Verbs:     []string{"get", "list", "watch", "update"},
+			},
+			{
+				APIGroups: []string{"storageo.k8s.io"},
+				Resources: []string{"storageclasses"},
+				Verbs:     []string{"list", "watch", "get"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"secrets"},
+				Verbs:     []string{"get"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"events"},
+				Verbs:     []string{"list", "watch", "create", "update", "patch"},
+			},
+		},
+	}
+
+	addOwnerRefToObject(role, asOwner(m))
+	if err := sdk.Create(role); err != nil && !apierrors.IsAlreadyExists(err) {
+		return fmt.Errorf("failed to create cluster role: %v", err)
+	}
+	return nil
+}
+
+func createClusterRoleForAttacher(m *api.StorageOS) error {
+	role := &rbacv1.ClusterRole{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "rbac.authorization.k8s.io/v1",
+			Kind:       "ClusterRole",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "csi-attacher-role",
+			Labels: map[string]string{
+				"app": "storageos",
+			},
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"persistentvolumes"},
+				Verbs:     []string{"get", "list", "watch", "update"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"nodes"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+			{
+				APIGroups: []string{"storage.k8s.io"},
+				Resources: []string{"storageclasses"},
+				Verbs:     []string{"list", "watch", "get"},
+			},
+			{
+				APIGroups: []string{"storage.k8s.io"},
+				Resources: []string{"volumeattachments"},
+				Verbs:     []string{"get", "list", "watch", "update"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"events"},
+				Verbs:     []string{"list", "watch", "create", "update", "patch"},
+			},
+		},
+	}
+
+	addOwnerRefToObject(role, asOwner(m))
+	if err := sdk.Create(role); err != nil && !apierrors.IsAlreadyExists(err) {
+		return fmt.Errorf("failed to create cluster role: %v", err)
+	}
+	return nil
+}
+
 func createRoleBindingForKeyMgmt(m *api.StorageOS) error {
 	roleBinding := &rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
@@ -95,7 +321,7 @@ func createRoleBindingForKeyMgmt(m *api.StorageOS) error {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "key-management-binding",
-			Namespace: m.Namespace,
+			Namespace: m.Spec.GetResourceNS(),
 			Labels: map[string]string{
 				"app": "storageos",
 			},
@@ -104,7 +330,7 @@ func createRoleBindingForKeyMgmt(m *api.StorageOS) error {
 			{
 				Kind:      "ServiceAccount",
 				Name:      "storageos-daemonset-sa",
-				Namespace: m.Namespace,
+				Namespace: m.Spec.GetResourceNS(),
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
@@ -121,10 +347,112 @@ func createRoleBindingForKeyMgmt(m *api.StorageOS) error {
 	return nil
 }
 
+func createClusterRoleBindingForDriverRegistrar(m *api.StorageOS) error {
+	roleBinding := &rbacv1.ClusterRoleBinding{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "rbac.authorization.k8s.io/v1",
+			Kind:       "ClusterRoleBinding",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "driver-registrar-binding",
+			Labels: map[string]string{
+				"app": "storageos",
+			},
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      "storageos-daemon-sa",
+				Namespace: m.Spec.GetResourceNS(),
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			Kind:     "ClusterRole",
+			Name:     "driver-registrar-role",
+			APIGroup: "rbac.authorization.k8s.io",
+		},
+	}
+
+	addOwnerRefToObject(roleBinding, asOwner(m))
+	if err := sdk.Create(roleBinding); err != nil && !apierrors.IsAlreadyExists(err) {
+		return fmt.Errorf("failed to create cluster role binding: %v", err)
+	}
+	return nil
+}
+
+func createClusterRoleBindingForProvisioner(m *api.StorageOS) error {
+	roleBinding := &rbacv1.ClusterRoleBinding{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "rbac.authorization.k8s.io/v1",
+			Kind:       "ClusterRoleBinding",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "csi-provisioner-binding",
+			Labels: map[string]string{
+				"app": "storageos",
+			},
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      "storageos-statefulset-sa",
+				Namespace: m.Spec.GetResourceNS(),
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			Kind:     "ClusterRole",
+			Name:     "csi-provisioner-role",
+			APIGroup: "rbac.authorization.k8s.io",
+		},
+	}
+
+	addOwnerRefToObject(roleBinding, asOwner(m))
+	if err := sdk.Create(roleBinding); err != nil && !apierrors.IsAlreadyExists(err) {
+		return fmt.Errorf("failed to create cluster role binding: %v", err)
+	}
+	return nil
+}
+
+func createClusterRoleBindingForAttacher(m *api.StorageOS) error {
+	roleBinding := &rbacv1.ClusterRoleBinding{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "rbac.authorization.k8s.io/v1",
+			Kind:       "ClusterRoleBinding",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "csi-attacher-binding",
+			Labels: map[string]string{
+				"app": "storageos",
+			},
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      "storageos-statefulset-sa",
+				Namespace: m.Spec.GetResourceNS(),
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			Kind:     "ClusterRole",
+			Name:     "csi-attacher-role",
+			APIGroup: "rbac.authorization.k8s.io",
+		},
+	}
+
+	addOwnerRefToObject(roleBinding, asOwner(m))
+	if err := sdk.Create(roleBinding); err != nil && !apierrors.IsAlreadyExists(err) {
+		return fmt.Errorf("failed to create cluster role binding: %v", err)
+	}
+	return nil
+}
+
 func createDaemonSet(m *api.StorageOS) error {
-	ls := labelsForStorageOS(m.Name)
+	ls := labelsForDaemonSet(m.Name)
 	privileged := true
-	mountPropagation := v1.MountPropagationBidirectional
+	mountPropagationBidirectional := v1.MountPropagationBidirectional
+	hostpathDirOrCreate := v1.HostPathDirectoryOrCreate
+	hostpathDir := v1.HostPathDirectory
+	allowPrivilegeEscalation := true
 
 	dset := &appsv1.DaemonSet{
 		TypeMeta: metav1.TypeMeta{
@@ -133,7 +461,7 @@ func createDaemonSet(m *api.StorageOS) error {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      m.Name,
-			Namespace: m.Namespace,
+			Namespace: m.Spec.GetResourceNS(),
 		},
 		Spec: appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
@@ -160,7 +488,7 @@ func createDaemonSet(m *api.StorageOS) error {
 								{
 									Name:             "sys",
 									MountPath:        "/sys",
-									MountPropagation: &mountPropagation,
+									MountPropagation: &mountPropagationBidirectional,
 								},
 							},
 							SecurityContext: &v1.SecurityContext{
@@ -176,11 +504,32 @@ func createDaemonSet(m *api.StorageOS) error {
 							Image: "storageos/node:1.0.0-rc4",
 							Name:  "storageos",
 							Args:  []string{"server"},
-							// Command: []string{"storageos", "server"},
 							Ports: []v1.ContainerPort{{
 								ContainerPort: 5705,
 								Name:          "api",
 							}},
+							LivenessProbe: &v1.Probe{
+								InitialDelaySeconds: int32(65),
+								TimeoutSeconds:      int32(10),
+								FailureThreshold:    int32(5),
+								Handler: v1.Handler{
+									HTTPGet: &v1.HTTPGetAction{
+										Path: "/v1/health",
+										Port: intstr.IntOrString{Type: intstr.String, StrVal: "api"},
+									},
+								},
+							},
+							ReadinessProbe: &v1.Probe{
+								InitialDelaySeconds: int32(65),
+								TimeoutSeconds:      int32(10),
+								FailureThreshold:    int32(5),
+								Handler: v1.Handler{
+									HTTPGet: &v1.HTTPGetAction{
+										Path: "/v1/health",
+										Port: intstr.IntOrString{Type: intstr.String, StrVal: "api"},
+									},
+								},
+							},
 							Env: []v1.EnvVar{
 								{
 									Name: "HOSTNAME",
@@ -189,6 +538,14 @@ func createDaemonSet(m *api.StorageOS) error {
 											FieldPath: "spec.nodeName",
 										},
 									},
+								},
+								{
+									Name:  "ADMIN_USERNAME",
+									Value: m.Spec.API.Username,
+								},
+								{
+									Name:  "ADMIN_PASSWORD",
+									Value: m.Spec.API.Password,
 								},
 								{
 									Name:  "JOIN",
@@ -209,7 +566,7 @@ func createDaemonSet(m *api.StorageOS) error {
 								},
 								{
 									Name:  "NAMESPACE",
-									Value: m.Namespace,
+									Value: m.Spec.GetResourceNS(),
 								},
 							},
 							SecurityContext: &v1.SecurityContext{
@@ -217,6 +574,7 @@ func createDaemonSet(m *api.StorageOS) error {
 								Capabilities: &v1.Capabilities{
 									Add: []v1.Capability{"SYS_ADMIN"},
 								},
+								AllowPrivilegeEscalation: &allowPrivilegeEscalation,
 							},
 							VolumeMounts: []v1.VolumeMount{
 								{
@@ -267,10 +625,118 @@ func createDaemonSet(m *api.StorageOS) error {
 								},
 							},
 						},
+						// TODO: Add sharedDir volume.
 					},
 				},
 			},
 		},
+	}
+
+	// Add CSI specific configurations if enabled.
+	if m.Spec.EnableCSI {
+		vols := []v1.Volume{
+			{
+				Name: "registrar-socket-dir",
+				VolumeSource: v1.VolumeSource{
+					HostPath: &v1.HostPathVolumeSource{
+						Path: "/var/lib/kubelet/device-plugins/",
+						Type: &hostpathDirOrCreate,
+					},
+				},
+			},
+			{
+				Name: "kubelet-dir",
+				VolumeSource: v1.VolumeSource{
+					HostPath: &v1.HostPathVolumeSource{
+						Path: "/var/lib/kubelet",
+						Type: &hostpathDir,
+					},
+				},
+			},
+			{
+				Name: "plugin-dir",
+				VolumeSource: v1.VolumeSource{
+					HostPath: &v1.HostPathVolumeSource{
+						Path: "/var/lib/kubelet/plugins/storageos/",
+						Type: &hostpathDirOrCreate,
+					},
+				},
+			},
+			{
+				Name: "device-dir",
+				VolumeSource: v1.VolumeSource{
+					HostPath: &v1.HostPathVolumeSource{
+						Path: "/dev",
+						Type: &hostpathDir,
+					},
+				},
+			},
+		}
+
+		dset.Spec.Template.Spec.Volumes = append(dset.Spec.Template.Spec.Volumes, vols...)
+
+		volMnts := []v1.VolumeMount{
+			{
+				Name:             "kubelet-dir",
+				MountPath:        "/var/lib/kubelet",
+				MountPropagation: &mountPropagationBidirectional,
+			},
+			{
+				Name:      "plugin-dir",
+				MountPath: "/var/lib/kubelet/plugins/storageos/",
+			},
+			{
+				Name:      "device-dir",
+				MountPath: "/dev",
+			},
+		}
+
+		// Append volume mounts to the first container, the only container is the node container, at this point.
+		dset.Spec.Template.Spec.Containers[0].VolumeMounts = append(dset.Spec.Template.Spec.Containers[0].VolumeMounts, volMnts...)
+
+		envVar := []v1.EnvVar{
+			{
+				Name:  "CSI_ENDPOINT",
+				Value: "unix://var/lib/kubelet/plugins/storageos/csi.sock",
+			},
+		}
+		// Append env vars to the first container, node container.
+		dset.Spec.Template.Spec.Containers[0].Env = append(dset.Spec.Template.Spec.Containers[0].Env, envVar...)
+
+		driverReg := v1.Container{
+			Image:           "quay.io/k8scsi/driver-registrar:v0.2.0",
+			Name:            "csi-driver-registrar",
+			ImagePullPolicy: v1.PullIfNotPresent,
+			Args: []string{
+				"--v=5",
+				"--csi-address=$(ADDRESS)",
+			},
+			Env: []v1.EnvVar{
+				{
+					Name:  "ADDRESS",
+					Value: "/csi/csi.sock",
+				},
+				{
+					Name: "KUBE_NODE_NAME",
+					ValueFrom: &v1.EnvVarSource{
+						FieldRef: &v1.ObjectFieldSelector{
+							FieldPath: "spec.nodeName",
+						},
+					},
+				},
+			},
+			VolumeMounts: []v1.VolumeMount{
+				{
+					Name:      "plugin-dir",
+					MountPath: "/csi",
+				},
+				{
+					Name:      "registrar-socket-dir",
+					MountPath: "/var/lib/csi/sockets/",
+				},
+			},
+		}
+		dset.Spec.Template.Spec.Containers = append(dset.Spec.Template.Spec.Containers, driverReg)
 	}
 
 	addOwnerRefToObject(dset, asOwner(m))
@@ -280,8 +746,211 @@ func createDaemonSet(m *api.StorageOS) error {
 	return nil
 }
 
-func labelsForStorageOS(name string) map[string]string {
-	return map[string]string{"app": "storageos", "storageos_cr": name}
+func createStatefulSet(m *api.StorageOS) error {
+	ls := labelsForStatefulSet(m.Name)
+	replicas := int32(1)
+	hostpathDirOrCreate := v1.HostPathDirectoryOrCreate
+
+	sset := &appsv1.StatefulSet{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "StatefulSet",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "storageos-statefulset",
+			Namespace: m.Spec.GetResourceNS(),
+		},
+		Spec: appsv1.StatefulSetSpec{
+			ServiceName: "storageos",
+			Replicas:    &replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: ls,
+			},
+			Template: v1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: ls,
+				},
+				Spec: v1.PodSpec{
+					ServiceAccountName: "storageos-statefulset-sa",
+					Containers: []v1.Container{
+						{
+							Image:           "quay.io/k8scsi/csi-provisioner:canary",
+							Name:            "csi-external-provisioner",
+							ImagePullPolicy: v1.PullIfNotPresent,
+							Args: []string{
+								"--v=5",
+								"--provisioner=storageos",
+								"--csi-address=$(ADDRESS)",
+							},
+							Env: []v1.EnvVar{
+								{
+									Name:  "ADDRESS",
+									Value: "/csi/csi.sock",
+								},
+							},
+							VolumeMounts: []v1.VolumeMount{
+								{
+									Name:      "plugin-dir",
+									MountPath: "/csi",
+								},
+							},
+						},
+						{
+							Image:           "quay.io/k8scsi/csi-attacher:canary",
+							Name:            "csi-external-attacher",
+							ImagePullPolicy: v1.PullIfNotPresent,
+							Args: []string{
+								"--v=5",
+								"--csi-address=$(ADDRESS)",
+							},
+							Env: []v1.EnvVar{
+								{
+									Name:  "ADDRESS",
+									Value: "/csi/csi.sock",
+								},
+							},
+							VolumeMounts: []v1.VolumeMount{
+								{
+									Name:      "plugin-dir",
+									MountPath: "/csi",
+								},
+							},
+						},
+					},
+					Volumes: []v1.Volume{
+						{
+							Name: "plugin-dir",
+							VolumeSource: v1.VolumeSource{
+								HostPath: &v1.HostPathVolumeSource{
+									Path: "/var/lib/kubelet/plugins/storageos/",
+									Type: &hostpathDirOrCreate,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	addOwnerRefToObject(sset, asOwner(m))
+	if err := sdk.Create(sset); err != nil && !apierrors.IsAlreadyExists(err) {
+		return fmt.Errorf("failed to create statefulset: %v", err)
+	}
+	return nil
+}
+
+func createService(m *api.StorageOS) error {
+	svc := &v1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      m.Spec.Service.Name,
+			Namespace: m.Spec.GetResourceNS(),
+			Labels: map[string]string{
+				"app": "storageos",
+			},
+		},
+		Spec: v1.ServiceSpec{
+			Type: v1.ServiceType(m.Spec.Service.Type),
+			Ports: []v1.ServicePort{
+				{
+					Name:       m.Spec.Service.Name,
+					Protocol:   "TCP",
+					Port:       int32(m.Spec.Service.InternalPort),
+					TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: int32(m.Spec.Service.ExternalPort)},
+				},
+			},
+			Selector: map[string]string{
+				"app": "storageos",
+			},
+		},
+	}
+
+	addOwnerRefToObject(svc, asOwner(m))
+	if err := sdk.Create(svc); err != nil && !apierrors.IsAlreadyExists(err) {
+		return fmt.Errorf("failed to create service: %v", err)
+	}
+	return nil
+}
+
+func createAPISecret(m *api.StorageOS) error {
+	secret := &v1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      m.Spec.API.SecretName,
+			Namespace: m.Spec.API.SecretNamespace,
+			Labels: map[string]string{
+				"app": "storageos",
+			},
+		},
+		Type: v1.SecretType("kubernetes.io/storageos"),
+		Data: map[string][]byte{
+			"apiAddress":  []byte(m.Spec.API.Address),
+			"apiUsername": []byte(m.Spec.API.Username),
+			"apiPassword": []byte(m.Spec.API.Password),
+		},
+	}
+
+	addOwnerRefToObject(secret, asOwner(m))
+	if err := sdk.Create(secret); err != nil && !apierrors.IsAlreadyExists(err) {
+		return fmt.Errorf("failed to create secret: %v", err)
+	}
+	return nil
+}
+
+func createStorageClass(m *api.StorageOS) error {
+	// Provisioner name for in-tree storage plugin.
+	provisioner := "kubernetes.io/storageos"
+
+	if m.Spec.EnableCSI {
+		provisioner = "storageos"
+	}
+
+	sc := &storagev1.StorageClass{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "storage.k8s.io/v1",
+			Kind:       "StorageClass",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "fast",
+			Labels: map[string]string{
+				"app": "storageos",
+			},
+		},
+		Provisioner: provisioner,
+		Parameters: map[string]string{
+			"pool":   "default",
+			"fsType": "ext4",
+		},
+	}
+
+	if m.Spec.EnableCSI {
+		// Add CSI creds secrets in parameters.
+	} else {
+		// Add StorageOS admin secrets name and namespace.
+		sc.Parameters["adminSecretNamespace"] = m.Spec.API.SecretNamespace
+		sc.Parameters["adminSecretName"] = m.Spec.API.SecretName
+	}
+
+	addOwnerRefToObject(sc, asOwner(m))
+	if err := sdk.Create(sc); err != nil && !apierrors.IsAlreadyExists(err) {
+		return fmt.Errorf("failed to create storage class: %v", err)
+	}
+	return nil
+}
+
+func labelsForDaemonSet(name string) map[string]string {
+	return map[string]string{"app": "storageos", "storageos_cr": name, "kind": "daemonset"}
+}
+
+func labelsForStatefulSet(name string) map[string]string {
+	return map[string]string{"app": "storageos", "storageos_cr": name, "kind": "statefulset"}
 }
 
 func addOwnerRefToObject(obj metav1.Object, ownerRef metav1.OwnerReference) {

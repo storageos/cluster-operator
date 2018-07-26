@@ -29,10 +29,10 @@ func updateStorageOSStatus(m *api.StorageOS, status *api.StorageOSServiceStatus)
 
 func getStorageOSStatus(m *api.StorageOS) (*api.StorageOSServiceStatus, error) {
 	podList := podList()
-	sel := labels.SelectorFromSet(labelsForStorageOS(m.Name)).String()
+	sel := labels.SelectorFromSet(labelsForDaemonSet(m.Name)).String()
 	listOps := &metav1.ListOptions{LabelSelector: sel}
 
-	if err := sdk.List(m.Namespace, podList, sdk.WithListOptions(listOps)); err != nil {
+	if err := sdk.List(m.Spec.GetResourceNS(), podList, sdk.WithListOptions(listOps)); err != nil {
 		return nil, fmt.Errorf("failed to list pods: %v", err)
 	}
 
