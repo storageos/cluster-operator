@@ -14,6 +14,11 @@ spec:
     type: "ClusterIP"
     externalPort: 5705
     internalPort: 5705
+  # sharedDir should be set if running kubelet in a container.  This should
+  # be the path shared into to kubelet container, typically:
+  # "/var/lib/kubelet/plugins/kubernetes.io~storageos".  If not set, defaults
+  # will be used.
+  sharedDir:
 
 ---
 apiVersion: v1

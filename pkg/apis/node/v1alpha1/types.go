@@ -37,6 +37,7 @@ type StorageOSSpec struct {
 	Service            StorageOSService `json:"service"`
 	SecretRefName      string           `json:"secretRefName"`
 	SecretRefNamespace string           `json:"secretRefNamespace"`
+	SharedDir          string           `json:"sharedDir"`
 }
 
 // GetResourceNS returns the namespace where all the resources should be provisioned.

@@ -647,6 +647,32 @@ func createDaemonSet(m *api.StorageOS) error {
 		},
 	}
 
+	// If kubelet is running in a container, sharedDir should be set.
+	if m.Spec.SharedDir != "" {
+		envVar := v1.EnvVar{
+			Name:  "DEVICE_DIR",
+			Value: fmt.Sprintf("%s/devices", m.Spec.SharedDir),
+		}
+		dset.Spec.Template.Spec.Containers[0].Env = append(dset.Spec.Template.Spec.Containers[0].Env, envVar)
+
+		sharedDir := v1.Volume{
+			Name: "shared",
+			VolumeSource: v1.VolumeSource{
+				HostPath: &v1.HostPathVolumeSource{
+					Path: m.Spec.SharedDir,
+				},
+			},
+		}
+		dset.Spec.Template.Spec.Volumes = append(dset.Spec.Template.Spec.Volumes, sharedDir)
+
+		volMnt := v1.VolumeMount{
+			Name:             "shared",
+			MountPath:        m.Spec.SharedDir,
+			MountPropagation: &mountPropagationBidirectional,
+		}
+		dset.Spec.Template.Spec.Containers[0].VolumeMounts = append(dset.Spec.Template.Spec.Containers[0].VolumeMounts, volMnt)
+	}
+
 	// Add CSI specific configurations if enabled.
 	if m.Spec.EnableCSI {
 		vols := []v1.Volume{
