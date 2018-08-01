@@ -14,6 +14,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
+const initSecretName = "init-secret"
+
 func deployStorageOS(m *api.StorageOS) error {
 	if err := createNamespace(m); err != nil {
 		return err
@@ -31,6 +33,10 @@ func deployStorageOS(m *api.StorageOS) error {
 		return err
 	}
 
+	if err := createInitSecret(m); err != nil {
+		return err
+	}
+
 	if err := createDaemonSet(m); err != nil {
 		return err
 	}
@@ -39,12 +45,7 @@ func deployStorageOS(m *api.StorageOS) error {
 		return err
 	}
 
-	// Create API secret for legacy setup only.
-	if !m.Spec.EnableCSI {
-		if err := createAPISecret(m); err != nil {
-			return err
-		}
-	} else {
+	if m.Spec.EnableCSI {
 		// Create CSI exclusive resources.
 		if err := createClusterRoleForDriverRegistrar(m); err != nil {
 			return err
@@ -540,12 +541,26 @@ func createDaemonSet(m *api.StorageOS) error {
 									},
 								},
 								{
-									Name:  "ADMIN_USERNAME",
-									Value: m.Spec.API.Username,
+									Name: "ADMIN_USERNAME",
+									ValueFrom: &v1.EnvVarSource{
+										SecretKeyRef: &v1.SecretKeySelector{
+											LocalObjectReference: v1.LocalObjectReference{
+												Name: initSecretName,
+											},
+											Key: "username",
+										},
+									},
 								},
 								{
-									Name:  "ADMIN_PASSWORD",
-									Value: m.Spec.API.Password,
+									Name: "ADMIN_PASSWORD",
+									ValueFrom: &v1.EnvVarSource{
+										SecretKeyRef: &v1.SecretKeySelector{
+											LocalObjectReference: v1.LocalObjectReference{
+												Name: initSecretName,
+											},
+											Key: "password",
+										},
+									},
 								},
 								{
 									Name:  "JOIN",
@@ -876,32 +891,65 @@ func createService(m *api.StorageOS) error {
 	return nil
 }
 
-func createAPISecret(m *api.StorageOS) error {
+func createInitSecret(m *api.StorageOS) error {
+	username, password, err := getAdminCreds(m)
+	if err != nil {
+		return err
+	}
+
 	secret := &v1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Secret",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      m.Spec.API.SecretName,
-			Namespace: m.Spec.API.SecretNamespace,
+			Name:      initSecretName,
+			Namespace: m.Spec.GetResourceNS(),
 			Labels: map[string]string{
 				"app": "storageos",
 			},
 		},
 		Type: v1.SecretType("kubernetes.io/storageos"),
 		Data: map[string][]byte{
-			"apiAddress":  []byte(m.Spec.API.Address),
-			"apiUsername": []byte(m.Spec.API.Username),
-			"apiPassword": []byte(m.Spec.API.Password),
+			"username": username,
+			"password": password,
 		},
 	}
 
 	addOwnerRefToObject(secret, asOwner(m))
 	if err := sdk.Create(secret); err != nil && !apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("failed to create secret: %v", err)
+		return fmt.Errorf("failed to create init secret: %v", err)
 	}
 	return nil
+}
+
+func getAdminCreds(m *api.StorageOS) ([]byte, []byte, error) {
+	var username, password []byte
+	if m.Spec.SecretRefName != "" && m.Spec.SecretRefNamespace != "" {
+		se := &v1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Secret",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      m.Spec.SecretRefName,
+				Namespace: m.Spec.SecretRefNamespace,
+			},
+		}
+		err := sdk.Get(se)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		username = se.Data["apiUsername"]
+		password = se.Data["apiPassword"]
+	} else {
+		// Use the default credentials.
+		username = []byte("storageos")
+		password = []byte("storageos")
+	}
+
+	return username, password, nil
 }
 
 func createStorageClass(m *api.StorageOS) error {
@@ -934,8 +982,8 @@ func createStorageClass(m *api.StorageOS) error {
 		// Add CSI creds secrets in parameters.
 	} else {
 		// Add StorageOS admin secrets name and namespace.
-		sc.Parameters["adminSecretNamespace"] = m.Spec.API.SecretNamespace
-		sc.Parameters["adminSecretName"] = m.Spec.API.SecretName
+		sc.Parameters["adminSecretNamespace"] = m.Spec.SecretRefNamespace
+		sc.Parameters["adminSecretName"] = m.Spec.SecretRefName
 	}
 
 	addOwnerRefToObject(sc, asOwner(m))

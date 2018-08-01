@@ -31,11 +31,12 @@ type StorageOS struct {
 }
 
 type StorageOSSpec struct {
-	Join       string           `json:"join"`
-	EnableCSI  bool             `json:"enableCSI"`
-	API        StorageOSAPI     `json:"api"`
-	ResourceNS string           `json:"namespace"`
-	Service    StorageOSService `json:"service"`
+	Join               string           `json:"join"`
+	EnableCSI          bool             `json:"enableCSI"`
+	ResourceNS         string           `json:"namespace"`
+	Service            StorageOSService `json:"service"`
+	SecretRefName      string           `json:"secretRefName"`
+	SecretRefNamespace string           `json:"secretRefNamespace"`
 }
 
 // GetResourceNS returns the namespace where all the resources should be provisioned.
@@ -46,14 +47,6 @@ func (s StorageOSSpec) GetResourceNS() string {
 	return DefaultNamespace
 }
 
-type StorageOSAPI struct {
-	SecretName      string `json:"secretName"`
-	SecretNamespace string `json:"secretNamespace"`
-	Address         string `json:"address"`
-	Username        string `json:"username"`
-	Password        string `json:"password"`
-}
-
 type StorageOSService struct {
 	Name         string `json:"name"`
 	Type         string `json:"type"`
@@ -62,9 +55,7 @@ type StorageOSService struct {
 }
 
 type StorageOSServiceStatus struct {
-	Phase ClusterPhase `json:"phase"`
-	// ServiceName      string                `json:"serviceName,omitempty"`
-	// ClientPort       int                   `json:"clientPort,omitempty"`
+	Phase            ClusterPhase          `json:"phase"`
 	NodeHealthStatus map[string]NodeHealth `json:"nodeHealthStatus,omitempty"`
 	Nodes            []string              `json:"nodes"`
 	Ready            string                `json:"ready"`
