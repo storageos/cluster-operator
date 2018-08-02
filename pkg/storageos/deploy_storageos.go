@@ -363,7 +363,7 @@ func createClusterRoleBindingForDriverRegistrar(m *api.StorageOS) error {
 		Subjects: []rbacv1.Subject{
 			{
 				Kind:      "ServiceAccount",
-				Name:      "storageos-daemon-sa",
+				Name:      "storageos-daemonset-sa",
 				Namespace: m.Spec.GetResourceNS(),
 			},
 		},
