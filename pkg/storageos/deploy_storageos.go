@@ -1051,6 +1051,15 @@ func podList() *v1.PodList {
 	}
 }
 
+func nodeList() *v1.NodeList {
+	return &v1.NodeList{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Node",
+			APIVersion: "v1",
+		},
+	}
+}
+
 func getPodNames(pods []v1.Pod) []string {
 	var podNames []string
 	for _, pod := range pods {
@@ -1059,10 +1068,10 @@ func getPodNames(pods []v1.Pod) []string {
 	return podNames
 }
 
-func getNodeNames(pods []v1.Pod) []string {
-	var nodes []string
-	for _, pod := range pods {
-		nodes = append(nodes, pod.Spec.NodeName)
+func getNodeIPs(nodes []v1.Node) []string {
+	var ips []string
+	for _, node := range nodes {
+		ips = append(ips, node.Status.Addresses[0].Address)
 	}
-	return nodes
+	return ips
 }

@@ -14,8 +14,6 @@ import (
 	storageosapi "github.com/storageos/go-api"
 	"github.com/storageos/go-api/types"
 	api "github.com/storageos/storageos-operator/pkg/apis/node/v1alpha1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 )
 
 func updateStorageOSStatus(m *api.StorageOS, status *api.StorageOSServiceStatus) error {
@@ -28,21 +26,19 @@ func updateStorageOSStatus(m *api.StorageOS, status *api.StorageOSServiceStatus)
 }
 
 func getStorageOSStatus(m *api.StorageOS) (*api.StorageOSServiceStatus, error) {
-	podList := podList()
-	sel := labels.SelectorFromSet(labelsForDaemonSet(m.Name)).String()
-	listOps := &metav1.ListOptions{LabelSelector: sel}
+	nodeList := nodeList()
 
-	if err := sdk.List(m.Spec.GetResourceNS(), podList, sdk.WithListOptions(listOps)); err != nil {
-		return nil, fmt.Errorf("failed to list pods: %v", err)
+	if err := sdk.List(m.Spec.GetResourceNS(), nodeList); err != nil {
+		return nil, fmt.Errorf("failed to list nodes: %v", err)
 	}
+	nodeIPs := getNodeIPs(nodeList.Items)
 
-	nodeNames := getNodeNames(podList.Items)
-	totalNodes := len(nodeNames)
+	totalNodes := len(nodeIPs)
 	readyNodes := 0
 
 	healthStatus := make(map[string]api.NodeHealth)
 
-	for _, node := range nodeNames {
+	for _, node := range nodeIPs {
 		if status, err := getNodeHealth(node, 1); err == nil {
 			healthStatus[node] = *status
 			if isHealthy(status) {
@@ -53,9 +49,14 @@ func getStorageOSStatus(m *api.StorageOS) (*api.StorageOSServiceStatus, error) {
 		}
 	}
 
+	phase := api.ClusterPhaseInitial
+	if readyNodes == totalNodes {
+		phase = api.ClusterPhaseRunning
+	}
+
 	return &api.StorageOSServiceStatus{
-		Phase:            api.ClusterPhaseRunning,
-		Nodes:            nodeNames,
+		Phase:            phase,
+		Nodes:            nodeIPs,
 		NodeHealthStatus: healthStatus,
 		Ready:            fmt.Sprintf("%d/%d", readyNodes, totalNodes),
 	}, nil
