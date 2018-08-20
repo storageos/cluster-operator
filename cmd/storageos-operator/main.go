@@ -5,7 +5,6 @@ import (
 	"runtime"
 
 	sdk "github.com/operator-framework/operator-sdk/pkg/sdk"
-	k8sutil "github.com/operator-framework/operator-sdk/pkg/util/k8sutil"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	stub "github.com/storageos/storageos-operator/pkg/stub"
 
@@ -25,10 +24,8 @@ func main() {
 
 	resource := "node.storageos.com/v1alpha1"
 	kind := "StorageOS"
-	namespace, err := k8sutil.GetWatchNamespace()
-	if err != nil {
-		logrus.Fatalf("Failed to get watch namespace: %v", err)
-	}
+	// Empty namespace to watch all the namespaces for the custom resource.
+	namespace := ""
 	resyncPeriod := 10
 	logrus.Infof("Watching %s, %s, %s, %d", resource, kind, namespace, resyncPeriod)
 	sdk.Watch(resource, kind, namespace, resyncPeriod)
