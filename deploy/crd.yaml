@@ -59,3 +59,16 @@ spec:
               type: string
             sharedDir:
               type: string
+          required:
+            - join
+        status:
+          properties:
+            phase:
+              type: string
+            nodeHealthStatus: {}
+            nodes:
+              type: array
+              items:
+                type: string
+            ready:
+              type: string
