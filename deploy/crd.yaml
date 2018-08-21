@@ -25,3 +25,37 @@ spec:
   - name: Age
     type: date
     JSONPath: .metadata.creationTimestamp
+  validation:
+    openAPIV3Schema:
+      properties:
+        apiVersion:
+          type: string
+        kind:
+          type: string
+        metadata: {}
+        spec:
+          properties:
+            join:
+              type: string
+            enableCSI:
+              type: boolean
+            namespace:
+              type: string
+            service:
+              properties:
+                name:
+                  type: string
+                type:
+                  type: string
+                externalPort:
+                  type: integer
+                  format: int32
+                internalPort:
+                  type: integer
+                  format: int32
+            secretRefName:
+              type: string
+            secretRefNamespace:
+              type: string
+            sharedDir:
+              type: string
