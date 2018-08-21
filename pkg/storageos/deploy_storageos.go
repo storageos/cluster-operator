@@ -905,7 +905,8 @@ func createService(m *api.StorageOS) error {
 				},
 			},
 			Selector: map[string]string{
-				"app": "storageos",
+				"app":  "storageos",
+				"kind": "daemonset",
 			},
 		},
 	}
