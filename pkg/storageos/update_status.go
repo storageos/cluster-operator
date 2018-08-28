@@ -14,11 +14,24 @@ import (
 	storageosapi "github.com/storageos/go-api"
 	"github.com/storageos/go-api/types"
 	api "github.com/storageos/storageos-operator/pkg/apis/node/v1alpha1"
+	"k8s.io/api/core/v1"
+	"k8s.io/client-go/tools/record"
 )
 
-func updateStorageOSStatus(m *api.StorageOS, status *api.StorageOSServiceStatus) error {
-	if reflect.DeepEqual(m.Status, status) {
+func updateStorageOSStatus(m *api.StorageOS, status *api.StorageOSServiceStatus, recorder record.EventRecorder) error {
+	if reflect.DeepEqual(m.Status, *status) {
 		return nil
+	}
+
+	// When there's a difference in node ready count, broadcast the health change event.
+	if m.Status.Ready != status.Ready {
+		// Ready contains the node count in the format 3/3.
+		ready := strings.Split(status.Ready, "/")
+		if ready[0] == ready[1] {
+			recorder.Event(m, v1.EventTypeNormal, "ChangedStatus", fmt.Sprintf("%s StorageOS nodes are functional. Cluster healthy", status.Ready))
+		} else {
+			recorder.Event(m, v1.EventTypeWarning, "ChangedStatus", fmt.Sprintf("%s StorageOS nodes are functional", status.Ready))
+		}
 	}
 
 	m.Status = *status

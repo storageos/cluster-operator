@@ -5,16 +5,17 @@ import (
 
 	"github.com/storageos/storageos-operator/pkg/apis/node/v1alpha1"
 	"github.com/storageos/storageos-operator/pkg/storageos"
+	"k8s.io/client-go/tools/record"
 
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
 )
 
-func NewHandler() sdk.Handler {
-	return &Handler{}
+func NewHandler(eRec record.EventRecorder) sdk.Handler {
+	return &Handler{eventRecorder: eRec}
 }
 
 type Handler struct {
-	// Fill me
+	eventRecorder record.EventRecorder
 }
 
 func (h *Handler) Handle(ctx context.Context, event sdk.Event) error {
@@ -27,7 +28,7 @@ func (h *Handler) Handle(ctx context.Context, event sdk.Event) error {
 			return nil
 		}
 
-		return storageos.Reconcile(o)
+		return storageos.Reconcile(o, h.eventRecorder)
 	}
 
 	return nil

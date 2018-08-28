@@ -12,11 +12,12 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/tools/record"
 )
 
 const initSecretName = "init-secret"
 
-func deployStorageOS(m *api.StorageOS) error {
+func deployStorageOS(m *api.StorageOS, recorder record.EventRecorder) error {
 	if err := createNamespace(m); err != nil {
 		return err
 	}
@@ -88,7 +89,7 @@ func deployStorageOS(m *api.StorageOS) error {
 	if err != nil {
 		return fmt.Errorf("failed to get storageos status: %v", err)
 	}
-	return updateStorageOSStatus(m, status)
+	return updateStorageOSStatus(m, status, recorder)
 }
 
 func createNamespace(m *api.StorageOS) error {
