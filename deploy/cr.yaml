@@ -4,7 +4,7 @@ metadata:
   name: "example-storageos"
   namespace: "default"
 spec:
-  join:
+  # join:
   enableCSI: true
   secretRefName: "storageos-api"
   secretRefNamespace: "default"

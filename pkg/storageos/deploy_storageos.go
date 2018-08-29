@@ -602,8 +602,9 @@ func createDaemonSet(m *api.StorageOS) error {
 									MountPath: "/sys",
 								},
 								{
-									Name:      "state",
-									MountPath: "/var/lib/storageos",
+									Name:             "state",
+									MountPath:        "/var/lib/storageos",
+									MountPropagation: &mountPropagationBidirectional,
 								},
 							},
 						},
@@ -916,6 +917,35 @@ func createService(m *api.StorageOS) error {
 	if err := sdk.Create(svc); err != nil && !apierrors.IsAlreadyExists(err) {
 		return fmt.Errorf("failed to create service: %v", err)
 	}
+
+	// Patch storageos-api secret with above service IP in apiAddress.
+	if !m.Spec.EnableCSI {
+		secret := &v1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Secret",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      m.Spec.SecretRefName,
+				Namespace: m.Spec.SecretRefNamespace,
+			},
+		}
+		if err := sdk.Get(secret); err != nil {
+			return err
+		}
+
+		if err := sdk.Get(svc); err != nil {
+			return err
+		}
+
+		apiAddress := fmt.Sprintf("tcp://%s:5705", svc.Spec.ClusterIP)
+		secret.Data["apiAddress"] = []byte(apiAddress)
+
+		if err := sdk.Update(secret); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
