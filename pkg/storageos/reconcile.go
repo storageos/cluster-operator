@@ -1,6 +1,7 @@
 package storageos
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
@@ -13,6 +14,25 @@ import (
 // Reconcile ensures that the state specified in the Spec of the object matches
 // the state of the system.
 func Reconcile(m *api.StorageOS, recorder record.EventRecorder) error {
+	// Get a new list of nodes and update the join token with new nodes.
+	nodeList := nodeList()
+	if err := sdk.List(m.Spec.GetResourceNS(), nodeList); err != nil {
+		return fmt.Errorf("failed to list nodes: %v", err)
+	}
+
+	nodeIPs := getNodeIPs(nodeList.Items)
+	join := strings.Join(nodeIPs, ",")
+
+	if m.Spec.Join != join {
+		m.Spec.Join = join
+		// Update Nodes as well, because updating StorageOS with null Nodes
+		// results in invalid config.
+		m.Status.Nodes = nodeIPs
+		if err := sdk.Update(m); err != nil {
+			return err
+		}
+	}
+
 	// Finalizers are set when an object should be deleted. Apply deploy only
 	// when finalizers is empty.
 	if len(m.GetFinalizers()) == 0 {

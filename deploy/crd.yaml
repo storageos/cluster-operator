@@ -59,8 +59,6 @@ spec:
               type: string
             sharedDir:
               type: string
-          required:
-            - join
         status:
           properties:
             phase:
