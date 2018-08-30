@@ -50,10 +50,11 @@ func (s StorageOSSpec) GetResourceNS() string {
 }
 
 type StorageOSService struct {
-	Name         string `json:"name"`
-	Type         string `json:"type"`
-	ExternalPort int    `json:"externalPort"`
-	InternalPort int    `json:"internalPort"`
+	Name         string            `json:"name"`
+	Type         string            `json:"type"`
+	ExternalPort int               `json:"externalPort"`
+	InternalPort int               `json:"internalPort"`
+	Annotations  map[string]string `json:"annotations"`
 }
 
 type StorageOSIngress struct {

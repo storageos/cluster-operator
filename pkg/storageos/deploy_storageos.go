@@ -911,6 +911,7 @@ func createService(m *api.StorageOS) error {
 			Labels: map[string]string{
 				"app": "storageos",
 			},
+			Annotations: m.Spec.Service.Annotations,
 		},
 		Spec: v1.ServiceSpec{
 			Type: v1.ServiceType(m.Spec.Service.Type),
