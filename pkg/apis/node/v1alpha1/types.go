@@ -38,6 +38,7 @@ type StorageOSSpec struct {
 	SecretRefName      string           `json:"secretRefName"`
 	SecretRefNamespace string           `json:"secretRefNamespace"`
 	SharedDir          string           `json:"sharedDir"`
+	Ingress            StorageOSIngress `json:"ingress"`
 }
 
 // GetResourceNS returns the namespace where all the resources should be provisioned.
@@ -53,6 +54,13 @@ type StorageOSService struct {
 	Type         string `json:"type"`
 	ExternalPort int    `json:"externalPort"`
 	InternalPort int    `json:"internalPort"`
+}
+
+type StorageOSIngress struct {
+	Enabled     bool              `json:"enabled"`
+	Hostname    string            `json:"hostname"`
+	TLS         bool              `json:"tls"`
+	Annotations map[string]string `json:"annotations"`
 }
 
 type StorageOSServiceStatus struct {

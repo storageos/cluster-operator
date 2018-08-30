@@ -59,6 +59,15 @@ spec:
               type: string
             sharedDir:
               type: string
+            ingress:
+              properties:
+                enabled:
+                  type: boolean
+                hostname:
+                  type: string
+                tls:
+                  type: boolean
+                annotations: {}
         status:
           properties:
             phase:

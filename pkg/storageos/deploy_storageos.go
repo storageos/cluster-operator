@@ -7,6 +7,7 @@ import (
 	api "github.com/storageos/storageos-operator/pkg/apis/node/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
+	"k8s.io/api/extensions/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -15,7 +16,10 @@ import (
 	"k8s.io/client-go/tools/record"
 )
 
-const initSecretName = "init-secret"
+const (
+	initSecretName = "init-secret"
+	tlsSecretName  = "tls-secret"
+)
 
 func deployStorageOS(m *api.StorageOS, recorder record.EventRecorder) error {
 	if err := createNamespace(m); err != nil {
@@ -44,6 +48,18 @@ func deployStorageOS(m *api.StorageOS, recorder record.EventRecorder) error {
 
 	if err := createService(m); err != nil {
 		return err
+	}
+
+	if m.Spec.Ingress.Enabled {
+		if m.Spec.Ingress.TLS {
+			if err := createTLSSecret(m); err != nil {
+				return err
+			}
+		}
+
+		if err := createIngress(m); err != nil {
+			return err
+		}
 	}
 
 	if m.Spec.EnableCSI {
@@ -949,6 +965,76 @@ func createService(m *api.StorageOS) error {
 	return nil
 }
 
+func createIngress(m *api.StorageOS) error {
+	ingress := &v1beta1.Ingress{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "extensions/v1beta1",
+			Kind:       "Ingress",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "storageos-ingress",
+			Namespace: m.Spec.GetResourceNS(),
+			Labels: map[string]string{
+				"app": "storageos",
+			},
+			Annotations: m.Spec.Ingress.Annotations,
+		},
+		Spec: v1beta1.IngressSpec{
+			Backend: &v1beta1.IngressBackend{
+				ServiceName: m.Spec.Service.Name,
+				ServicePort: intstr.IntOrString{Type: intstr.Int, IntVal: int32(m.Spec.Service.ExternalPort)},
+			},
+		},
+	}
+
+	if m.Spec.Ingress.TLS {
+		ingress.Spec.TLS = []v1beta1.IngressTLS{
+			v1beta1.IngressTLS{
+				Hosts:      []string{m.Spec.Ingress.Hostname},
+				SecretName: tlsSecretName,
+			},
+		}
+	}
+
+	addOwnerRefToObject(ingress, asOwner(m))
+	if err := sdk.Create(ingress); err != nil && !apierrors.IsAlreadyExists(err) {
+		return fmt.Errorf("failed to create ingress")
+	}
+	return nil
+}
+
+func createTLSSecret(m *api.StorageOS) error {
+	cert, key, err := getTLSData(m)
+	if err != nil {
+		return err
+	}
+
+	secret := &v1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      tlsSecretName,
+			Namespace: m.Spec.GetResourceNS(),
+			Labels: map[string]string{
+				"app": "storageos",
+			},
+		},
+		Type: v1.SecretType("kubernetes.io/tls"),
+		Data: map[string][]byte{
+			"tls.crt": cert,
+			"tls.key": key,
+		},
+	}
+
+	addOwnerRefToObject(secret, asOwner(m))
+	if err := sdk.Create(secret); err != nil && !apierrors.IsAlreadyExists(err) {
+		return fmt.Errorf("failed to create tls-secret: %v", err)
+	}
+	return nil
+}
+
 func createInitSecret(m *api.StorageOS) error {
 	username, password, err := getAdminCreds(m)
 	if err != nil {
@@ -1008,6 +1094,34 @@ func getAdminCreds(m *api.StorageOS) ([]byte, []byte, error) {
 	}
 
 	return username, password, nil
+}
+
+func getTLSData(m *api.StorageOS) ([]byte, []byte, error) {
+	var cert, key []byte
+	if m.Spec.SecretRefName != "" && m.Spec.SecretRefNamespace != "" {
+		se := &v1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Secret",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      m.Spec.SecretRefName,
+				Namespace: m.Spec.SecretRefNamespace,
+			},
+		}
+		err := sdk.Get(se)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		cert = se.Data["tls.crt"]
+		key = se.Data["tls.key"]
+	} else {
+		cert = []byte("")
+		key = []byte("")
+	}
+
+	return cert, key, nil
 }
 
 func createStorageClass(m *api.StorageOS) error {
