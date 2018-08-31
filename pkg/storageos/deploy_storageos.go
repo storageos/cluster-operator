@@ -19,6 +19,45 @@ import (
 const (
 	initSecretName = "init-secret"
 	tlsSecretName  = "tls-secret"
+
+	appName         = "storageos"
+	daemonsetKind   = "daemonset"
+	statefulsetKind = "statefulset"
+
+	nodeContainerName                   = "storageos/node:1.0.0-rc4"
+	csiDriverRegistrarContainerName     = "quay.io/k8scsi/driver-registrar:v0.2.0"
+	csiExternalProvisionerContainerName = "quay.io/k8scsi/csi-provisioner:canary"
+	csiExternalAttacherContainerName    = "quay.io/k8scsi/csi-attacher:canary"
+	initContainerName                   = "storageos/init:0.1"
+
+	tlsSecretType       = "kubernetes.io/tls"
+	storageosSecretType = "kubernetes.io/storageos"
+
+	intreeProvisionerName = "kubernetes.io/storageos"
+	csiProvisionerName    = "storageos"
+
+	hostnameEnvVar      = "HOSTNAME"
+	adminUsernameEnvVar = "ADMIN_USERNAME"
+	adminPasswordEnvVar = "ADMIN_PASSWORD"
+	joinEnvVar          = "JOIN"
+	advertiseIPEnvVar   = "ADVERTISE_IP"
+	namespaceEnvVar     = "NAMESPACE"
+	deviceDirEnvVar     = "DEVICE_DIR"
+	csiEndpointEnvVar   = "CSI_ENDPOINT"
+	addressEnvVar       = "ADDRESS"
+	kubeNodeNameEnvVar  = "KUBE_NODE_NAME"
+	sysAdminCap         = "SYS_ADMIN"
+
+	secretNamespaceKey = "adminSecretNamespace"
+	secretNameKey      = "adminSecretName"
+	apiAddressKey      = "apiAddress"
+	apiUsernameKey     = "apiUsername"
+	apiPasswordKey     = "apiPassword"
+	tlsCertKey         = "tls.crt"
+	tlsKeyKey          = "tls.key"
+
+	defaultUsername = "storageos"
+	defaultPassword = "storageos"
 )
 
 func deployStorageOS(m *api.StorageOS, recorder record.EventRecorder) error {
@@ -117,7 +156,7 @@ func createNamespace(m *api.StorageOS) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: m.Spec.GetResourceNS(),
 			Labels: map[string]string{
-				"app": "storageos",
+				"app": appName,
 			},
 		},
 	}
@@ -139,7 +178,7 @@ func createServiceAccountForDaemonSet(m *api.StorageOS) error {
 			Name:      "storageos-daemonset-sa",
 			Namespace: m.Spec.GetResourceNS(),
 			Labels: map[string]string{
-				"app": "storageos",
+				"app": appName,
 			},
 		},
 	}
@@ -161,7 +200,7 @@ func createServiceAccountForStatefulSet(m *api.StorageOS) error {
 			Name:      "storageos-statefulset-sa",
 			Namespace: m.Spec.GetResourceNS(),
 			Labels: map[string]string{
-				"app": "storageos",
+				"app": appName,
 			},
 		},
 	}
@@ -183,7 +222,7 @@ func createRoleForKeyMgmt(m *api.StorageOS) error {
 			Name:      "key-management-role",
 			Namespace: m.Spec.GetResourceNS(),
 			Labels: map[string]string{
-				"app": "storageos",
+				"app": appName,
 			},
 		},
 		Rules: []rbacv1.PolicyRule{
@@ -211,7 +250,7 @@ func createClusterRoleForDriverRegistrar(m *api.StorageOS) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "driver-registrar-role",
 			Labels: map[string]string{
-				"app": "storageos",
+				"app": appName,
 			},
 		},
 		Rules: []rbacv1.PolicyRule{
@@ -244,7 +283,7 @@ func createClusterRoleForProvisioner(m *api.StorageOS) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "csi-provisioner-role",
 			Labels: map[string]string{
-				"app": "storageos",
+				"app": appName,
 			},
 		},
 		Rules: []rbacv1.PolicyRule{
@@ -292,7 +331,7 @@ func createClusterRoleForAttacher(m *api.StorageOS) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "csi-attacher-role",
 			Labels: map[string]string{
-				"app": "storageos",
+				"app": appName,
 			},
 		},
 		Rules: []rbacv1.PolicyRule{
@@ -341,7 +380,7 @@ func createRoleBindingForKeyMgmt(m *api.StorageOS) error {
 			Name:      "key-management-binding",
 			Namespace: m.Spec.GetResourceNS(),
 			Labels: map[string]string{
-				"app": "storageos",
+				"app": appName,
 			},
 		},
 		Subjects: []rbacv1.Subject{
@@ -374,7 +413,7 @@ func createClusterRoleBindingForDriverRegistrar(m *api.StorageOS) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "driver-registrar-binding",
 			Labels: map[string]string{
-				"app": "storageos",
+				"app": appName,
 			},
 		},
 		Subjects: []rbacv1.Subject{
@@ -407,7 +446,7 @@ func createClusterRoleBindingForProvisioner(m *api.StorageOS) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "csi-provisioner-binding",
 			Labels: map[string]string{
-				"app": "storageos",
+				"app": appName,
 			},
 		},
 		Subjects: []rbacv1.Subject{
@@ -440,7 +479,7 @@ func createClusterRoleBindingForAttacher(m *api.StorageOS) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "csi-attacher-binding",
 			Labels: map[string]string{
-				"app": "storageos",
+				"app": appName,
 			},
 		},
 		Subjects: []rbacv1.Subject{
@@ -496,7 +535,7 @@ func createDaemonSet(m *api.StorageOS) error {
 					InitContainers: []v1.Container{
 						{
 							Name:  "enable-lio",
-							Image: "storageos/init:0.1",
+							Image: initContainerName,
 							VolumeMounts: []v1.VolumeMount{
 								{
 									Name:      "kernel-modules",
@@ -519,7 +558,7 @@ func createDaemonSet(m *api.StorageOS) error {
 					},
 					Containers: []v1.Container{
 						{
-							Image: "storageos/node:1.0.0-rc4",
+							Image: nodeContainerName,
 							Name:  "storageos",
 							Args:  []string{"server"},
 							Ports: []v1.ContainerPort{{
@@ -550,7 +589,7 @@ func createDaemonSet(m *api.StorageOS) error {
 							},
 							Env: []v1.EnvVar{
 								{
-									Name: "HOSTNAME",
+									Name: hostnameEnvVar,
 									ValueFrom: &v1.EnvVarSource{
 										FieldRef: &v1.ObjectFieldSelector{
 											FieldPath: "spec.nodeName",
@@ -558,7 +597,7 @@ func createDaemonSet(m *api.StorageOS) error {
 									},
 								},
 								{
-									Name: "ADMIN_USERNAME",
+									Name: adminUsernameEnvVar,
 									ValueFrom: &v1.EnvVarSource{
 										SecretKeyRef: &v1.SecretKeySelector{
 											LocalObjectReference: v1.LocalObjectReference{
@@ -569,7 +608,7 @@ func createDaemonSet(m *api.StorageOS) error {
 									},
 								},
 								{
-									Name: "ADMIN_PASSWORD",
+									Name: adminPasswordEnvVar,
 									ValueFrom: &v1.EnvVarSource{
 										SecretKeyRef: &v1.SecretKeySelector{
 											LocalObjectReference: v1.LocalObjectReference{
@@ -580,7 +619,7 @@ func createDaemonSet(m *api.StorageOS) error {
 									},
 								},
 								{
-									Name:  "JOIN",
+									Name:  joinEnvVar,
 									Value: m.Spec.Join,
 									// ValueFrom: &v1.EnvVarSource{
 									// 	FieldRef: &v1.ObjectFieldSelector{
@@ -589,7 +628,7 @@ func createDaemonSet(m *api.StorageOS) error {
 									// },
 								},
 								{
-									Name: "ADVERTISE_IP",
+									Name: advertiseIPEnvVar,
 									ValueFrom: &v1.EnvVarSource{
 										FieldRef: &v1.ObjectFieldSelector{
 											FieldPath: "status.podIP",
@@ -597,14 +636,14 @@ func createDaemonSet(m *api.StorageOS) error {
 									},
 								},
 								{
-									Name:  "NAMESPACE",
+									Name:  namespaceEnvVar,
 									Value: m.Spec.GetResourceNS(),
 								},
 							},
 							SecurityContext: &v1.SecurityContext{
 								Privileged: &privileged,
 								Capabilities: &v1.Capabilities{
-									Add: []v1.Capability{"SYS_ADMIN"},
+									Add: []v1.Capability{sysAdminCap},
 								},
 								AllowPrivilegeEscalation: &allowPrivilegeEscalation,
 							},
@@ -668,7 +707,7 @@ func createDaemonSet(m *api.StorageOS) error {
 	// If kubelet is running in a container, sharedDir should be set.
 	if m.Spec.SharedDir != "" {
 		envVar := v1.EnvVar{
-			Name:  "DEVICE_DIR",
+			Name:  deviceDirEnvVar,
 			Value: fmt.Sprintf("%s/devices", m.Spec.SharedDir),
 		}
 		dset.Spec.Template.Spec.Containers[0].Env = append(dset.Spec.Template.Spec.Containers[0].Env, envVar)
@@ -755,7 +794,7 @@ func createDaemonSet(m *api.StorageOS) error {
 
 		envVar := []v1.EnvVar{
 			{
-				Name:  "CSI_ENDPOINT",
+				Name:  csiEndpointEnvVar,
 				Value: "unix://var/lib/kubelet/plugins/storageos/csi.sock",
 			},
 		}
@@ -763,7 +802,7 @@ func createDaemonSet(m *api.StorageOS) error {
 		dset.Spec.Template.Spec.Containers[0].Env = append(dset.Spec.Template.Spec.Containers[0].Env, envVar...)
 
 		driverReg := v1.Container{
-			Image:           "quay.io/k8scsi/driver-registrar:v0.2.0",
+			Image:           csiDriverRegistrarContainerName,
 			Name:            "csi-driver-registrar",
 			ImagePullPolicy: v1.PullIfNotPresent,
 			Args: []string{
@@ -772,11 +811,11 @@ func createDaemonSet(m *api.StorageOS) error {
 			},
 			Env: []v1.EnvVar{
 				{
-					Name:  "ADDRESS",
+					Name:  addressEnvVar,
 					Value: "/csi/csi.sock",
 				},
 				{
-					Name: "KUBE_NODE_NAME",
+					Name: kubeNodeNameEnvVar,
 					ValueFrom: &v1.EnvVarSource{
 						FieldRef: &v1.ObjectFieldSelector{
 							FieldPath: "spec.nodeName",
@@ -833,7 +872,7 @@ func createStatefulSet(m *api.StorageOS) error {
 					ServiceAccountName: "storageos-statefulset-sa",
 					Containers: []v1.Container{
 						{
-							Image:           "quay.io/k8scsi/csi-provisioner:canary",
+							Image:           csiExternalProvisionerContainerName,
 							Name:            "csi-external-provisioner",
 							ImagePullPolicy: v1.PullIfNotPresent,
 							Args: []string{
@@ -843,7 +882,7 @@ func createStatefulSet(m *api.StorageOS) error {
 							},
 							Env: []v1.EnvVar{
 								{
-									Name:  "ADDRESS",
+									Name:  addressEnvVar,
 									Value: "/csi/csi.sock",
 								},
 							},
@@ -855,7 +894,7 @@ func createStatefulSet(m *api.StorageOS) error {
 							},
 						},
 						{
-							Image:           "quay.io/k8scsi/csi-attacher:canary",
+							Image:           csiExternalAttacherContainerName,
 							Name:            "csi-external-attacher",
 							ImagePullPolicy: v1.PullIfNotPresent,
 							Args: []string{
@@ -864,7 +903,7 @@ func createStatefulSet(m *api.StorageOS) error {
 							},
 							Env: []v1.EnvVar{
 								{
-									Name:  "ADDRESS",
+									Name:  addressEnvVar,
 									Value: "/csi/csi.sock",
 								},
 							},
@@ -909,7 +948,7 @@ func createService(m *api.StorageOS) error {
 			Name:      m.Spec.Service.Name,
 			Namespace: m.Spec.GetResourceNS(),
 			Labels: map[string]string{
-				"app": "storageos",
+				"app": appName,
 			},
 			Annotations: m.Spec.Service.Annotations,
 		},
@@ -924,8 +963,8 @@ func createService(m *api.StorageOS) error {
 				},
 			},
 			Selector: map[string]string{
-				"app":  "storageos",
-				"kind": "daemonset",
+				"app":  appName,
+				"kind": daemonsetKind,
 			},
 		},
 	}
@@ -956,7 +995,7 @@ func createService(m *api.StorageOS) error {
 		}
 
 		apiAddress := fmt.Sprintf("tcp://%s:5705", svc.Spec.ClusterIP)
-		secret.Data["apiAddress"] = []byte(apiAddress)
+		secret.Data[apiAddressKey] = []byte(apiAddress)
 
 		if err := sdk.Update(secret); err != nil {
 			return err
@@ -976,7 +1015,7 @@ func createIngress(m *api.StorageOS) error {
 			Name:      "storageos-ingress",
 			Namespace: m.Spec.GetResourceNS(),
 			Labels: map[string]string{
-				"app": "storageos",
+				"app": appName,
 			},
 			Annotations: m.Spec.Ingress.Annotations,
 		},
@@ -1019,13 +1058,13 @@ func createTLSSecret(m *api.StorageOS) error {
 			Name:      tlsSecretName,
 			Namespace: m.Spec.GetResourceNS(),
 			Labels: map[string]string{
-				"app": "storageos",
+				"app": appName,
 			},
 		},
-		Type: v1.SecretType("kubernetes.io/tls"),
+		Type: v1.SecretType(tlsSecretType),
 		Data: map[string][]byte{
-			"tls.crt": cert,
-			"tls.key": key,
+			tlsCertKey: cert,
+			tlsKeyKey:  key,
 		},
 	}
 
@@ -1051,10 +1090,10 @@ func createInitSecret(m *api.StorageOS) error {
 			Name:      initSecretName,
 			Namespace: m.Spec.GetResourceNS(),
 			Labels: map[string]string{
-				"app": "storageos",
+				"app": appName,
 			},
 		},
-		Type: v1.SecretType("kubernetes.io/storageos"),
+		Type: v1.SecretType(storageosSecretType),
 		Data: map[string][]byte{
 			"username": username,
 			"password": password,
@@ -1086,12 +1125,12 @@ func getAdminCreds(m *api.StorageOS) ([]byte, []byte, error) {
 			return nil, nil, err
 		}
 
-		username = se.Data["apiUsername"]
-		password = se.Data["apiPassword"]
+		username = se.Data[apiUsernameKey]
+		password = se.Data[apiPasswordKey]
 	} else {
 		// Use the default credentials.
-		username = []byte("storageos")
-		password = []byte("storageos")
+		username = []byte(defaultUsername)
+		password = []byte(defaultPassword)
 	}
 
 	return username, password, nil
@@ -1115,8 +1154,8 @@ func getTLSData(m *api.StorageOS) ([]byte, []byte, error) {
 			return nil, nil, err
 		}
 
-		cert = se.Data["tls.crt"]
-		key = se.Data["tls.key"]
+		cert = se.Data[tlsCertKey]
+		key = se.Data[tlsKeyKey]
 	} else {
 		cert = []byte("")
 		key = []byte("")
@@ -1127,10 +1166,10 @@ func getTLSData(m *api.StorageOS) ([]byte, []byte, error) {
 
 func createStorageClass(m *api.StorageOS) error {
 	// Provisioner name for in-tree storage plugin.
-	provisioner := "kubernetes.io/storageos"
+	provisioner := intreeProvisionerName
 
 	if m.Spec.EnableCSI {
-		provisioner = "storageos"
+		provisioner = csiProvisionerName
 	}
 
 	sc := &storagev1.StorageClass{
@@ -1141,7 +1180,7 @@ func createStorageClass(m *api.StorageOS) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "fast",
 			Labels: map[string]string{
-				"app": "storageos",
+				"app": appName,
 			},
 		},
 		Provisioner: provisioner,
@@ -1155,8 +1194,8 @@ func createStorageClass(m *api.StorageOS) error {
 		// Add CSI creds secrets in parameters.
 	} else {
 		// Add StorageOS admin secrets name and namespace.
-		sc.Parameters["adminSecretNamespace"] = m.Spec.SecretRefNamespace
-		sc.Parameters["adminSecretName"] = m.Spec.SecretRefName
+		sc.Parameters[secretNamespaceKey] = m.Spec.SecretRefNamespace
+		sc.Parameters[secretNameKey] = m.Spec.SecretRefName
 	}
 
 	addOwnerRefToObject(sc, asOwner(m))
@@ -1167,11 +1206,11 @@ func createStorageClass(m *api.StorageOS) error {
 }
 
 func labelsForDaemonSet(name string) map[string]string {
-	return map[string]string{"app": "storageos", "storageos_cr": name, "kind": "daemonset"}
+	return map[string]string{"app": appName, "storageos_cr": name, "kind": daemonsetKind}
 }
 
 func labelsForStatefulSet(name string) map[string]string {
-	return map[string]string{"app": "storageos", "storageos_cr": name, "kind": "statefulset"}
+	return map[string]string{"app": appName, "storageos_cr": name, "kind": statefulsetKind}
 }
 
 func addOwnerRefToObject(obj metav1.Object, ownerRef metav1.OwnerReference) {
