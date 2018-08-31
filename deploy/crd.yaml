@@ -37,10 +37,18 @@ spec:
           properties:
             join:
               type: string
-            enableCSI:
-              type: boolean
             namespace:
               type: string
+            csi:
+              properties:
+                enable:
+                  type: boolean
+                enableProvisionCreds:
+                  type: boolean
+                enableControllerPublishCreds:
+                  type: boolean
+                enableNodePublishCreds:
+                  type: boolean
             service:
               properties:
                 name:
@@ -61,7 +69,7 @@ spec:
               type: string
             ingress:
               properties:
-                enabled:
+                enable:
                   type: boolean
                 hostname:
                   type: string

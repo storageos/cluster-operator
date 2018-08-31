@@ -5,10 +5,14 @@ metadata:
   namespace: "default"
 spec:
   # join:
-  enableCSI: true
   secretRefName: "storageos-api"
   secretRefNamespace: "default"
   namespace: "storageos"
+  csi:
+    enable: true
+    # enableProvisionCreds: false
+    # enableControllerPublishCreds: false
+    # enableNodePublishCreds: false
   service:
     name: "storageos"
     type: "ClusterIP"
@@ -18,7 +22,7 @@ spec:
     #  service.beta.kubernetes.io/aws-load-balancer-backend-protocol: http
     #  service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443,8443"
   ingress:
-    enabled: false
+    enable: false
     hostname: storageos.local
     tls: false
     annotations:
@@ -47,3 +51,10 @@ data:
   # Add base64 encoded TLS cert and key below if ingress.tls is set to true.
   # tls.crt:
   # tls.key:
+  # Add base64 encoded creds below for CSI credentials.
+  # csiProvisionUsername:
+  # csiProvisionPassword:
+  # csiControllerPublishUsername:
+  # csiControllerPublishPassword:
+  # csiNodePublishUsername:
+  # csiNodePublishPassword:

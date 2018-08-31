@@ -32,7 +32,7 @@ type StorageOS struct {
 
 type StorageOSSpec struct {
 	Join               string           `json:"join"`
-	EnableCSI          bool             `json:"enableCSI"`
+	CSI                StorageOSCSI     `json:"csi"`
 	ResourceNS         string           `json:"namespace"`
 	Service            StorageOSService `json:"service"`
 	SecretRefName      string           `json:"secretRefName"`
@@ -49,6 +49,13 @@ func (s StorageOSSpec) GetResourceNS() string {
 	return DefaultNamespace
 }
 
+type StorageOSCSI struct {
+	Enable                       bool `json:"enable"`
+	EnableProvisionCreds         bool `json:"enableProvisionCreds"`
+	EnableControllerPublishCreds bool `json:"enableControllerPublishCreds"`
+	EnableNodePublishCreds       bool `json:"enableNodePublishCreds"`
+}
+
 type StorageOSService struct {
 	Name         string            `json:"name"`
 	Type         string            `json:"type"`
@@ -58,7 +65,7 @@ type StorageOSService struct {
 }
 
 type StorageOSIngress struct {
-	Enabled     bool              `json:"enabled"`
+	Enable      bool              `json:"enable"`
 	Hostname    string            `json:"hostname"`
 	TLS         bool              `json:"tls"`
 	Annotations map[string]string `json:"annotations"`

@@ -17,8 +17,11 @@ import (
 )
 
 const (
-	initSecretName = "init-secret"
-	tlsSecretName  = "tls-secret"
+	initSecretName                 = "init-secret"
+	tlsSecretName                  = "tls-secret"
+	csiProvisionerSecretName       = "csi-provisioner-secret"
+	csiControllerPublishSecretName = "csi-controller-publish-secret"
+	csiNodePublishSecretName       = "csi-node-publish-secret"
 
 	appName         = "storageos"
 	daemonsetKind   = "daemonset"
@@ -36,25 +39,48 @@ const (
 	intreeProvisionerName = "kubernetes.io/storageos"
 	csiProvisionerName    = "storageos"
 
-	hostnameEnvVar      = "HOSTNAME"
-	adminUsernameEnvVar = "ADMIN_USERNAME"
-	adminPasswordEnvVar = "ADMIN_PASSWORD"
-	joinEnvVar          = "JOIN"
-	advertiseIPEnvVar   = "ADVERTISE_IP"
-	namespaceEnvVar     = "NAMESPACE"
-	deviceDirEnvVar     = "DEVICE_DIR"
-	csiEndpointEnvVar   = "CSI_ENDPOINT"
-	addressEnvVar       = "ADDRESS"
-	kubeNodeNameEnvVar  = "KUBE_NODE_NAME"
-	sysAdminCap         = "SYS_ADMIN"
+	hostnameEnvVar                      = "HOSTNAME"
+	adminUsernameEnvVar                 = "ADMIN_USERNAME"
+	adminPasswordEnvVar                 = "ADMIN_PASSWORD"
+	joinEnvVar                          = "JOIN"
+	advertiseIPEnvVar                   = "ADVERTISE_IP"
+	namespaceEnvVar                     = "NAMESPACE"
+	deviceDirEnvVar                     = "DEVICE_DIR"
+	csiEndpointEnvVar                   = "CSI_ENDPOINT"
+	csiRequireCredsCreateEnvVar         = "CSI_REQUIRE_CREDS_CREATE_VOL"
+	csiRequireCredsDeleteEnvVar         = "CSI_REQUIRE_CREDS_DELETE_VOL"
+	csiProvisionCredsUsernameEnvVar     = "CSI_PROVISION_CREDS_USERNAME"
+	csiProvisionCredsPasswordEnvVar     = "CSI_PROVISION_CREDS_PASSWORD"
+	csiRequireCredsCtrlPubEnvVar        = "CSI_REQUIRE_CREDS_CTRL_PUB_VOL"
+	csiRequireCredsCtrlUnpubEnvVar      = "CSI_REQUIRE_CREDS_CTRL_UNPUB_VOL"
+	csiControllerPubCredsUsernameEnvVar = "CSI_CTRL_PUB_CREDS_USERNAME"
+	csiControllerPubCredsPasswordEnvVar = "CSI_CTRL_PUB_CREDS_PASSWORD"
+	csiRequireCredsNodePubEnvVar        = "CSI_REQUIRE_CREDS_NODE_PUB_VOL"
+	csiNodePubCredsUsernameEnvVar       = "CSI_NODE_PUB_CREDS_USERNAME"
+	csiNodePubCredsPasswordEnvVar       = "CSI_NODE_PUB_CREDS_PASSWORD"
+	addressEnvVar                       = "ADDRESS"
+	kubeNodeNameEnvVar                  = "KUBE_NODE_NAME"
+	sysAdminCap                         = "SYS_ADMIN"
 
-	secretNamespaceKey = "adminSecretNamespace"
-	secretNameKey      = "adminSecretName"
-	apiAddressKey      = "apiAddress"
-	apiUsernameKey     = "apiUsername"
-	apiPasswordKey     = "apiPassword"
-	tlsCertKey         = "tls.crt"
-	tlsKeyKey          = "tls.key"
+	secretNamespaceKey                     = "adminSecretNamespace"
+	secretNameKey                          = "adminSecretName"
+	apiAddressKey                          = "apiAddress"
+	apiUsernameKey                         = "apiUsername"
+	apiPasswordKey                         = "apiPassword"
+	csiProvisionUsernameKey                = "csiProvisionUsername"
+	csiProvisionPasswordKey                = "csiProvisionPassword"
+	csiControllerPublishUsernameKey        = "csiControllerPublishUsername"
+	csiControllerPublishPasswordKey        = "csiControllerPublishPassword"
+	csiNodePublishUsernameKey              = "csiNodePublishUsername"
+	csiNodePublishPasswordKey              = "csiNodePublishPassword"
+	csiProvisionerSecretNameKey            = "csiProvisionerSecretName"
+	csiProvisionerSecretNamespaceKey       = "csiProvisionerSecretNamespace"
+	csiControllerPublishSecretNameKey      = "csiControllerPublishSecretName"
+	csiControllerPublishSecretNamespaceKey = "csiControllerPublishSecretNamespace"
+	csiNodePublishSecretNameKey            = "csiNodePublishSecretName"
+	csiNodePublishSecretNamespaceKey       = "csiNodePublishSecretNamespace"
+	tlsCertKey                             = "tls.crt"
+	tlsKeyKey                              = "tls.key"
 
 	defaultUsername = "storageos"
 	defaultPassword = "storageos"
@@ -89,7 +115,7 @@ func deployStorageOS(m *api.StorageOS, recorder record.EventRecorder) error {
 		return err
 	}
 
-	if m.Spec.Ingress.Enabled {
+	if m.Spec.Ingress.Enable {
 		if m.Spec.Ingress.TLS {
 			if err := createTLSSecret(m); err != nil {
 				return err
@@ -101,8 +127,12 @@ func deployStorageOS(m *api.StorageOS, recorder record.EventRecorder) error {
 		}
 	}
 
-	if m.Spec.EnableCSI {
+	if m.Spec.CSI.Enable {
 		// Create CSI exclusive resources.
+		if err := createCSISecrets(m); err != nil {
+			return err
+		}
+
 		if err := createClusterRoleForDriverRegistrar(m); err != nil {
 			return err
 		}
@@ -731,7 +761,7 @@ func createDaemonSet(m *api.StorageOS) error {
 	}
 
 	// Add CSI specific configurations if enabled.
-	if m.Spec.EnableCSI {
+	if m.Spec.CSI.Enable {
 		vols := []v1.Volume{
 			{
 				Name: "registrar-socket-dir",
@@ -798,6 +828,54 @@ func createDaemonSet(m *api.StorageOS) error {
 				Value: "unix://var/lib/kubelet/plugins/storageos/csi.sock",
 			},
 		}
+
+		// Append CSI Provision Creds env var if enabled.
+		if m.Spec.CSI.EnableProvisionCreds {
+			envVar = append(
+				envVar,
+				v1.EnvVar{
+					Name:  csiRequireCredsCreateEnvVar,
+					Value: "true",
+				},
+				v1.EnvVar{
+					Name:  csiRequireCredsDeleteEnvVar,
+					Value: "true",
+				},
+				getCSICredsEnvVar(csiProvisionCredsUsernameEnvVar, csiProvisionerSecretName, "username"),
+				getCSICredsEnvVar(csiProvisionCredsPasswordEnvVar, csiProvisionerSecretName, "password"),
+			)
+		}
+
+		// Append CSI Controller Publish env var if enabled.
+		if m.Spec.CSI.EnableControllerPublishCreds {
+			envVar = append(
+				envVar,
+				v1.EnvVar{
+					Name:  csiRequireCredsCtrlPubEnvVar,
+					Value: "true",
+				},
+				v1.EnvVar{
+					Name:  csiRequireCredsCtrlUnpubEnvVar,
+					Value: "true",
+				},
+				getCSICredsEnvVar(csiControllerPubCredsUsernameEnvVar, csiControllerPublishSecretName, "username"),
+				getCSICredsEnvVar(csiControllerPubCredsPasswordEnvVar, csiControllerPublishSecretName, "password"),
+			)
+		}
+
+		// Append CSI Node Publish env var if enabled.
+		if m.Spec.CSI.EnableNodePublishCreds {
+			envVar = append(
+				envVar,
+				v1.EnvVar{
+					Name:  csiRequireCredsNodePubEnvVar,
+					Value: "true",
+				},
+				getCSICredsEnvVar(csiNodePubCredsUsernameEnvVar, csiNodePublishSecretName, "username"),
+				getCSICredsEnvVar(csiNodePubCredsPasswordEnvVar, csiNodePublishSecretName, "password"),
+			)
+		}
+
 		// Append env vars to the first container, node container.
 		dset.Spec.Template.Spec.Containers[0].Env = append(dset.Spec.Template.Spec.Containers[0].Env, envVar...)
 
@@ -842,6 +920,22 @@ func createDaemonSet(m *api.StorageOS) error {
 		return fmt.Errorf("failed to create daemonset: %v", err)
 	}
 	return nil
+}
+
+// getCSICredsEnvVar returns a v1.EnvVar object with value from a secret key
+// reference, given env var name, reference secret name and key in the secret.
+func getCSICredsEnvVar(envVarName, secretName, key string) v1.EnvVar {
+	return v1.EnvVar{
+		Name: envVarName,
+		ValueFrom: &v1.EnvVarSource{
+			SecretKeyRef: &v1.SecretKeySelector{
+				LocalObjectReference: v1.LocalObjectReference{
+					Name: secretName,
+				},
+				Key: key,
+			},
+		},
+	}
 }
 
 func createStatefulSet(m *api.StorageOS) error {
@@ -975,7 +1069,7 @@ func createService(m *api.StorageOS) error {
 	}
 
 	// Patch storageos-api secret with above service IP in apiAddress.
-	if !m.Spec.EnableCSI {
+	if !m.Spec.CSI.Enable {
 		secret := &v1.Secret{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Secret",
@@ -1080,29 +1174,8 @@ func createInitSecret(m *api.StorageOS) error {
 	if err != nil {
 		return err
 	}
-
-	secret := &v1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Secret",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      initSecretName,
-			Namespace: m.Spec.GetResourceNS(),
-			Labels: map[string]string{
-				"app": appName,
-			},
-		},
-		Type: v1.SecretType(storageosSecretType),
-		Data: map[string][]byte{
-			"username": username,
-			"password": password,
-		},
-	}
-
-	addOwnerRefToObject(secret, asOwner(m))
-	if err := sdk.Create(secret); err != nil && !apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("failed to create init secret: %v", err)
+	if err := createCredSecret(m, initSecretName, username, password); err != nil {
+		return err
 	}
 	return nil
 }
@@ -1164,11 +1237,101 @@ func getTLSData(m *api.StorageOS) ([]byte, []byte, error) {
 	return cert, key, nil
 }
 
+// createCSISecrets checks which CSI creds are enabled and creates secret for
+// those components.
+func createCSISecrets(m *api.StorageOS) error {
+	// Create Provision Secret.
+	if m.Spec.CSI.EnableProvisionCreds {
+		username, password, err := getCSICreds(m, csiProvisionUsernameKey, csiProvisionPasswordKey)
+		if err != nil {
+			return err
+		}
+		if err := createCredSecret(m, csiProvisionerSecretName, username, password); err != nil {
+			return err
+		}
+	}
+
+	// Create Controller Publish Secret.
+	if m.Spec.CSI.EnableControllerPublishCreds {
+		username, password, err := getCSICreds(m, csiControllerPublishUsernameKey, csiControllerPublishPasswordKey)
+		if err != nil {
+			return err
+		}
+		if err := createCredSecret(m, csiControllerPublishSecretName, username, password); err != nil {
+			return err
+		}
+	}
+
+	// Create Node Publish Secret.
+	if m.Spec.CSI.EnableNodePublishCreds {
+		username, password, err := getCSICreds(m, csiNodePublishUsernameKey, csiNodePublishPasswordKey)
+		if err != nil {
+			return err
+		}
+		if err := createCredSecret(m, csiNodePublishSecretName, username, password); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func createCredSecret(m *api.StorageOS, name string, username, password []byte) error {
+	secret := &v1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: m.Spec.GetResourceNS(),
+			Labels: map[string]string{
+				"app": appName,
+			},
+		},
+		Type: v1.SecretType(v1.SecretTypeOpaque),
+		Data: map[string][]byte{
+			"username": username,
+			"password": password,
+		},
+	}
+
+	addOwnerRefToObject(secret, asOwner(m))
+	if err := sdk.Create(secret); err != nil && !apierrors.IsAlreadyExists(err) {
+		return fmt.Errorf("failed to create secret: %v", err)
+	}
+	return nil
+}
+
+// getCSICreds - given username and password keys, it fetches the creds from
+// storageos-api secret and returns them.
+func getCSICreds(m *api.StorageOS, usernameKey, passwordKey string) (username []byte, password []byte, err error) {
+	// Get the username and password from storageos-api secret object.
+	secret := &v1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Secret",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      m.Spec.SecretRefName,
+			Namespace: m.Spec.SecretRefNamespace,
+		},
+	}
+	if err := sdk.Get(secret); err != nil {
+		return nil, nil, err
+	}
+
+	username = secret.Data[usernameKey]
+	password = secret.Data[passwordKey]
+
+	return username, password, err
+}
+
 func createStorageClass(m *api.StorageOS) error {
 	// Provisioner name for in-tree storage plugin.
 	provisioner := intreeProvisionerName
 
-	if m.Spec.EnableCSI {
+	if m.Spec.CSI.Enable {
 		provisioner = csiProvisionerName
 	}
 
@@ -1190,8 +1353,20 @@ func createStorageClass(m *api.StorageOS) error {
 		},
 	}
 
-	if m.Spec.EnableCSI {
+	if m.Spec.CSI.Enable {
 		// Add CSI creds secrets in parameters.
+		if m.Spec.CSI.EnableProvisionCreds {
+			sc.Parameters[csiProvisionerSecretNameKey] = csiProvisionerSecretName
+			sc.Parameters[csiProvisionerSecretNamespaceKey] = m.Spec.GetResourceNS()
+		}
+		if m.Spec.CSI.EnableControllerPublishCreds {
+			sc.Parameters[csiControllerPublishSecretNameKey] = csiControllerPublishSecretName
+			sc.Parameters[csiControllerPublishSecretNamespaceKey] = m.Spec.GetResourceNS()
+		}
+		if m.Spec.CSI.EnableNodePublishCreds {
+			sc.Parameters[csiNodePublishSecretNameKey] = csiNodePublishSecretName
+			sc.Parameters[csiNodePublishSecretNamespaceKey] = m.Spec.GetResourceNS()
+		}
 	} else {
 		// Add StorageOS admin secrets name and namespace.
 		sc.Parameters[secretNamespaceKey] = m.Spec.SecretRefNamespace
