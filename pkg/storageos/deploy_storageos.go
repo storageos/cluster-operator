@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
-	api "github.com/storageos/storageos-operator/pkg/apis/node/v1alpha1"
+	api "github.com/storageos/storageoscluster-operator/pkg/apis/cluster/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
@@ -86,7 +86,7 @@ const (
 	defaultPassword = "storageos"
 )
 
-func deployStorageOS(m *api.StorageOS, recorder record.EventRecorder) error {
+func deployStorageOS(m *api.StorageOSCluster, recorder record.EventRecorder) error {
 	if err := createNamespace(m); err != nil {
 		return err
 	}
@@ -177,7 +177,7 @@ func deployStorageOS(m *api.StorageOS, recorder record.EventRecorder) error {
 	return updateStorageOSStatus(m, status, recorder)
 }
 
-func createNamespace(m *api.StorageOS) error {
+func createNamespace(m *api.StorageOSCluster) error {
 	ns := &v1.Namespace{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -198,7 +198,7 @@ func createNamespace(m *api.StorageOS) error {
 	return nil
 }
 
-func createServiceAccountForDaemonSet(m *api.StorageOS) error {
+func createServiceAccountForDaemonSet(m *api.StorageOSCluster) error {
 	sa := &v1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -220,7 +220,7 @@ func createServiceAccountForDaemonSet(m *api.StorageOS) error {
 	return nil
 }
 
-func createServiceAccountForStatefulSet(m *api.StorageOS) error {
+func createServiceAccountForStatefulSet(m *api.StorageOSCluster) error {
 	sa := &v1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -242,7 +242,7 @@ func createServiceAccountForStatefulSet(m *api.StorageOS) error {
 	return nil
 }
 
-func createRoleForKeyMgmt(m *api.StorageOS) error {
+func createRoleForKeyMgmt(m *api.StorageOSCluster) error {
 	role := &rbacv1.Role{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
@@ -271,7 +271,7 @@ func createRoleForKeyMgmt(m *api.StorageOS) error {
 	return nil
 }
 
-func createClusterRoleForDriverRegistrar(m *api.StorageOS) error {
+func createClusterRoleForDriverRegistrar(m *api.StorageOSCluster) error {
 	role := &rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
@@ -304,7 +304,7 @@ func createClusterRoleForDriverRegistrar(m *api.StorageOS) error {
 	return nil
 }
 
-func createClusterRoleForProvisioner(m *api.StorageOS) error {
+func createClusterRoleForProvisioner(m *api.StorageOSCluster) error {
 	role := &rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
@@ -352,7 +352,7 @@ func createClusterRoleForProvisioner(m *api.StorageOS) error {
 	return nil
 }
 
-func createClusterRoleForAttacher(m *api.StorageOS) error {
+func createClusterRoleForAttacher(m *api.StorageOSCluster) error {
 	role := &rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
@@ -400,7 +400,7 @@ func createClusterRoleForAttacher(m *api.StorageOS) error {
 	return nil
 }
 
-func createRoleBindingForKeyMgmt(m *api.StorageOS) error {
+func createRoleBindingForKeyMgmt(m *api.StorageOSCluster) error {
 	roleBinding := &rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
@@ -434,7 +434,7 @@ func createRoleBindingForKeyMgmt(m *api.StorageOS) error {
 	return nil
 }
 
-func createClusterRoleBindingForDriverRegistrar(m *api.StorageOS) error {
+func createClusterRoleBindingForDriverRegistrar(m *api.StorageOSCluster) error {
 	roleBinding := &rbacv1.ClusterRoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
@@ -467,7 +467,7 @@ func createClusterRoleBindingForDriverRegistrar(m *api.StorageOS) error {
 	return nil
 }
 
-func createClusterRoleBindingForProvisioner(m *api.StorageOS) error {
+func createClusterRoleBindingForProvisioner(m *api.StorageOSCluster) error {
 	roleBinding := &rbacv1.ClusterRoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
@@ -500,7 +500,7 @@ func createClusterRoleBindingForProvisioner(m *api.StorageOS) error {
 	return nil
 }
 
-func createClusterRoleBindingForAttacher(m *api.StorageOS) error {
+func createClusterRoleBindingForAttacher(m *api.StorageOSCluster) error {
 	roleBinding := &rbacv1.ClusterRoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
@@ -533,7 +533,7 @@ func createClusterRoleBindingForAttacher(m *api.StorageOS) error {
 	return nil
 }
 
-func createDaemonSet(m *api.StorageOS) error {
+func createDaemonSet(m *api.StorageOSCluster) error {
 	ls := labelsForDaemonSet(m.Name)
 	privileged := true
 	mountPropagationBidirectional := v1.MountPropagationBidirectional
@@ -938,7 +938,7 @@ func getCSICredsEnvVar(envVarName, secretName, key string) v1.EnvVar {
 	}
 }
 
-func createStatefulSet(m *api.StorageOS) error {
+func createStatefulSet(m *api.StorageOSCluster) error {
 	ls := labelsForStatefulSet(m.Name)
 	replicas := int32(1)
 	hostpathDirOrCreate := v1.HostPathDirectoryOrCreate
@@ -1032,7 +1032,7 @@ func createStatefulSet(m *api.StorageOS) error {
 	return nil
 }
 
-func createService(m *api.StorageOS) error {
+func createService(m *api.StorageOSCluster) error {
 	svc := &v1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -1099,7 +1099,7 @@ func createService(m *api.StorageOS) error {
 	return nil
 }
 
-func createIngress(m *api.StorageOS) error {
+func createIngress(m *api.StorageOSCluster) error {
 	ingress := &v1beta1.Ingress{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "extensions/v1beta1",
@@ -1137,7 +1137,7 @@ func createIngress(m *api.StorageOS) error {
 	return nil
 }
 
-func createTLSSecret(m *api.StorageOS) error {
+func createTLSSecret(m *api.StorageOSCluster) error {
 	cert, key, err := getTLSData(m)
 	if err != nil {
 		return err
@@ -1169,7 +1169,7 @@ func createTLSSecret(m *api.StorageOS) error {
 	return nil
 }
 
-func createInitSecret(m *api.StorageOS) error {
+func createInitSecret(m *api.StorageOSCluster) error {
 	username, password, err := getAdminCreds(m)
 	if err != nil {
 		return err
@@ -1180,7 +1180,7 @@ func createInitSecret(m *api.StorageOS) error {
 	return nil
 }
 
-func getAdminCreds(m *api.StorageOS) ([]byte, []byte, error) {
+func getAdminCreds(m *api.StorageOSCluster) ([]byte, []byte, error) {
 	var username, password []byte
 	if m.Spec.SecretRefName != "" && m.Spec.SecretRefNamespace != "" {
 		se := &v1.Secret{
@@ -1209,7 +1209,7 @@ func getAdminCreds(m *api.StorageOS) ([]byte, []byte, error) {
 	return username, password, nil
 }
 
-func getTLSData(m *api.StorageOS) ([]byte, []byte, error) {
+func getTLSData(m *api.StorageOSCluster) ([]byte, []byte, error) {
 	var cert, key []byte
 	if m.Spec.SecretRefName != "" && m.Spec.SecretRefNamespace != "" {
 		se := &v1.Secret{
@@ -1239,7 +1239,7 @@ func getTLSData(m *api.StorageOS) ([]byte, []byte, error) {
 
 // createCSISecrets checks which CSI creds are enabled and creates secret for
 // those components.
-func createCSISecrets(m *api.StorageOS) error {
+func createCSISecrets(m *api.StorageOSCluster) error {
 	// Create Provision Secret.
 	if m.Spec.CSI.EnableProvisionCreds {
 		username, password, err := getCSICreds(m, csiProvisionUsernameKey, csiProvisionPasswordKey)
@@ -1276,7 +1276,7 @@ func createCSISecrets(m *api.StorageOS) error {
 	return nil
 }
 
-func createCredSecret(m *api.StorageOS, name string, username, password []byte) error {
+func createCredSecret(m *api.StorageOSCluster, name string, username, password []byte) error {
 	secret := &v1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -1305,7 +1305,7 @@ func createCredSecret(m *api.StorageOS, name string, username, password []byte) 
 
 // getCSICreds - given username and password keys, it fetches the creds from
 // storageos-api secret and returns them.
-func getCSICreds(m *api.StorageOS, usernameKey, passwordKey string) (username []byte, password []byte, err error) {
+func getCSICreds(m *api.StorageOSCluster, usernameKey, passwordKey string) (username []byte, password []byte, err error) {
 	// Get the username and password from storageos-api secret object.
 	secret := &v1.Secret{
 		TypeMeta: metav1.TypeMeta{
@@ -1327,7 +1327,7 @@ func getCSICreds(m *api.StorageOS, usernameKey, passwordKey string) (username []
 	return username, password, err
 }
 
-func createStorageClass(m *api.StorageOS) error {
+func createStorageClass(m *api.StorageOSCluster) error {
 	// Provisioner name for in-tree storage plugin.
 	provisioner := intreeProvisionerName
 
@@ -1392,7 +1392,7 @@ func addOwnerRefToObject(obj metav1.Object, ownerRef metav1.OwnerReference) {
 	obj.SetOwnerReferences(append(obj.GetOwnerReferences(), ownerRef))
 }
 
-func asOwner(m *api.StorageOS) metav1.OwnerReference {
+func asOwner(m *api.StorageOSCluster) metav1.OwnerReference {
 	trueVar := true
 	return metav1.OwnerReference{
 		APIVersion: m.APIVersion,

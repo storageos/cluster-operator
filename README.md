@@ -1,4 +1,4 @@
-# storageos-operator
+# storageoscluster-operator
 
 
 Setup/Development:
@@ -15,34 +15,34 @@ Setup/Development:
 
 For development, run the operator outside of the k8s cluster by running:
 ```
-$ OPERATOR_NAME=storageos-operator operator-sdk up local
+$ OPERATOR_NAME=storageoscluster-operator operator-sdk up local
 ```
 Pass kubeconfig:
 ```
-OPERATOR_NAME=storageos-operator operator-sdk up local --kubeconfig=/path/to/kubeconfig
+OPERATOR_NAME=storageoscluster-operator operator-sdk up local --kubeconfig=/path/to/kubeconfig
 ```
 
 After creating a resource, query the resource:
 ```
-$ kubectl get storageos
+$ kubectl get storageoscluster
 NAME                READY     STATUS    AGE
 example-storageos   3/3       Running   4m
 ```
 
 Get all the details about the resource:
 ```
-$ kubectl describe storageos/example-storageos
+$ kubectl describe storageoscluster/example-storageos
 Name:         example-storageos
 Namespace:    default
 Labels:       <none>
-Annotations:  kubectl.kubernetes.io/last-applied-configuration={"apiVersion":"node.storageos.com/v1alpha1","kind":"StorageOS","metadata":{"annotations":{},"name":"example-storageos","namespace":"default"},"spec":{"...
-API Version:  node.storageos.com/v1alpha1
-Kind:         StorageOS
+Annotations:  kubectl.kubernetes.io/last-applied-configuration={"apiVersion":"storageos.com/v1alpha1","kind":"StorageOSCluster","metadata":{"annotations":{},"name":"example-storageos","namespace":"default"},"spec":{"...
+API Version:  storageos.com/v1alpha1
+Kind:         StorageOSCluster
 Metadata:
   Creation Timestamp:  2018-07-21T12:57:11Z
   Generation:          1
   Resource Version:    10939030
-  Self Link:           /apis/node.storageos.com/v1alpha1/namespaces/default/storageoses/example-storageos
+  Self Link:           /apis/storageos.com/v1alpha1/namespaces/default/storageosclusters/example-storageos
   UID:                 955b24a4-8ce5-11e8-956a-1866da35eee2
 Spec:
   Join:  test07

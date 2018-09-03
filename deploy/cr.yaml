@@ -1,10 +1,9 @@
-apiVersion: "node.storageos.com/v1alpha1"
-kind: "StorageOS"
+apiVersion: "storageos.com/v1alpha1"
+kind: "StorageOSCluster"
 metadata:
   name: "example-storageos"
   namespace: "default"
 spec:
-  # join:
   secretRefName: "storageos-api"
   secretRefNamespace: "default"
   namespace: "storageos"

@@ -6,7 +6,7 @@ import (
 
 	sdk "github.com/operator-framework/operator-sdk/pkg/sdk"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
-	stub "github.com/storageos/storageos-operator/pkg/stub"
+	stub "github.com/storageos/storageoscluster-operator/pkg/stub"
 
 	"k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -29,8 +29,8 @@ func main() {
 
 	sdk.ExposeMetricsPort()
 
-	resource := "node.storageos.com/v1alpha1"
-	kind := "StorageOS"
+	resource := "storageos.com/v1alpha1"
+	kind := "StorageOSCluster"
 	// Empty namespace to watch all the namespaces for the custom resource.
 	namespace := ""
 	resyncPeriod := 10
@@ -52,7 +52,7 @@ func eventRecorder(kubeClient kubernetes.Interface) record.EventRecorder {
 	)
 	recorder := eventBroadcaster.NewRecorder(
 		scheme.Scheme,
-		v1.EventSource{Component: "storageos-operator"},
+		v1.EventSource{Component: "storageoscluster-operator"},
 	)
 	return recorder
 }

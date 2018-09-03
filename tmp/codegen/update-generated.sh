@@ -6,7 +6,7 @@ set -o pipefail
 
 vendor/k8s.io/code-generator/generate-groups.sh \
 deepcopy \
-github.com/storageos/storageos-operator/pkg/generated \
-github.com/storageos/storageos-operator/pkg/apis \
-node:v1alpha1 \
+github.com/storageos/storageoscluster-operator/pkg/generated \
+github.com/storageos/storageoscluster-operator/pkg/apis \
+cluster:v1alpha1 \
 --go-header-file "./tmp/codegen/boilerplate.go.txt"

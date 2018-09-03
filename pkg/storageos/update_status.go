@@ -13,12 +13,12 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
 	storageosapi "github.com/storageos/go-api"
 	"github.com/storageos/go-api/types"
-	api "github.com/storageos/storageos-operator/pkg/apis/node/v1alpha1"
+	api "github.com/storageos/storageoscluster-operator/pkg/apis/cluster/v1alpha1"
 	"k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/record"
 )
 
-func updateStorageOSStatus(m *api.StorageOS, status *api.StorageOSServiceStatus, recorder record.EventRecorder) error {
+func updateStorageOSStatus(m *api.StorageOSCluster, status *api.StorageOSServiceStatus, recorder record.EventRecorder) error {
 	if reflect.DeepEqual(m.Status, *status) {
 		return nil
 	}
@@ -38,7 +38,7 @@ func updateStorageOSStatus(m *api.StorageOS, status *api.StorageOSServiceStatus,
 	return sdk.Update(m)
 }
 
-func getStorageOSStatus(m *api.StorageOS) (*api.StorageOSServiceStatus, error) {
+func getStorageOSStatus(m *api.StorageOSCluster) (*api.StorageOSServiceStatus, error) {
 	nodeList := nodeList()
 
 	if err := sdk.List(m.Spec.GetResourceNS(), nodeList); err != nil {

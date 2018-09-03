@@ -8,12 +8,12 @@ import (
 	"k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/record"
 
-	api "github.com/storageos/storageos-operator/pkg/apis/node/v1alpha1"
+	api "github.com/storageos/storageoscluster-operator/pkg/apis/cluster/v1alpha1"
 )
 
 // Reconcile ensures that the state specified in the Spec of the object matches
 // the state of the system.
-func Reconcile(m *api.StorageOS, recorder record.EventRecorder) error {
+func Reconcile(m *api.StorageOSCluster, recorder record.EventRecorder) error {
 	// Get a new list of nodes and update the join token with new nodes.
 	nodeList := nodeList()
 	if err := sdk.List(m.Spec.GetResourceNS(), nodeList); err != nil {

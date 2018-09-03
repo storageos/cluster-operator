@@ -1,3 +1,3 @@
 // +k8s:deepcopy-gen=package
-// +groupName=node.storageos.com
+// +groupName=storageos.com
 package v1alpha1
