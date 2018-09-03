@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: storageos-operator
+  namespace: default
 spec:
   replicas: 1
   selector:
@@ -12,6 +13,7 @@ spec:
       labels:
         name: storageos-operator
     spec:
+      serviceAccountName: storageos-operator-sa
       containers:
         - name: storageos-operator
           image: storageos/operator:v0.0.1
