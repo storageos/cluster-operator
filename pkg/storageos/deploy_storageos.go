@@ -29,8 +29,8 @@ const (
 
 	nodeContainerName                   = "storageos/node:1.0.0-rc4"
 	csiDriverRegistrarContainerName     = "quay.io/k8scsi/driver-registrar:v0.2.0"
-	csiExternalProvisionerContainerName = "quay.io/k8scsi/csi-provisioner:canary"
-	csiExternalAttacherContainerName    = "quay.io/k8scsi/csi-attacher:canary"
+	csiExternalProvisionerContainerName = "quay.io/k8scsi/csi-provisioner:v0.3.0"
+	csiExternalAttacherContainerName    = "quay.io/k8scsi/csi-attacher:v0.3.0"
 	initContainerName                   = "storageos/init:0.1"
 
 	tlsSecretType       = "kubernetes.io/tls"
