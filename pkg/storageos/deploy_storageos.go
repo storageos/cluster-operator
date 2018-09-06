@@ -27,12 +27,6 @@ const (
 	daemonsetKind   = "daemonset"
 	statefulsetKind = "statefulset"
 
-	nodeContainerName                   = "storageos/node:1.0.0-rc4"
-	csiDriverRegistrarContainerName     = "quay.io/k8scsi/driver-registrar:v0.2.0"
-	csiExternalProvisionerContainerName = "quay.io/k8scsi/csi-provisioner:v0.3.0"
-	csiExternalAttacherContainerName    = "quay.io/k8scsi/csi-attacher:v0.3.0"
-	initContainerName                   = "storageos/init:0.1"
-
 	tlsSecretType       = "kubernetes.io/tls"
 	storageosSecretType = "kubernetes.io/storageos"
 
@@ -565,7 +559,7 @@ func createDaemonSet(m *api.StorageOSCluster) error {
 					InitContainers: []v1.Container{
 						{
 							Name:  "enable-lio",
-							Image: initContainerName,
+							Image: m.Spec.GetInitContainerImage(),
 							VolumeMounts: []v1.VolumeMount{
 								{
 									Name:      "kernel-modules",
@@ -588,7 +582,7 @@ func createDaemonSet(m *api.StorageOSCluster) error {
 					},
 					Containers: []v1.Container{
 						{
-							Image: nodeContainerName,
+							Image: m.Spec.GetNodeContainerImage(),
 							Name:  "storageos",
 							Args:  []string{"server"},
 							Ports: []v1.ContainerPort{{
@@ -880,7 +874,7 @@ func createDaemonSet(m *api.StorageOSCluster) error {
 		dset.Spec.Template.Spec.Containers[0].Env = append(dset.Spec.Template.Spec.Containers[0].Env, envVar...)
 
 		driverReg := v1.Container{
-			Image:           csiDriverRegistrarContainerName,
+			Image:           m.Spec.GetCSIDriverRegistrarImage(),
 			Name:            "csi-driver-registrar",
 			ImagePullPolicy: v1.PullIfNotPresent,
 			Args: []string{
@@ -966,7 +960,7 @@ func createStatefulSet(m *api.StorageOSCluster) error {
 					ServiceAccountName: "storageos-statefulset-sa",
 					Containers: []v1.Container{
 						{
-							Image:           csiExternalProvisionerContainerName,
+							Image:           m.Spec.GetCSIExternalProvisionerImage(),
 							Name:            "csi-external-provisioner",
 							ImagePullPolicy: v1.PullIfNotPresent,
 							Args: []string{
@@ -988,7 +982,7 @@ func createStatefulSet(m *api.StorageOSCluster) error {
 							},
 						},
 						{
-							Image:           csiExternalAttacherContainerName,
+							Image:           m.Spec.GetCSIExternalAttacherImage(),
 							Name:            "csi-external-attacher",
 							ImagePullPolicy: v1.PullIfNotPresent,
 							Args: []string{

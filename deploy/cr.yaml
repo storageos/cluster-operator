@@ -7,6 +7,12 @@ spec:
   secretRefName: "storageos-api"
   secretRefNamespace: "default"
   namespace: "storageos"
+  # images:
+  #   nodeContainer:
+  #   initContainer:
+  #   csiDriverRegistrarContainer:
+  #   csiExternalProvisionerContainer:
+  #   csiExternalAttacherContainer:
   csi:
     enable: true
     # enableProvisionCreds: false

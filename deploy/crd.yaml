@@ -39,6 +39,18 @@ spec:
               type: string
             namespace:
               type: string
+            images:
+              properties:
+                nodeContainer:
+                  type: string
+                initContainer:
+                  type: string
+                csiDriverRegistrarContainer:
+                  type: string
+                csiExternalProvisionerContainer:
+                  type: string
+                csiExternalAttacherContainer:
+                  type: string
             csi:
               properties:
                 enable:

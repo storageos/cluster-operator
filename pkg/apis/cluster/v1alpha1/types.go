@@ -11,6 +11,12 @@ const (
 	ClusterPhaseRunning              = "Running"
 
 	DefaultNamespace = "storageos"
+
+	DefaultNodeContainerImage                   = "storageos/node:1.0.0-rc4"
+	DefaultCSIDriverRegistrarContainerImage     = "quay.io/k8scsi/driver-registrar:v0.2.0"
+	DefaultCSIExternalProvisionerContainerImage = "quay.io/k8scsi/csi-provisioner:v0.3.0"
+	DefaultCSIExternalAttacherContainerImage    = "quay.io/k8scsi/csi-attacher:v0.3.0"
+	DefaultInitContainerImage                   = "storageos/init:0.1"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -39,6 +45,7 @@ type StorageOSSpec struct {
 	SecretRefNamespace string           `json:"secretRefNamespace"`
 	SharedDir          string           `json:"sharedDir"`
 	Ingress            StorageOSIngress `json:"ingress"`
+	Images             ContainerImages  `json:"images"`
 }
 
 // GetResourceNS returns the namespace where all the resources should be provisioned.
@@ -47,6 +54,55 @@ func (s StorageOSSpec) GetResourceNS() string {
 		return s.ResourceNS
 	}
 	return DefaultNamespace
+}
+
+// GetNodeContainerImage returns node container image.
+func (s StorageOSSpec) GetNodeContainerImage() string {
+	if s.Images.NodeContainer != "" {
+		return s.Images.NodeContainer
+	}
+	return DefaultNodeContainerImage
+}
+
+// GetInitContainerImage returns init container image.
+func (s StorageOSSpec) GetInitContainerImage() string {
+	if s.Images.InitContainer != "" {
+		return s.Images.InitContainer
+	}
+	return DefaultInitContainerImage
+}
+
+// GetCSIDriverRegistrarImage returns CSI driver registrar container image.
+func (s StorageOSSpec) GetCSIDriverRegistrarImage() string {
+	if s.Images.CSIDriverRegistrarContainer != "" {
+		return s.Images.CSIDriverRegistrarContainer
+	}
+	return DefaultCSIDriverRegistrarContainerImage
+}
+
+// GetCSIExternalProvisionerImage returns CSI external provisioner container image.
+func (s StorageOSSpec) GetCSIExternalProvisionerImage() string {
+	if s.Images.CSIExternalProvisionerContainer != "" {
+		return s.Images.CSIExternalProvisionerContainer
+	}
+	return DefaultCSIExternalProvisionerContainerImage
+}
+
+// GetCSIExternalAttacherImage returns CSI external attacher container image.
+func (s StorageOSSpec) GetCSIExternalAttacherImage() string {
+	if s.Images.CSIExternalAttacherContainer != "" {
+		return s.Images.CSIExternalAttacherContainer
+	}
+	return DefaultCSIExternalAttacherContainerImage
+}
+
+// ContainerImages contains image names of all the containers used by the operator.
+type ContainerImages struct {
+	NodeContainer                   string `json:"nodeContainer"`
+	InitContainer                   string `json:"initContainer"`
+	CSIDriverRegistrarContainer     string `json:"csiDriverRegistrarContainer"`
+	CSIExternalProvisionerContainer string `json:"csiExternalProvisionerContainer"`
+	CSIExternalAttacherContainer    string `json:"csiExternalAttacherContainer"`
 }
 
 type StorageOSCSI struct {
