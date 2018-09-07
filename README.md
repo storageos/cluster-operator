@@ -112,3 +112,66 @@ Parameter | Description | Default
 `ingress.tls` | Enable TLS for the ingress | `false`
 `ingress.annotations` | Annotations of the ingress used by the cluster |
 `sharedDir` | Path to be shared with kubelet container when deployed as a pod | `/var/lib/kubelet/plugins/kubernetes.io~storageos`
+
+
+## TLS Support
+
+To enable TLS, ensure that an ingress controller is installed in the cluster.
+Set `ingress.enable` and `ingress.tls` to `true`.
+Store the TLS cert and key as part of the storageos secret as:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: "storageos-api"
+...
+...
+data:
+  # echo -n '<secret>' | base64
+  ...
+  ...
+  # Add base64 encoded TLS cert and key.
+  tls.crt:
+  tls.key:
+```
+
+## CSI Credentials
+
+To enable CSI Credentials, ensure that CSI is enabled by setting `csi.enable` to
+`true`. Based on the type of credentials to enable, set the csi fields to `true`:
+```yaml
+apiVersion: "storageos.com/v1alpha1"
+kind: "StorageOSCluster"
+metadata:
+  name: "example-storageos"
+  namespace: "default"
+spec:
+  ...
+  ...
+  csi:
+    enable: true
+    enableProvisionCreds: true
+    enableControllerPublishCreds: true
+    enableNodePublishCreds: true
+  ...
+```
+
+Specify the CSI credentials as part of the storageos secret object as:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: "storageos-api"
+...
+...
+data:
+  # echo -n '<secret>' | base64
+  ...
+  ...
+  csiProvisionUsername:
+  csiProvisionPassword:
+  csiControllerPublishUsername:
+  csiControllerPublishPassword:
+  csiNodePublishUsername:
+  csiNodePublishPassword:
+```
