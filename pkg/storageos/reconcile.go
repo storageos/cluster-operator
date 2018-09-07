@@ -31,7 +31,29 @@ func Reconcile(m *api.StorageOSCluster, recorder record.EventRecorder) error {
 		if err := sdk.Update(m); err != nil {
 			return err
 		}
+
 	}
+
+	// Update the spec values. This ensures that the default values are applied
+	// when fields are not set in the spec.
+	m.Spec.ResourceNS = m.Spec.GetResourceNS()
+	m.Spec.Images.NodeContainer = m.Spec.GetNodeContainerImage()
+	m.Spec.Images.InitContainer = m.Spec.GetInitContainerImage()
+
+	if m.Spec.CSI.Enable {
+		m.Spec.Images.CSIDriverRegistrarContainer = m.Spec.GetCSIDriverRegistrarImage()
+		m.Spec.Images.CSIExternalProvisionerContainer = m.Spec.GetCSIExternalProvisionerImage()
+		m.Spec.Images.CSIExternalAttacherContainer = m.Spec.GetCSIExternalAttacherImage()
+	}
+
+	if m.Spec.Ingress.Enable {
+		m.Spec.Ingress.Hostname = m.Spec.GetIngressHostname()
+	}
+
+	m.Spec.Service.Name = m.Spec.GetServiceName()
+	m.Spec.Service.Type = m.Spec.GetServiceType()
+	m.Spec.Service.ExternalPort = m.Spec.GetServiceExternalPort()
+	m.Spec.Service.InternalPort = m.Spec.GetServiceInternalPort()
 
 	// Finalizers are set when an object should be deleted. Apply deploy only
 	// when finalizers is empty.

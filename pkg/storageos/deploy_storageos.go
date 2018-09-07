@@ -1033,7 +1033,7 @@ func createService(m *api.StorageOSCluster) error {
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      m.Spec.Service.Name,
+			Name:      m.Spec.GetServiceName(),
 			Namespace: m.Spec.GetResourceNS(),
 			Labels: map[string]string{
 				"app": appName,
@@ -1041,13 +1041,13 @@ func createService(m *api.StorageOSCluster) error {
 			Annotations: m.Spec.Service.Annotations,
 		},
 		Spec: v1.ServiceSpec{
-			Type: v1.ServiceType(m.Spec.Service.Type),
+			Type: v1.ServiceType(m.Spec.GetServiceType()),
 			Ports: []v1.ServicePort{
 				{
-					Name:       m.Spec.Service.Name,
+					Name:       m.Spec.GetServiceName(),
 					Protocol:   "TCP",
-					Port:       int32(m.Spec.Service.InternalPort),
-					TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: int32(m.Spec.Service.ExternalPort)},
+					Port:       int32(m.Spec.GetServiceInternalPort()),
+					TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: int32(m.Spec.GetServiceExternalPort())},
 				},
 			},
 			Selector: map[string]string{
@@ -1109,8 +1109,8 @@ func createIngress(m *api.StorageOSCluster) error {
 		},
 		Spec: v1beta1.IngressSpec{
 			Backend: &v1beta1.IngressBackend{
-				ServiceName: m.Spec.Service.Name,
-				ServicePort: intstr.IntOrString{Type: intstr.Int, IntVal: int32(m.Spec.Service.ExternalPort)},
+				ServiceName: m.Spec.GetServiceName(),
+				ServicePort: intstr.IntOrString{Type: intstr.Int, IntVal: int32(m.Spec.GetServiceExternalPort())},
 			},
 		},
 	}

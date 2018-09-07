@@ -12,6 +12,13 @@ const (
 
 	DefaultNamespace = "storageos"
 
+	DefaultServiceName         = "storageos"
+	DefaultServiceType         = "ClusterIP"
+	DefaultServiceExternalPort = 5705
+	DefaultServiceInternalPort = 5705
+
+	DefaultIngressHostname = "storageos.local"
+
 	DefaultNodeContainerImage                   = "storageos/node:1.0.0-rc4"
 	DefaultCSIDriverRegistrarContainerImage     = "quay.io/k8scsi/driver-registrar:v0.2.0"
 	DefaultCSIExternalProvisionerContainerImage = "quay.io/k8scsi/csi-provisioner:v0.3.0"
@@ -94,6 +101,46 @@ func (s StorageOSSpec) GetCSIExternalAttacherImage() string {
 		return s.Images.CSIExternalAttacherContainer
 	}
 	return DefaultCSIExternalAttacherContainerImage
+}
+
+// GetServiceName returns the service name.
+func (s StorageOSSpec) GetServiceName() string {
+	if s.Service.Name != "" {
+		return s.Service.Name
+	}
+	return DefaultServiceName
+}
+
+// GetServiceType returns the service type.
+func (s StorageOSSpec) GetServiceType() string {
+	if s.Service.Type != "" {
+		return s.Service.Type
+	}
+	return DefaultServiceType
+}
+
+// GetServiceExternalPort returns the service external port.
+func (s StorageOSSpec) GetServiceExternalPort() int {
+	if s.Service.ExternalPort != 0 {
+		return s.Service.ExternalPort
+	}
+	return DefaultServiceExternalPort
+}
+
+// GetServiceInternalPort returns the service internal port.
+func (s StorageOSSpec) GetServiceInternalPort() int {
+	if s.Service.InternalPort != 0 {
+		return s.Service.InternalPort
+	}
+	return DefaultServiceInternalPort
+}
+
+// GetIngressHostname returns the ingress host name.
+func (s StorageOSSpec) GetIngressHostname() string {
+	if s.Ingress.Hostname != "" {
+		return s.Ingress.Hostname
+	}
+	return DefaultIngressHostname
 }
 
 // ContainerImages contains image names of all the containers used by the operator.
