@@ -1,17 +1,31 @@
 # storageos cluster-operator
 
+StorageOS Cluster Operator deploys and configures a StorageOS cluster on
+Kubernetes.
 
-Setup/Development:
+## Pre-requisites
+
+* Kubernetes 1.9+
+* Kubernetes must be configured to allow (configured by default in 1.10+):
+    - Privileged mode containers (enabled by default)
+    - Feature gate: MountPropagation=true.  This can be done by appending `--feature-gates MountPropagation=true` to the
+      kube-apiserver and kubelet services.
+
+Refer to the [StorageOS prerequisites docs](https://docs.storageos.com/docs/prerequisites/overview) for more information.
+
+
+## Setup/Development:
+
 1. Install [operator-sdk](https://github.com/operator-framework/operator-sdk#quick-start).
 2. Run `operator-sdk generate k8s` if there's a change in api type.
 3. Build operator container with `operator-sdk build storageos/cluster-operator:<tag>`
-4. Install the configs in `deploy/`
+4. Apply the manifests in `deploy/` to install the operator
     - Apply `rbac.yaml` to grant all the permissions
     - Apply `crd.yaml` to define the custom resources.
     - Apply `operator.yaml` to install the operator. Change the container image in this file when installing a new operator.
-    - Apply `cr.yaml` to create a custom resource.
+    - Apply `cr.yaml` to create a `StorageOSCluster` custom resource.
 
-**NOTE**: Installing StorageOS on minikube would fail because the init container fails to enable lio on the minikube host.
+**NOTE**: Installing StorageOS on minikube currently fails because the init container fails to enable lio on the minikube host.
 
 For development, run the operator outside of the k8s cluster by running:
 ```
@@ -29,7 +43,9 @@ NAME                READY     STATUS    AGE
 example-storageos   3/3       Running   4m
 ```
 
-Get all the details about the resource:
+## Inspect a StorageOSCluster Resource
+
+Get all the details about the cluster:
 ```
 $ kubectl describe storageoscluster/example-storageos
 Name:         example-storageos
@@ -84,7 +100,7 @@ Status:
 Events:   <none>
 ```
 
-# Configurations
+## StorageOSCluster Resource Configuration
 
 The following tables lists the configurable spec parameters of the StorageOSCluster custom resource and their default values.
 
@@ -137,7 +153,29 @@ data:
   tls.key:
 ```
 
-## CSI Credentials
+## CSI
+
+The recommended way to run StorageOS on a Kubernetes 1.10+ cluster is to deploy
+with [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec)
+support. Using CSI ensures forward compatibility with future releases of
+Kubernetes, as vendor-specific drivers will be deprecated from Kubernetes 1.12.
+
+To enable CSI, set `csi.enable` to `true` in the `StorageOSCluster` resource config.
+
+```yaml
+apiVersion: "storageos.com/v1alpha1"
+kind: "StorageOSCluster"
+metadata:
+  name: "example-storageos"
+  namespace: "default"
+spec:
+  secretRefName: "storageos-api"
+  secretRefNamespace: "default"
+  csi:
+    enable: true
+```
+
+### CSI Credentials
 
 To enable CSI Credentials, ensure that CSI is enabled by setting `csi.enable` to
 `true`. Based on the type of credentials to enable, set the csi fields to `true`:
