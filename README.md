@@ -1,6 +1,6 @@
 # storageos cluster-operator
 
-StorageOS Cluster Operator deploys and configures a StorageOS cluster on
+The StorageOS Cluster Operator deploys and configures a StorageOS cluster on
 Kubernetes.
 
 ## Pre-requisites
@@ -25,7 +25,7 @@ Refer to the [StorageOS prerequisites docs](https://docs.storageos.com/docs/prer
     - Apply `operator.yaml` to install the operator. Change the container image in this file when installing a new operator.
     - Apply `cr.yaml` to create a `StorageOSCluster` custom resource.
 
-**NOTE**: Installing StorageOS on minikube currently fails because the init container fails to enable lio on the minikube host.
+**NOTE**: Installing StorageOS on Minikube is not currently supported due to missing [kernel prerequisites](https://docs.storageos.com/docs/prerequisites/systemconfiguration).
 
 For development, run the operator outside of the k8s cluster by running:
 ```
@@ -158,7 +158,7 @@ data:
 The recommended way to run StorageOS on a Kubernetes 1.10+ cluster is to deploy
 with [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec)
 support. Using CSI ensures forward compatibility with future releases of
-Kubernetes, as vendor-specific drivers will be deprecated from Kubernetes 1.12.
+Kubernetes, as vendor-specific drivers will soon be deprecated from Kubernetes.
 
 To enable CSI, set `csi.enable` to `true` in the `StorageOSCluster` resource config.
 
