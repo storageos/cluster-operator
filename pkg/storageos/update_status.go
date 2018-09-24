@@ -10,41 +10,41 @@ import (
 	"strings"
 	"time"
 
-	"github.com/operator-framework/operator-sdk/pkg/sdk"
 	storageosapi "github.com/storageos/go-api"
 	"github.com/storageos/go-api/types"
 	api "github.com/storageos/storageoscluster-operator/pkg/apis/cluster/v1alpha1"
 	"k8s.io/api/core/v1"
-	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func updateStorageOSStatus(m *api.StorageOSCluster, status *api.StorageOSServiceStatus, recorder record.EventRecorder) error {
-	if reflect.DeepEqual(m.Status, *status) {
+func (s *Deployment) updateStorageOSStatus(status *api.StorageOSServiceStatus) error {
+	if reflect.DeepEqual(s.stos.Status, *status) {
 		return nil
 	}
 
 	// When there's a difference in node ready count, broadcast the health change event.
-	if m.Status.Ready != status.Ready {
+	if s.stos.Status.Ready != status.Ready {
 		// Ready contains the node count in the format 3/3.
 		ready := strings.Split(status.Ready, "/")
 		if ready[0] == ready[1] {
-			recorder.Event(m, v1.EventTypeNormal, "ChangedStatus", fmt.Sprintf("%s StorageOS nodes are functional. Cluster healthy", status.Ready))
+			s.recorder.Event(s.stos, v1.EventTypeNormal, "ChangedStatus", fmt.Sprintf("%s StorageOS nodes are functional. Cluster healthy", status.Ready))
 		} else {
-			recorder.Event(m, v1.EventTypeWarning, "ChangedStatus", fmt.Sprintf("%s StorageOS nodes are functional", status.Ready))
+			s.recorder.Event(s.stos, v1.EventTypeWarning, "ChangedStatus", fmt.Sprintf("%s StorageOS nodes are functional", status.Ready))
 		}
 	}
 
-	m.Status = *status
-	return sdk.Update(m)
+	s.stos.Status = *status
+	return s.client.Update(context.Background(), s.stos)
 }
 
-func getStorageOSStatus(m *api.StorageOSCluster) (*api.StorageOSServiceStatus, error) {
-	nodeList := nodeList()
+func (s *Deployment) getStorageOSStatus() (*api.StorageOSServiceStatus, error) {
+	nodeList := NodeList()
 
-	if err := sdk.List(m.Spec.GetResourceNS(), nodeList); err != nil {
+	lopts := &client.ListOptions{Namespace: s.stos.Spec.GetResourceNS()}
+	if err := s.client.List(context.Background(), lopts, nodeList); err != nil {
 		return nil, fmt.Errorf("failed to list nodes: %v", err)
 	}
-	nodeIPs := getNodeIPs(nodeList.Items)
+	nodeIPs := GetNodeIPs(nodeList.Items)
 
 	totalNodes := len(nodeIPs)
 	readyNodes := 0
