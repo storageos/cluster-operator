@@ -212,14 +212,14 @@ func (s *Deployment) createNamespace() error {
 	return nil
 }
 
-func (s *Deployment) createServiceAccountForDaemonSet() error {
+func (s *Deployment) createServiceAccount(name string) error {
 	sa := &v1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "ServiceAccount",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "storageos-daemonset-sa",
+			Name:      name,
 			Namespace: s.stos.Spec.GetResourceNS(),
 			Labels: map[string]string{
 				"app": appName,
@@ -234,26 +234,12 @@ func (s *Deployment) createServiceAccountForDaemonSet() error {
 	return nil
 }
 
-func (s *Deployment) createServiceAccountForStatefulSet() error {
-	sa := &v1.ServiceAccount{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ServiceAccount",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "storageos-statefulset-sa",
-			Namespace: s.stos.Spec.GetResourceNS(),
-			Labels: map[string]string{
-				"app": appName,
-			},
-		},
-	}
+func (s *Deployment) createServiceAccountForDaemonSet() error {
+	return s.createServiceAccount("storageos-daemonset-sa")
+}
 
-	addOwnerRefToObject(sa, asOwner(s.stos))
-	if err := s.client.Create(context.Background(), sa); err != nil && !apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("failed to create service account: %v", err)
-	}
-	return nil
+func (s *Deployment) createServiceAccountForStatefulSet() error {
+	return s.createServiceAccount("storageos-statefulset-sa")
 }
 
 func (s *Deployment) createRoleForKeyMgmt() error {
@@ -285,30 +271,19 @@ func (s *Deployment) createRoleForKeyMgmt() error {
 	return nil
 }
 
-func (s *Deployment) createClusterRoleForDriverRegistrar() error {
+func (s *Deployment) createClusterRole(name string, rules []rbacv1.PolicyRule) error {
 	role := &rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
 			Kind:       "ClusterRole",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "driver-registrar-role",
+			Name: name,
 			Labels: map[string]string{
 				"app": appName,
 			},
 		},
-		Rules: []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{""},
-				Resources: []string{"nodes"},
-				Verbs:     []string{"get", "update"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"events"},
-				Verbs:     []string{"list", "watch", "create", "update", "patch"},
-			},
-		},
+		Rules: rules,
 	}
 
 	addOwnerRefToObject(role, asOwner(s.stos))
@@ -316,102 +291,84 @@ func (s *Deployment) createClusterRoleForDriverRegistrar() error {
 		return fmt.Errorf("failed to create cluster role: %v", err)
 	}
 	return nil
+}
+
+func (s *Deployment) createClusterRoleForDriverRegistrar() error {
+	rules := []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{""},
+			Resources: []string{"nodes"},
+			Verbs:     []string{"get", "update"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"events"},
+			Verbs:     []string{"list", "watch", "create", "update", "patch"},
+		},
+	}
+	return s.createClusterRole("driver-registrar-role", rules)
 }
 
 func (s *Deployment) createClusterRoleForProvisioner() error {
-	role := &rbacv1.ClusterRole{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "rbac.authorization.k8s.io/v1",
-			Kind:       "ClusterRole",
+	rules := []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{""},
+			Resources: []string{"persistentvolumes"},
+			Verbs:     []string{"list", "watch", "create", "delete"},
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "csi-provisioner-role",
-			Labels: map[string]string{
-				"app": appName,
-			},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"persistentvolumeclaims"},
+			Verbs:     []string{"get", "list", "watch", "update"},
 		},
-		Rules: []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{""},
-				Resources: []string{"persistentvolumes"},
-				Verbs:     []string{"list", "watch", "create", "delete"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"persistentvolumeclaims"},
-				Verbs:     []string{"get", "list", "watch", "update"},
-			},
-			{
-				APIGroups: []string{"storageo.k8s.io"},
-				Resources: []string{"storageclasses"},
-				Verbs:     []string{"list", "watch", "get"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"secrets"},
-				Verbs:     []string{"get"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"events"},
-				Verbs:     []string{"list", "watch", "create", "update", "patch"},
-			},
+		{
+			APIGroups: []string{"storageo.k8s.io"},
+			Resources: []string{"storageclasses"},
+			Verbs:     []string{"list", "watch", "get"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"secrets"},
+			Verbs:     []string{"get"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"events"},
+			Verbs:     []string{"list", "watch", "create", "update", "patch"},
 		},
 	}
-
-	addOwnerRefToObject(role, asOwner(s.stos))
-	if err := s.client.Create(context.Background(), role); err != nil && !apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("failed to create cluster role: %v", err)
-	}
-	return nil
+	return s.createClusterRole("csi-provisioner-role", rules)
 }
 
 func (s *Deployment) createClusterRoleForAttacher() error {
-	role := &rbacv1.ClusterRole{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "rbac.authorization.k8s.io/v1",
-			Kind:       "ClusterRole",
+	rules := []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{""},
+			Resources: []string{"persistentvolumes"},
+			Verbs:     []string{"get", "list", "watch", "update"},
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "csi-attacher-role",
-			Labels: map[string]string{
-				"app": appName,
-			},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"nodes"},
+			Verbs:     []string{"get", "list", "watch"},
 		},
-		Rules: []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{""},
-				Resources: []string{"persistentvolumes"},
-				Verbs:     []string{"get", "list", "watch", "update"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"nodes"},
-				Verbs:     []string{"get", "list", "watch"},
-			},
-			{
-				APIGroups: []string{"storage.k8s.io"},
-				Resources: []string{"storageclasses"},
-				Verbs:     []string{"list", "watch", "get"},
-			},
-			{
-				APIGroups: []string{"storage.k8s.io"},
-				Resources: []string{"volumeattachments"},
-				Verbs:     []string{"get", "list", "watch", "update"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"events"},
-				Verbs:     []string{"list", "watch", "create", "update", "patch"},
-			},
+		{
+			APIGroups: []string{"storage.k8s.io"},
+			Resources: []string{"storageclasses"},
+			Verbs:     []string{"list", "watch", "get"},
+		},
+		{
+			APIGroups: []string{"storage.k8s.io"},
+			Resources: []string{"volumeattachments"},
+			Verbs:     []string{"get", "list", "watch", "update"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"events"},
+			Verbs:     []string{"list", "watch", "create", "update", "patch"},
 		},
 	}
-
-	addOwnerRefToObject(role, asOwner(s.stos))
-	if err := s.client.Create(context.Background(), role); err != nil && !apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("failed to create cluster role: %v", err)
-	}
-	return nil
+	return s.createClusterRole("csi-attacher-role", rules)
 }
 
 func (s *Deployment) createRoleBindingForKeyMgmt() error {
@@ -448,30 +405,20 @@ func (s *Deployment) createRoleBindingForKeyMgmt() error {
 	return nil
 }
 
-func (s *Deployment) createClusterRoleBindingForDriverRegistrar() error {
+func (s *Deployment) createClusterRoleBinding(name string, subjects []rbacv1.Subject, roleRef rbacv1.RoleRef) error {
 	roleBinding := &rbacv1.ClusterRoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
 			Kind:       "ClusterRoleBinding",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "driver-registrar-binding",
+			Name: name,
 			Labels: map[string]string{
 				"app": appName,
 			},
 		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      "ServiceAccount",
-				Name:      "storageos-daemonset-sa",
-				Namespace: s.stos.Spec.GetResourceNS(),
-			},
-		},
-		RoleRef: rbacv1.RoleRef{
-			Kind:     "ClusterRole",
-			Name:     "driver-registrar-role",
-			APIGroup: "rbac.authorization.k8s.io",
-		},
+		Subjects: subjects,
+		RoleRef:  roleRef,
 	}
 
 	addOwnerRefToObject(roleBinding, asOwner(s.stos))
@@ -479,72 +426,54 @@ func (s *Deployment) createClusterRoleBindingForDriverRegistrar() error {
 		return fmt.Errorf("failed to create cluster role binding: %v", err)
 	}
 	return nil
+}
+
+func (s *Deployment) createClusterRoleBindingForDriverRegistrar() error {
+	subjects := []rbacv1.Subject{
+		{
+			Kind:      "ServiceAccount",
+			Name:      "storageos-daemonset-sa",
+			Namespace: s.stos.Spec.GetResourceNS(),
+		},
+	}
+	roleRef := rbacv1.RoleRef{
+		Kind:     "ClusterRole",
+		Name:     "driver-registrar-role",
+		APIGroup: "rbac.authorization.k8s.io",
+	}
+	return s.createClusterRoleBinding("driver-registrar-binding", subjects, roleRef)
 }
 
 func (s *Deployment) createClusterRoleBindingForProvisioner() error {
-	roleBinding := &rbacv1.ClusterRoleBinding{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "rbac.authorization.k8s.io/v1",
-			Kind:       "ClusterRoleBinding",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "csi-provisioner-binding",
-			Labels: map[string]string{
-				"app": appName,
-			},
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      "ServiceAccount",
-				Name:      "storageos-statefulset-sa",
-				Namespace: s.stos.Spec.GetResourceNS(),
-			},
-		},
-		RoleRef: rbacv1.RoleRef{
-			Kind:     "ClusterRole",
-			Name:     "csi-provisioner-role",
-			APIGroup: "rbac.authorization.k8s.io",
+	subjects := []rbacv1.Subject{
+		{
+			Kind:      "ServiceAccount",
+			Name:      "storageos-statefulset-sa",
+			Namespace: s.stos.Spec.GetResourceNS(),
 		},
 	}
-
-	addOwnerRefToObject(roleBinding, asOwner(s.stos))
-	if err := s.client.Create(context.Background(), roleBinding); err != nil && !apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("failed to create cluster role binding: %v", err)
+	roleRef := rbacv1.RoleRef{
+		Kind:     "ClusterRole",
+		Name:     "csi-provisioner-role",
+		APIGroup: "rbac.authorization.k8s.io",
 	}
-	return nil
+	return s.createClusterRoleBinding("csi-provisioner-binding", subjects, roleRef)
 }
 
 func (s *Deployment) createClusterRoleBindingForAttacher() error {
-	roleBinding := &rbacv1.ClusterRoleBinding{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "rbac.authorization.k8s.io/v1",
-			Kind:       "ClusterRoleBinding",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "csi-attacher-binding",
-			Labels: map[string]string{
-				"app": appName,
-			},
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      "ServiceAccount",
-				Name:      "storageos-statefulset-sa",
-				Namespace: s.stos.Spec.GetResourceNS(),
-			},
-		},
-		RoleRef: rbacv1.RoleRef{
-			Kind:     "ClusterRole",
-			Name:     "csi-attacher-role",
-			APIGroup: "rbac.authorization.k8s.io",
+	subjects := []rbacv1.Subject{
+		{
+			Kind:      "ServiceAccount",
+			Name:      "storageos-statefulset-sa",
+			Namespace: s.stos.Spec.GetResourceNS(),
 		},
 	}
-
-	addOwnerRefToObject(roleBinding, asOwner(s.stos))
-	if err := s.client.Create(context.Background(), roleBinding); err != nil && !apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("failed to create cluster role binding: %v", err)
+	roleRef := rbacv1.RoleRef{
+		Kind:     "ClusterRole",
+		Name:     "csi-attacher-role",
+		APIGroup: "rbac.authorization.k8s.io",
 	}
-	return nil
+	return s.createClusterRoleBinding("csi-attacher-binding", subjects, roleRef)
 }
 
 func (s *Deployment) createDaemonSet() error {
@@ -741,7 +670,6 @@ func (s *Deployment) createDaemonSet() error {
 								},
 							},
 						},
-						// TODO: Add sharedDir volume.
 					},
 				},
 			},
