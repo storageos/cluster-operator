@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"runtime"
+	"time"
 
 	sdk "github.com/operator-framework/operator-sdk/pkg/sdk"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
+	"github.com/storageos/storageoscluster-operator/pkg/controller"
 	stub "github.com/storageos/storageoscluster-operator/pkg/stub"
 
 	"k8s.io/api/core/v1"
@@ -33,11 +35,13 @@ func main() {
 	kind := "StorageOSCluster"
 	// Empty namespace to watch all the namespaces for the custom resource.
 	namespace := ""
-	resyncPeriod := 10
+	resyncPeriod := time.Duration(10) * time.Second
 	logrus.Infof("Watching %s, %s, %s, %d", resource, kind, namespace, resyncPeriod)
 	sdk.Watch(resource, kind, namespace, resyncPeriod)
 	kubeclient := k8sclient.GetKubeClient()
-	sdk.Handle(stub.NewHandler(eventRecorder(kubeclient)))
+	operatorClient := controller.OperatorClient{}
+	clusterController := controller.NewClusterController(operatorClient)
+	sdk.Handle(stub.NewHandler(eventRecorder(kubeclient), clusterController))
 	sdk.Run(context.TODO())
 }
 

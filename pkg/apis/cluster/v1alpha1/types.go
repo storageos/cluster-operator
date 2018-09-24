@@ -28,6 +28,7 @@ const (
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// StorageOSClusterList represents a list of StorageOSClusters.
 type StorageOSClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
@@ -36,6 +37,7 @@ type StorageOSClusterList struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// StorageOSCluster is a Custom Resource of type `StorageOSSpec`.
 type StorageOSCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`

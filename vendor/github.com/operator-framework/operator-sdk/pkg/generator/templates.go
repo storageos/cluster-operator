@@ -132,6 +132,7 @@ const mainTmpl = `package main
 import (
 	"context"
 	"runtime"
+	"time"
 
 	stub "{{.StubImport}}"
 	sdk "{{.OperatorSDKImport}}"
@@ -159,7 +160,7 @@ func main() {
 	if err != nil {
 		logrus.Fatalf("failed to get watch namespace: %v", err)
 	}
-	resyncPeriod := 5
+	resyncPeriod := time.Duration(5) * time.Second
 	logrus.Infof("Watching %s, %s, %s, %d", resource, kind, namespace, resyncPeriod)
 	sdk.Watch(resource, kind, namespace, resyncPeriod)
 	sdk.Handle(stub.NewHandler())
@@ -281,11 +282,21 @@ required = [
   name = "sigs.k8s.io/controller-runtime"
   revision = "60bb251ad86f9b313653618aad0c2c53f41a6625"
 
+[prune]
+  go-tests = true
+  non-go = true
+  unused-packages = true
+
+  [[prune.project]]
+    name = "k8s.io/code-generator"
+    non-go = false
+    unused-packages = false
+
 [[constraint]]
   name = "github.com/operator-framework/operator-sdk"
   # The version rule is used for a specific release and the master branch for in between releases.
-  branch = "master"
-  # version = "=v0.0.5"
+  # branch = "master"
+  version = "=v0.0.6"
 `
 
 const projectGitignoreTmpl = `
