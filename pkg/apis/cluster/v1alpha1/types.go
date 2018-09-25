@@ -4,8 +4,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// ClusterPhase is the phase of the storageos cluster at a given point in time.
 type ClusterPhase string
 
+// Constants for operator defaults values and different phases.
 const (
 	ClusterPhaseInitial ClusterPhase = ""
 	ClusterPhaseRunning              = "Running"
@@ -45,6 +47,7 @@ type StorageOSCluster struct {
 	Status            StorageOSServiceStatus `json:"status,omitempty"`
 }
 
+// StorageOSSpec is the Spec of a StorageOS Cluster.
 type StorageOSSpec struct {
 	Join               string           `json:"join"`
 	CSI                StorageOSCSI     `json:"csi"`
@@ -154,6 +157,7 @@ type ContainerImages struct {
 	CSIExternalAttacherContainer    string `json:"csiExternalAttacherContainer"`
 }
 
+// StorageOSCSI contains CSI configurations.
 type StorageOSCSI struct {
 	Enable                       bool `json:"enable"`
 	EnableProvisionCreds         bool `json:"enableProvisionCreds"`
@@ -161,6 +165,7 @@ type StorageOSCSI struct {
 	EnableNodePublishCreds       bool `json:"enableNodePublishCreds"`
 }
 
+// StorageOSService contains Service configurations.
 type StorageOSService struct {
 	Name         string            `json:"name"`
 	Type         string            `json:"type"`
@@ -169,6 +174,7 @@ type StorageOSService struct {
 	Annotations  map[string]string `json:"annotations"`
 }
 
+// StorageOSIngress contains Ingress configurations.
 type StorageOSIngress struct {
 	Enable      bool              `json:"enable"`
 	Hostname    string            `json:"hostname"`
@@ -176,6 +182,7 @@ type StorageOSIngress struct {
 	Annotations map[string]string `json:"annotations"`
 }
 
+// StorageOSServiceStatus contains status data of the cluster.
 type StorageOSServiceStatus struct {
 	Phase            ClusterPhase          `json:"phase"`
 	NodeHealthStatus map[string]NodeHealth `json:"nodeHealthStatus,omitempty"`
@@ -183,6 +190,7 @@ type StorageOSServiceStatus struct {
 	Ready            string                `json:"ready"`
 }
 
+// NodeHealth contains health status of a node.
 type NodeHealth struct {
 	DirectfsInitiator string `json:"directfsInitiator"`
 	Director          string `json:"director"`

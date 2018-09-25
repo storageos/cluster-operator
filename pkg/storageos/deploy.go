@@ -91,6 +91,8 @@ type Deployment struct {
 	recorder record.EventRecorder
 }
 
+// NewDeployment creates a new Deployment given a k8c client, storageos manifest
+// and an event broadcast recorder.
 func NewDeployment(client client.Client, stos *api.StorageOSCluster, recorder record.EventRecorder) *Deployment {
 	return &Deployment{
 		client:   client,
