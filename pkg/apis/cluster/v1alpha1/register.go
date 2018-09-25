@@ -13,6 +13,7 @@ const (
 	groupName = "storageos.com"
 )
 
+// Scheme related package level variables.
 var (
 	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
 	AddToScheme   = SchemeBuilder.AddToScheme
