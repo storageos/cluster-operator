@@ -60,6 +60,11 @@ type ClusterController struct {
 	currentCluster *clusterv1alpha1.StorageOSCluster
 }
 
+// NewClusterController creates and returns a new ClusterController, given a client.
+func NewClusterController(c client.Client) *ClusterController {
+	return &ClusterController{client: c}
+}
+
 // SetCurrentClusterIfNone checks if there's any existing current cluster and
 // sets a new current cluster if it wasn't set before.
 func (c *ClusterController) SetCurrentClusterIfNone(cluster *clusterv1alpha1.StorageOSCluster) {
@@ -89,11 +94,6 @@ func (c *ClusterController) IsCurrentCluster(cluster *clusterv1alpha1.StorageOSC
 // ResetCurrentCluster resets the current cluster of the controller.
 func (c *ClusterController) ResetCurrentCluster() {
 	c.currentCluster = nil
-}
-
-// NewClusterController creates and returns a new ClusterController, given a client.
-func NewClusterController(c client.Client) *ClusterController {
-	return &ClusterController{client: c}
 }
 
 // Reconcile ensures that the state specified in the Spec of the object matches
