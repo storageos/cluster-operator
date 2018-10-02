@@ -2,6 +2,7 @@ package stub
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/storageos/storageoscluster-operator/pkg/apis/cluster/v1alpha1"
 	"github.com/storageos/storageoscluster-operator/pkg/controller"
@@ -29,7 +30,19 @@ func (h *Handler) Handle(ctx context.Context, event sdk.Event) error {
 		// Ignore the delete event since the garbage collector will clean up all secondary resources for the CR
 		// All secondary resources must have the CR set as their OwnerReference for this to be the case
 		if event.Deleted {
+			if h.controller.IsCurrentCluster(o) {
+				h.controller.ResetCurrentCluster()
+			}
 			return nil
+		}
+
+		// Set as the current cluster if there's no current cluster.
+		h.controller.SetCurrentClusterIfNone(o)
+
+		// If the event doesn't belongs to the current cluster, do not reconcile.
+		// There must be only a single instance of storageos in a cluster.
+		if !h.controller.IsCurrentCluster(o) {
+			return fmt.Errorf("can't create more than one storageos cluster")
 		}
 
 		return h.controller.Reconcile(o, h.eventRecorder)
