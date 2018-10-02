@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
+	clusterv1alpha1 "github.com/storageos/storageoscluster-operator/pkg/apis/cluster/v1alpha1"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -55,12 +56,44 @@ func (oc OperatorClient) Status() client.StatusWriter {
 
 // ClusterController is the StorageOS cluster controller.
 type ClusterController struct {
-	client client.Client
+	client         client.Client
+	currentCluster *clusterv1alpha1.StorageOSCluster
 }
 
 // NewClusterController creates and returns a new ClusterController, given a client.
 func NewClusterController(c client.Client) *ClusterController {
 	return &ClusterController{client: c}
+}
+
+// SetCurrentClusterIfNone checks if there's any existing current cluster and
+// sets a new current cluster if it wasn't set before.
+func (c *ClusterController) SetCurrentClusterIfNone(cluster *clusterv1alpha1.StorageOSCluster) {
+	if c.currentCluster == nil {
+		c.SetCurrentCluster(cluster)
+	}
+}
+
+// SetCurrentCluster sets the currently active cluster in the controller.
+func (c *ClusterController) SetCurrentCluster(cluster *clusterv1alpha1.StorageOSCluster) {
+	c.currentCluster = cluster
+}
+
+// IsCurrentCluster compares a given cluster with the current cluster to check
+// if they are the same.
+func (c *ClusterController) IsCurrentCluster(cluster *clusterv1alpha1.StorageOSCluster) bool {
+	if cluster == nil {
+		return false
+	}
+
+	if (c.currentCluster.GetName() == cluster.GetName()) && (c.currentCluster.GetNamespace() == cluster.GetNamespace()) {
+		return true
+	}
+	return false
+}
+
+// ResetCurrentCluster resets the current cluster of the controller.
+func (c *ClusterController) ResetCurrentCluster() {
+	c.currentCluster = nil
 }
 
 // Reconcile ensures that the state specified in the Spec of the object matches
@@ -122,6 +155,7 @@ func (c *ClusterController) Reconcile(m *api.StorageOSCluster, recorder record.E
 		}
 	} else {
 		recorder.Event(m, v1.EventTypeNormal, "Terminating", "StorageOS object deleted")
+		c.ResetCurrentCluster()
 		// Reset finalizers and let k8s delete the object.
 		// When finalizers are set on an object, metadata.deletionTimestamp is
 		// also set. deletionTimestamp helps the garbage collector identify
