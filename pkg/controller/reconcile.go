@@ -54,6 +54,7 @@ func (c *ClusterController) IsCurrentCluster(cluster *clusterv1alpha1.StorageOSC
 
 // ResetCurrentCluster resets the current cluster of the controller.
 func (c *ClusterController) ResetCurrentCluster() {
+	cleanup(c.client)
 	c.currentCluster = nil
 }
 
