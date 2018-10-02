@@ -6,6 +6,7 @@ import (
 
 	"github.com/storageos/storageoscluster-operator/pkg/apis/cluster/v1alpha1"
 	"github.com/storageos/storageoscluster-operator/pkg/controller"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/record"
 
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
@@ -42,7 +43,9 @@ func (h *Handler) Handle(ctx context.Context, event sdk.Event) error {
 		// If the event doesn't belongs to the current cluster, do not reconcile.
 		// There must be only a single instance of storageos in a cluster.
 		if !h.controller.IsCurrentCluster(o) {
-			return fmt.Errorf("can't create more than one storageos cluster")
+			err := fmt.Errorf("can't create more than one storageos cluster")
+			h.eventRecorder.Event(o, corev1.EventTypeWarning, "FailedCreation", err.Error())
+			return err
 		}
 
 		return h.controller.Reconcile(o, h.eventRecorder)
