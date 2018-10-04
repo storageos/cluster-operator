@@ -31,6 +31,7 @@ func (h *Handler) Handle(ctx context.Context, event sdk.Event) error {
 		// Ignore the delete event since the garbage collector will clean up all secondary resources for the CR
 		// All secondary resources must have the CR set as their OwnerReference for this to be the case
 		if event.Deleted {
+			// If the current cluster is deleted, reset current cluster.
 			if h.controller.IsCurrentCluster(o) {
 				h.controller.ResetCurrentCluster()
 			}

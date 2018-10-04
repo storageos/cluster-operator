@@ -26,6 +26,14 @@
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
+  branch = "master"
+  digest = "1:797795992132adfb4ef5eec1dffe16eaed73291d214a1d29f99616d10405be92"
+  name = "github.com/darkowlzz/daemonset-job"
+  packages = ["pkg/apis/daemonset/v1beta1"]
+  pruneopts = ""
+  revision = "c828f905532bf39206ebe4635cfa6a52f45918d4"
+
+[[projects]]
   digest = "1:56c130d885a4aacae1dd9c7b71cfe39912c7ebc1ff7d2b46083c8812996dc43b"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -678,6 +686,7 @@
     "pkg/client/apiutil",
     "pkg/client/fake",
     "pkg/runtime/log",
+    "pkg/runtime/scheme",
   ]
   pruneopts = ""
   revision = "67e28744a963c78a34108c3b52aadbc5e02f4384"
@@ -687,6 +696,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/darkowlzz/daemonset-job/pkg/apis/daemonset/v1beta1",
     "github.com/operator-framework/operator-sdk/pkg/k8sclient",
     "github.com/operator-framework/operator-sdk/pkg/sdk",
     "github.com/operator-framework/operator-sdk/pkg/util/k8sutil",
