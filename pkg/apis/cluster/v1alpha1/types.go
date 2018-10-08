@@ -58,6 +58,7 @@ type StorageOSSpec struct {
 	SharedDir          string           `json:"sharedDir"`
 	Ingress            StorageOSIngress `json:"ingress"`
 	Images             ContainerImages  `json:"images"`
+	CleanupAtDelete    bool             `json:"cleanupAtDelete"`
 }
 
 // GetResourceNS returns the namespace where all the resources should be provisioned.

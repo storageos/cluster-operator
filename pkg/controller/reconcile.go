@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
@@ -54,7 +55,11 @@ func (c *ClusterController) IsCurrentCluster(cluster *clusterv1alpha1.StorageOSC
 
 // ResetCurrentCluster resets the current cluster of the controller.
 func (c *ClusterController) ResetCurrentCluster() {
-	cleanup(c.client)
+	if c.currentCluster.Spec.CleanupAtDelete {
+		if err := cleanup(c.client); err != nil {
+			log.Println(err)
+		}
+	}
 	c.currentCluster = nil
 }
 
