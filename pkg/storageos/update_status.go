@@ -77,7 +77,7 @@ func (s *Deployment) getStorageOSStatus() (*api.StorageOSServiceStatus, error) {
 
 func isHealthy(health *api.NodeHealth) bool {
 	if health.DirectfsInitiator+health.Director+health.KV+health.KVWrite+
-		health.Nats+health.Presentation+health.Rdb+health.Scheduler == strings.Repeat("alive", 8) {
+		health.Nats+health.Presentation+health.Rdb == strings.Repeat("alive", 7) {
 		return true
 	}
 	return false
@@ -115,6 +115,5 @@ func getNodeHealth(address string, timeout int) (*api.NodeHealth, error) {
 		Nats:              healthStatus.Submodules.NATS.Status,
 		Presentation:      healthStatus.Submodules.FS.Status,
 		Rdb:               healthStatus.Submodules.FSDriver.Status,
-		Scheduler:         healthStatus.Submodules.Scheduler.Status,
 	}, nil
 }

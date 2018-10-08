@@ -21,7 +21,7 @@ const (
 
 	DefaultIngressHostname = "storageos.local"
 
-	DefaultNodeContainerImage                   = "storageos/node:1.0.0-rc4"
+	DefaultNodeContainerImage                   = "storageos/node:1.0.0-rc5"
 	DefaultCSIDriverRegistrarContainerImage     = "quay.io/k8scsi/driver-registrar:v0.2.0"
 	DefaultCSIExternalProvisionerContainerImage = "quay.io/k8scsi/csi-provisioner:v0.3.0"
 	DefaultCSIExternalAttacherContainerImage    = "quay.io/k8scsi/csi-attacher:v0.3.0"
@@ -199,5 +199,4 @@ type NodeHealth struct {
 	Nats              string `json:"nats"`
 	Presentation      string `json:"presentation"`
 	Rdb               string `json:"rdb"`
-	Scheduler         string `json:"scheduler"`
 }
