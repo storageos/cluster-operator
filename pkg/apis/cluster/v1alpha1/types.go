@@ -21,11 +21,12 @@ const (
 
 	DefaultIngressHostname = "storageos.local"
 
-	DefaultNodeContainerImage                   = "storageos/node:1.0.0-rc4"
+	DefaultNodeContainerImage                   = "storageos/node:1.0.0-rc5"
 	DefaultCSIDriverRegistrarContainerImage     = "quay.io/k8scsi/driver-registrar:v0.2.0"
 	DefaultCSIExternalProvisionerContainerImage = "quay.io/k8scsi/csi-provisioner:v0.3.0"
 	DefaultCSIExternalAttacherContainerImage    = "quay.io/k8scsi/csi-attacher:v0.3.0"
 	DefaultInitContainerImage                   = "storageos/init:0.1"
+	DefaultCleanupContainerImage                = "darkowlzz/cleanup:v0.0.2"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -58,6 +59,7 @@ type StorageOSSpec struct {
 	SharedDir          string           `json:"sharedDir"`
 	Ingress            StorageOSIngress `json:"ingress"`
 	Images             ContainerImages  `json:"images"`
+	CleanupAtDelete    bool             `json:"cleanupAtDelete"`
 }
 
 // GetResourceNS returns the namespace where all the resources should be provisioned.
@@ -108,6 +110,14 @@ func (s StorageOSSpec) GetCSIExternalAttacherImage() string {
 	return DefaultCSIExternalAttacherContainerImage
 }
 
+// GetCleanupContainerImage returns the container image used for cleanup.
+func (s StorageOSSpec) GetCleanupContainerImage() string {
+	if s.Images.CleanupContainer != "" {
+		return s.Images.CleanupContainer
+	}
+	return DefaultCleanupContainerImage
+}
+
 // GetServiceName returns the service name.
 func (s StorageOSSpec) GetServiceName() string {
 	if s.Service.Name != "" {
@@ -155,6 +165,7 @@ type ContainerImages struct {
 	CSIDriverRegistrarContainer     string `json:"csiDriverRegistrarContainer"`
 	CSIExternalProvisionerContainer string `json:"csiExternalProvisionerContainer"`
 	CSIExternalAttacherContainer    string `json:"csiExternalAttacherContainer"`
+	CleanupContainer                string `json:"cleanupContainer"`
 }
 
 // StorageOSCSI contains CSI configurations.
@@ -199,5 +210,4 @@ type NodeHealth struct {
 	Nats              string `json:"nats"`
 	Presentation      string `json:"presentation"`
 	Rdb               string `json:"rdb"`
-	Scheduler         string `json:"scheduler"`
 }

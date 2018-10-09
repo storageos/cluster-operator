@@ -88,6 +88,8 @@ spec:
                 tls:
                   type: boolean
                 annotations: {}
+            cleanupAtDelete:
+              type: boolean
         status:
           properties:
             phase:
