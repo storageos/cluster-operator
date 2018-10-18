@@ -3,7 +3,9 @@ package storageos
 import (
 	"context"
 	"fmt"
+	"log"
 
+	"github.com/blang/semver"
 	api "github.com/storageos/storageoscluster-operator/pkg/apis/cluster/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
@@ -86,18 +88,20 @@ const (
 // Deployment stores all the resource configuration and performs
 // resource creation and update.
 type Deployment struct {
-	client   client.Client
-	stos     *api.StorageOSCluster
-	recorder record.EventRecorder
+	client     client.Client
+	stos       *api.StorageOSCluster
+	recorder   record.EventRecorder
+	k8sVersion string
 }
 
 // NewDeployment creates a new Deployment given a k8c client, storageos manifest
 // and an event broadcast recorder.
-func NewDeployment(client client.Client, stos *api.StorageOSCluster, recorder record.EventRecorder) *Deployment {
+func NewDeployment(client client.Client, stos *api.StorageOSCluster, recorder record.EventRecorder, version string) *Deployment {
 	return &Deployment{
-		client:   client,
-		stos:     stos,
-		recorder: recorder,
+		client:     client,
+		stos:       stos,
+		recorder:   recorder,
+		k8sVersion: version,
 	}
 }
 
@@ -743,6 +747,15 @@ func (s *Deployment) createDaemonSet() error {
 					},
 				},
 			},
+			{
+				Name: "registration-dir",
+				VolumeSource: v1.VolumeSource{
+					HostPath: &v1.HostPathVolumeSource{
+						Path: "/var/lib/kubelet/plugins",
+						Type: &hostpathDir,
+					},
+				},
+			},
 		}
 
 		dset.Spec.Template.Spec.Volumes = append(dset.Spec.Template.Spec.Volumes, vols...)
@@ -840,7 +853,8 @@ func (s *Deployment) createDaemonSet() error {
 					Name: kubeNodeNameEnvVar,
 					ValueFrom: &v1.EnvVarSource{
 						FieldRef: &v1.ObjectFieldSelector{
-							FieldPath: "spec.nodeName",
+							APIVersion: "v1",
+							FieldPath:  "spec.nodeName",
 						},
 					},
 				},
@@ -854,7 +868,22 @@ func (s *Deployment) createDaemonSet() error {
 					Name:      "registrar-socket-dir",
 					MountPath: "/var/lib/csi/sockets/",
 				},
+				{
+					Name:      "registration-dir",
+					MountPath: "/registration",
+				},
 			},
+		}
+
+		// Add extra flags to activate node-register mode if kubelet plugins
+		// watcher is supported.
+		if kubeletPluginsWatcherSupported(s.k8sVersion) {
+			driverReg.Args = append(
+				driverReg.Args,
+				"--mode=node-register",
+				"--driver-requires-attachment=true",
+				"--pod-info-mount-version=v1",
+				"--kubelet-registration-path=/var/lib/kubelet/plugins/storageos/csi.sock")
 		}
 		dset.Spec.Template.Spec.Containers = append(dset.Spec.Template.Spec.Containers, driverReg)
 	}
@@ -864,6 +893,29 @@ func (s *Deployment) createDaemonSet() error {
 		return fmt.Errorf("failed to create daemonset: %v", err)
 	}
 	return nil
+}
+
+// kubeletPluginsWatcherSupported checks if the given version of k8s supports
+// KubeletPluginsWatcher. This is used to change the CSI driver registry setup
+// based on the kubernetes cluster setup.
+func kubeletPluginsWatcherSupported(version string) bool {
+	supportedVersion, err := semver.Parse("1.12.0")
+	if err != nil {
+		log.Printf("failed to parse version: %v", err)
+		return false
+	}
+
+	currentVersion, err := semver.Parse(version)
+	if err != nil {
+		log.Printf("failed to parse version: %v", err)
+		return false
+	}
+
+	// Supported if v1.12.0 or above.
+	if currentVersion.Compare(supportedVersion) >= 0 {
+		return true
+	}
+	return false
 }
 
 // getCSICredsEnvVar returns a v1.EnvVar object with value from a secret key

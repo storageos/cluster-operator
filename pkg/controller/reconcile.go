@@ -20,11 +20,12 @@ import (
 type ClusterController struct {
 	client         client.Client
 	currentCluster *clusterv1alpha1.StorageOSCluster
+	k8sVersion     string
 }
 
 // NewClusterController creates and returns a new ClusterController, given a client.
-func NewClusterController(c client.Client) *ClusterController {
-	return &ClusterController{client: c}
+func NewClusterController(c client.Client, version string) *ClusterController {
+	return &ClusterController{client: c, k8sVersion: version}
 }
 
 // SetCurrentClusterIfNone checks if there's any existing current cluster and
@@ -113,7 +114,7 @@ func (c *ClusterController) Reconcile(m *api.StorageOSCluster, recorder record.E
 	// Finalizers are set when an object should be deleted. Apply deploy only
 	// when finalizers is empty.
 	if len(m.GetFinalizers()) == 0 {
-		stosDeployment := storageos.NewDeployment(c.client, m, recorder)
+		stosDeployment := storageos.NewDeployment(c.client, m, recorder, c.k8sVersion)
 		if err := stosDeployment.Deploy(); err != nil {
 			// Ignore "Operation cannot be fulfilled" error. It happens when the
 			// actual state of object is different from what is known to the operator.

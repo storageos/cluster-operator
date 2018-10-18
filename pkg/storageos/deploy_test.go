@@ -34,7 +34,7 @@ func setupFakeDeployment() (client.Client, *Deployment) {
 		},
 	}
 
-	deploy := NewDeployment(c, stosCluster, nil)
+	deploy := NewDeployment(c, stosCluster, nil, "")
 	return c, deploy
 }
 
@@ -321,7 +321,7 @@ func TestCreateDaemonSet(t *testing.T) {
 
 	for _, tc := range testcases {
 		stosCluster.Spec = tc.spec
-		deploy := NewDeployment(c, stosCluster, nil)
+		deploy := NewDeployment(c, stosCluster, nil, "")
 		if err := deploy.createDaemonSet(); err != nil {
 			t.Fatal("failed to create daemonset", err)
 		}

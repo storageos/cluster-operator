@@ -43,3 +43,7 @@ required = [
 [[constraint]]
   name = "github.com/darkowlzz/daemonset-job"
   branch = "master"
+
+[[constraint]]
+  name = "github.com/blang/semver"
+  version = "v3.5.1"

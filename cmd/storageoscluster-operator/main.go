@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	sdk "github.com/operator-framework/operator-sdk/pkg/sdk"
@@ -39,10 +41,26 @@ func main() {
 	logrus.Infof("Watching %s, %s, %s, %d", resource, kind, namespace, resyncPeriod)
 	sdk.Watch(resource, kind, namespace, resyncPeriod)
 	kubeclient := k8sclient.GetKubeClient()
+
+	k8sVersion, err := getK8SVersion(kubeclient)
+	if err != nil {
+		logrus.Errorf("failed to get k8s version: %v", err)
+		os.Exit(1)
+	}
+	logrus.Infof("k8s version: %s", k8sVersion)
+
 	operatorClient := controller.OperatorClient{}
-	clusterController := controller.NewClusterController(operatorClient)
+	clusterController := controller.NewClusterController(operatorClient, strings.TrimLeft(k8sVersion, "v"))
 	sdk.Handle(stub.NewHandler(eventRecorder(kubeclient), clusterController))
 	sdk.Run(context.TODO())
+}
+
+func getK8SVersion(client kubernetes.Interface) (string, error) {
+	info, err := client.Discovery().ServerVersion()
+	if err != nil {
+		return "", err
+	}
+	return info.String(), nil
 }
 
 // eventRecorder creates and returns an EventRecorder which could be used to
