@@ -5,11 +5,11 @@ IMG ?= controller:latest
 all: test manager
 
 # Run tests
-test: generate fmt vet manifests
+test: generate fmt lint vet manifests
 	go test ./pkg/... ./cmd/... -coverprofile cover.out
 
 # Build manager binary
-manager: generate fmt vet
+manager: generate fmt lint vet
 	go build -o bin/manager github.com/darkowlzz/daemonset-job/cmd/manager
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
@@ -28,6 +28,10 @@ deploy: manifests
 # Generate manifests e.g. CRD, RBAC etc.
 manifests:
 	go run vendor/sigs.k8s.io/controller-tools/cmd/controller-gen/main.go all
+
+# Run golint against code
+lint:
+	golint -set_exit_status $(go list ./...)
 
 # Run go fmt against code
 fmt:

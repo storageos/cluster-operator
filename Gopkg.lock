@@ -27,11 +27,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:797795992132adfb4ef5eec1dffe16eaed73291d214a1d29f99616d10405be92"
+  digest = "1:b4e2f36f76bd05d85395f9bb25787c45097d9feaa61e691e004cb11f1585f879"
   name = "github.com/darkowlzz/daemonset-job"
   packages = ["pkg/apis/daemonset/v1beta1"]
   pruneopts = ""
-  revision = "c828f905532bf39206ebe4635cfa6a52f45918d4"
+  revision = "589bf4c4c958d2b494fb03bd69ea781ad61476e5"
 
 [[projects]]
   digest = "1:56c130d885a4aacae1dd9c7b71cfe39912c7ebc1ff7d2b46083c8812996dc43b"
