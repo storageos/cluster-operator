@@ -13,7 +13,7 @@ jobs:
       - checkout
 
       # specify any bash command here prefixed with `run: `
-      - run: go get github.com/golang/lint/golint
+      - run: go get golang.org/x/lint/golint
       - run: golint -set_exit_status $(go list ./...)
       - run: go vet ./...
       - run: go test -v ./...
