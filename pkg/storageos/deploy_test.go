@@ -327,7 +327,7 @@ func TestCreateDaemonSet(t *testing.T) {
 		}
 
 		nsName := types.NamespacedName{
-			Name:      clusterName,
+			Name:      daemonsetName,
 			Namespace: defaultNS,
 		}
 		createdDaemonset := &appsv1.DaemonSet{
@@ -336,7 +336,7 @@ func TestCreateDaemonSet(t *testing.T) {
 				Kind:       "DaemonSet",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      clusterName,
+				Name:      daemonsetName,
 				Namespace: defaultNS,
 			},
 		}
@@ -407,4 +407,193 @@ func TestCreateStatefulSet(t *testing.T) {
 
 	owner := createdStatefulset.GetOwnerReferences()[0]
 	checkObjectOwner(t, owner, gvk)
+}
+
+func TestDeployLegacy(t *testing.T) {
+	const (
+		containersCount = 1
+		volumesCount    = 4
+	)
+
+	stosCluster := &api.StorageOSCluster{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: gvk.GroupVersion().String(),
+			Kind:       gvk.Kind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "teststos",
+			Namespace: "default",
+		},
+	}
+
+	testCases := []struct {
+		name       string
+		k8sVersion string
+	}{
+		{
+			name:       "empty",
+			k8sVersion: "",
+		},
+		{
+			name:       "1.9",
+			k8sVersion: "1.9",
+		},
+		{
+			name:       "1.11.0",
+			k8sVersion: "1.11.0",
+		},
+		{
+			name:       "1.12.2",
+			k8sVersion: "1.12.2",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			c := fake.NewFakeClient()
+			deploy := NewDeployment(c, stosCluster, nil, tc.k8sVersion)
+			deploy.Deploy()
+
+			createdDaemonset := &appsv1.DaemonSet{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "apps/v1",
+					Kind:       "DaemonSet",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      daemonsetName,
+					Namespace: stosCluster.Spec.GetResourceNS(),
+				},
+			}
+
+			nsName := types.NamespacedName{
+				Name:      daemonsetName,
+				Namespace: defaultNS,
+			}
+
+			if err := c.Get(context.Background(), nsName, createdDaemonset); err != nil {
+				t.Fatal("failed to get the created daemonset", err)
+			}
+
+			owner := createdDaemonset.GetOwnerReferences()[0]
+			checkObjectOwner(t, owner, gvk)
+
+			if len(createdDaemonset.Spec.Template.Spec.Containers) != containersCount {
+				t.Errorf("unexpected number of containers in the DaemonSet:\n\t(GOT) %d\n\t(WNT) %d", len(createdDaemonset.Spec.Template.Spec.Containers), containersCount)
+			}
+
+			if len(createdDaemonset.Spec.Template.Spec.Volumes) != volumesCount {
+				t.Errorf("unexpected number of volumes in the DaemonSet:\n\t(GOT) %d\n\t(WNT) %d", len(createdDaemonset.Spec.Template.Spec.Volumes), volumesCount)
+			}
+		})
+	}
+}
+
+func TestDeployCSI(t *testing.T) {
+	const (
+		kubeletPluginsWatcherDriverRegArgsCount = 6
+		containersCount                         = 2
+		volumesCount                            = 9
+	)
+
+	stosCluster := &api.StorageOSCluster{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: gvk.GroupVersion().String(),
+			Kind:       gvk.Kind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "teststos",
+			Namespace: "default",
+		},
+		Spec: api.StorageOSSpec{
+			CSI: api.StorageOSCSI{
+				Enable: true,
+			},
+		},
+	}
+
+	testCases := []struct {
+		name                          string
+		k8sVersion                    string
+		supportsKubeletPluginsWatcher bool
+	}{
+		{
+			name:       "empty",
+			k8sVersion: "",
+		},
+		{
+			name:       "1.9.0",
+			k8sVersion: "1.9.0",
+		},
+		{
+			name:       "1.11.0",
+			k8sVersion: "1.11.0",
+		},
+		{
+			name:                          "1.12.0",
+			k8sVersion:                    "1.12.0",
+			supportsKubeletPluginsWatcher: true,
+		},
+		{
+			name:                          "1.12.2",
+			k8sVersion:                    "1.12.2",
+			supportsKubeletPluginsWatcher: true,
+		},
+		{
+			name:       "1.9.1+a0ce1bc657",
+			k8sVersion: "1.9.1+a0ce1bc657",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			c := fake.NewFakeClient()
+			deploy := NewDeployment(c, stosCluster, nil, tc.k8sVersion)
+			deploy.Deploy()
+
+			createdDaemonset := &appsv1.DaemonSet{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "apps/v1",
+					Kind:       "DaemonSet",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      daemonsetName,
+					Namespace: stosCluster.Spec.GetResourceNS(),
+				},
+			}
+
+			nsName := types.NamespacedName{
+				Name:      daemonsetName,
+				Namespace: defaultNS,
+			}
+
+			if err := c.Get(context.Background(), nsName, createdDaemonset); err != nil {
+				t.Fatal("failed to get the created daemonset", err)
+			}
+
+			owner := createdDaemonset.GetOwnerReferences()[0]
+			checkObjectOwner(t, owner, gvk)
+
+			if len(createdDaemonset.Spec.Template.Spec.Containers) != containersCount {
+				t.Errorf("unexpected number of containers in the DaemonSet:\n\t(GOT) %d\n\t(WNT) %d", len(createdDaemonset.Spec.Template.Spec.Containers), containersCount)
+			}
+
+			if len(createdDaemonset.Spec.Template.Spec.Volumes) != volumesCount {
+				t.Errorf("unexpected number of volumes in the DaemonSet:\n\t(GOT) %d\n\t(WNT) %d", len(createdDaemonset.Spec.Template.Spec.Volumes), volumesCount)
+			}
+
+			// KubeletPluginsWatcher support is only on k8s 1.12.0+.
+			if kubeletPluginsWatcherSupported(tc.k8sVersion) != tc.supportsKubeletPluginsWatcher {
+				t.Errorf("expected KubeletPluginsWatcherSupported to be %t", tc.supportsKubeletPluginsWatcher)
+			}
+
+			// When KubeletPluginsWatcher is supported, some extra arguments are
+			// passed to set the proper registration mode.
+			if kubeletPluginsWatcherSupported(tc.k8sVersion) {
+				driverReg := createdDaemonset.Spec.Template.Spec.Containers[1]
+				if len(driverReg.Args) != kubeletPluginsWatcherDriverRegArgsCount {
+					t.Errorf("unexpected number of args for DriverRegistration container:\n\t(GOT) %d\n\t(WNT) %d", len(driverReg.Args), kubeletPluginsWatcherDriverRegArgsCount)
+				}
+			}
+		})
+	}
 }

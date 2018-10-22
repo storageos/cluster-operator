@@ -32,6 +32,9 @@ const (
 	daemonsetKind   = "daemonset"
 	statefulsetKind = "statefulset"
 
+	daemonsetName   = "storageos-daemonset"
+	statefulsetName = "storageos-statefulset"
+
 	tlsSecretType       = "kubernetes.io/tls"
 	storageosSecretType = "kubernetes.io/storageos"
 
@@ -496,7 +499,7 @@ func (s *Deployment) createDaemonSet() error {
 			Kind:       "DaemonSet",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      s.stos.Name,
+			Name:      daemonsetName,
 			Namespace: s.stos.Spec.GetResourceNS(),
 		},
 		Spec: appsv1.DaemonSetSpec{
@@ -945,7 +948,7 @@ func (s *Deployment) createStatefulSet() error {
 			Kind:       "StatefulSet",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "storageos-statefulset",
+			Name:      statefulsetName,
 			Namespace: s.stos.Spec.GetResourceNS(),
 		},
 		Spec: appsv1.StatefulSetSpec{
