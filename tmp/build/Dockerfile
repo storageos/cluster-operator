@@ -1,6 +1,6 @@
 FROM alpine:3.6
 
-RUN adduser -D storageoscluster-operator
-USER storageoscluster-operator
+RUN adduser -D cluster-operator
+USER cluster-operator
 
-ADD tmp/_output/bin/storageoscluster-operator /usr/local/bin/storageoscluster-operator
+ADD tmp/_output/bin/cluster-operator /usr/local/bin/cluster-operator

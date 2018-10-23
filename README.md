@@ -1,10 +1,10 @@
-# storageoscluster-operator
+# storageos cluster-operator
 
 
 Setup/Development:
 1. Install [operator-sdk](https://github.com/operator-framework/operator-sdk#quick-start).
 2. Run `operator-sdk generate k8s` if there's a change in api type.
-3. Build operator container with `operator-sdk build storageos/storageoscluster-operator:<tag>`
+3. Build operator container with `operator-sdk build storageos/cluster-operator:<tag>`
 4. Install the configs in `deploy/`
     - Apply `rbac.yaml` to grant all the permissions
     - Apply `crd.yaml` to define the custom resources.
@@ -15,11 +15,11 @@ Setup/Development:
 
 For development, run the operator outside of the k8s cluster by running:
 ```
-$ OPERATOR_NAME=storageoscluster-operator operator-sdk up local
+$ OPERATOR_NAME=cluster-operator operator-sdk up local
 ```
 Pass kubeconfig:
 ```
-OPERATOR_NAME=storageoscluster-operator operator-sdk up local --kubeconfig=/path/to/kubeconfig
+OPERATOR_NAME=cluster-operator operator-sdk up local --kubeconfig=/path/to/kubeconfig
 ```
 
 After creating a resource, query the resource:

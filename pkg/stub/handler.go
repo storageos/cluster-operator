@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/storageos/storageoscluster-operator/pkg/apis/cluster/v1alpha1"
-	"github.com/storageos/storageoscluster-operator/pkg/controller"
+	"github.com/storageos/cluster-operator/pkg/apis/cluster/v1alpha1"
+	"github.com/storageos/cluster-operator/pkg/controller"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/record"
 

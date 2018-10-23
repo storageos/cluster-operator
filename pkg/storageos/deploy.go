@@ -6,7 +6,7 @@ import (
 	"log"
 
 	"github.com/blang/semver"
-	api "github.com/storageos/storageoscluster-operator/pkg/apis/cluster/v1alpha1"
+	api "github.com/storageos/cluster-operator/pkg/apis/cluster/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"

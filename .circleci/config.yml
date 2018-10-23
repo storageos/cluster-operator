@@ -8,7 +8,7 @@ jobs:
       # specify the version
       - image: circleci/golang:1.11
 
-    working_directory: /go/src/github.com/storageos/storageoscluster-operator
+    working_directory: /go/src/github.com/storageos/cluster-operator
     steps:
       - checkout
 
@@ -17,4 +17,4 @@ jobs:
       - run: golint -set_exit_status $(go list ./...)
       - run: go vet ./...
       - run: go test -v ./...
-      - run: go build github.com/storageos/storageoscluster-operator/cmd/storageoscluster-operator
+      - run: go build github.com/storageos/cluster-operator/cmd/cluster-operator

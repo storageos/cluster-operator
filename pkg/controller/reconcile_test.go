@@ -3,7 +3,7 @@ package controller
 import (
 	"testing"
 
-	clusterv1alpha1 "github.com/storageos/storageoscluster-operator/pkg/apis/cluster/v1alpha1"
+	clusterv1alpha1 "github.com/storageos/cluster-operator/pkg/apis/cluster/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

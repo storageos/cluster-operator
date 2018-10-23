@@ -7,13 +7,13 @@ import (
 	"strings"
 
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
-	clusterv1alpha1 "github.com/storageos/storageoscluster-operator/pkg/apis/cluster/v1alpha1"
+	clusterv1alpha1 "github.com/storageos/cluster-operator/pkg/apis/cluster/v1alpha1"
 	"k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	api "github.com/storageos/storageoscluster-operator/pkg/apis/cluster/v1alpha1"
-	"github.com/storageos/storageoscluster-operator/pkg/storageos"
+	api "github.com/storageos/cluster-operator/pkg/apis/cluster/v1alpha1"
+	"github.com/storageos/cluster-operator/pkg/storageos"
 )
 
 // ClusterController is the StorageOS cluster controller.
