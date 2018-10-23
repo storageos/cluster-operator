@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	api "github.com/storageos/storageoscluster-operator/pkg/apis/cluster/v1alpha1"
+	api "github.com/storageos/cluster-operator/pkg/apis/cluster/v1alpha1"
 )
 
 var gvk = schema.GroupVersionKind{

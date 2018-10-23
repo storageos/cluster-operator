@@ -9,9 +9,9 @@ import (
 
 	sdk "github.com/operator-framework/operator-sdk/pkg/sdk"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
-	"github.com/storageos/storageoscluster-operator/pkg/controller"
-	stub "github.com/storageos/storageoscluster-operator/pkg/stub"
-	"github.com/storageos/storageoscluster-operator/pkg/util/k8sutil"
+	"github.com/storageos/cluster-operator/pkg/controller"
+	stub "github.com/storageos/cluster-operator/pkg/stub"
+	"github.com/storageos/cluster-operator/pkg/util/k8sutil"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sclient"
 	"github.com/sirupsen/logrus"
