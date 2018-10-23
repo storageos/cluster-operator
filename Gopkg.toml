@@ -12,6 +12,9 @@ required = [
   "k8s.io/gengo/args",
 ]
 
+[prune]
+  go-tests = true
+
 [[override]]
   name = "k8s.io/code-generator"
   version = "kubernetes-1.10.8"
