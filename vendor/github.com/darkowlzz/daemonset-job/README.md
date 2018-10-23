@@ -1,5 +1,7 @@
 # daemonset-job
 
+[![CircleCI](https://circleci.com/gh/darkowlzz/daemonset-job.svg?style=svg)](https://circleci.com/gh/darkowlzz/daemonset-job)
+
 Kubernetes Operator for creating Jobs backed by Daemonsets.
 
 Inspired by [Run Once DaemonSet on Kubernetes](https://blog.phymata.com/2017/05/13/run-once-daemonset-on-kubernetes/)
@@ -73,7 +75,7 @@ rm -rf $1
 # Let the monitoring script know we're done.
 echo "done"
 
-# this is a workaround to prevent the container from exiting 
+# this is a workaround to prevent the container from exiting
 # and k8s restarting the daemonset pod
 while true; do sleep 1; done
 ```

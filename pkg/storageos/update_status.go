@@ -14,6 +14,7 @@ import (
 	"github.com/storageos/go-api/types"
 	api "github.com/storageos/storageoscluster-operator/pkg/apis/cluster/v1alpha1"
 	"k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -27,9 +28,13 @@ func (s *Deployment) updateStorageOSStatus(status *api.StorageOSServiceStatus) e
 		// Ready contains the node count in the format 3/3.
 		ready := strings.Split(status.Ready, "/")
 		if ready[0] == ready[1] {
-			s.recorder.Event(s.stos, v1.EventTypeNormal, "ChangedStatus", fmt.Sprintf("%s StorageOS nodes are functional. Cluster healthy", status.Ready))
+			if s.recorder != nil {
+				s.recorder.Event(s.stos, v1.EventTypeNormal, "ChangedStatus", fmt.Sprintf("%s StorageOS nodes are functional. Cluster healthy", status.Ready))
+			}
 		} else {
-			s.recorder.Event(s.stos, v1.EventTypeWarning, "ChangedStatus", fmt.Sprintf("%s StorageOS nodes are functional", status.Ready))
+			if s.recorder != nil {
+				s.recorder.Event(s.stos, v1.EventTypeWarning, "ChangedStatus", fmt.Sprintf("%s StorageOS nodes are functional", status.Ready))
+			}
 		}
 	}
 
@@ -40,7 +45,10 @@ func (s *Deployment) updateStorageOSStatus(status *api.StorageOSServiceStatus) e
 func (s *Deployment) getStorageOSStatus() (*api.StorageOSServiceStatus, error) {
 	nodeList := NodeList()
 
-	lopts := &client.ListOptions{Namespace: s.stos.Spec.GetResourceNS()}
+	lopts := &client.ListOptions{
+		Namespace: s.stos.Spec.GetResourceNS(),
+		Raw:       &metav1.ListOptions{},
+	}
 	if err := s.client.List(context.Background(), lopts, nodeList); err != nil {
 		return nil, fmt.Errorf("failed to list nodes: %v", err)
 	}
