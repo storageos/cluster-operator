@@ -90,6 +90,12 @@ spec:
                 annotations: {}
             cleanupAtDelete:
               type: boolean
+            kvBackend:
+              properties:
+                address:
+                  type: string
+                backend:
+                  type: string
         status:
           properties:
             phase:

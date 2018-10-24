@@ -597,3 +597,76 @@ func TestDeployCSI(t *testing.T) {
 		})
 	}
 }
+
+func TestDeployKVBackend(t *testing.T) {
+	testKVAddr := "1.2.3.4:1111,4.3.2.1:0000"
+	testBackend := "etcd"
+
+	stosCluster := &api.StorageOSCluster{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: gvk.GroupVersion().String(),
+			Kind:       gvk.Kind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "teststos",
+			Namespace: "default",
+		},
+		Spec: api.StorageOSSpec{
+			KVBackend: api.StorageOSKVBackend{
+				Address: testKVAddr,
+				Backend: testBackend,
+			},
+		},
+	}
+
+	c := fake.NewFakeClient()
+	deploy := NewDeployment(c, stosCluster, nil, "")
+	deploy.Deploy()
+
+	createdDaemonset := &appsv1.DaemonSet{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "DaemonSet",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      daemonsetName,
+			Namespace: stosCluster.Spec.GetResourceNS(),
+		},
+	}
+
+	nsName := types.NamespacedName{
+		Name:      daemonsetName,
+		Namespace: defaultNS,
+	}
+
+	if err := c.Get(context.Background(), nsName, createdDaemonset); err != nil {
+		t.Fatal("failed to get the created daemonset", err)
+	}
+
+	podSpec := createdDaemonset.Spec.Template.Spec.Containers[0]
+
+	foundKVAddr := false
+	foundKVBackend := false
+
+	for _, e := range podSpec.Env {
+		switch e.Name {
+		case kvAddrEnvVar:
+			foundKVAddr = true
+			if e.Value != testKVAddr {
+				t.Errorf("unexpected %s value:\n\t(GOT) %s\n\t(WNT) %s", kvAddrEnvVar, e.Value, testKVAddr)
+			}
+		case kvBackendEnvVar:
+			foundKVBackend = true
+			if e.Value != testBackend {
+				t.Errorf("unexpected %s value:\n\t(GOT) %s\n\t(WNT) %s", kvBackendEnvVar, e.Value, testBackend)
+			}
+		}
+	}
+
+	if !foundKVAddr {
+		t.Errorf("expected %s to be in the pod spec env", kvAddrEnvVar)
+	}
+	if !foundKVBackend {
+		t.Errorf("expected %s to be in the pod spec env", kvBackendEnvVar)
+	}
+}

@@ -38,6 +38,9 @@ spec:
   # "/var/lib/kubelet/plugins/kubernetes.io~storageos".  If not set, defaults
   # will be used.
   # sharedDir:
+  # kvBackend:
+  #   address:
+  #   backend:
 
 ---
 apiVersion: v1
