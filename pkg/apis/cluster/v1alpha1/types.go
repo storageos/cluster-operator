@@ -44,8 +44,8 @@ type StorageOSClusterList struct {
 type StorageOSCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              StorageOSSpec          `json:"spec"`
-	Status            StorageOSServiceStatus `json:"status,omitempty"`
+	Spec              StorageOSSpec   `json:"spec"`
+	Status            StorageOSStatus `json:"status,omitempty"`
 }
 
 // StorageOSSpec is the Spec of a StorageOS Cluster.
@@ -193,8 +193,8 @@ type StorageOSIngress struct {
 	Annotations map[string]string `json:"annotations"`
 }
 
-// StorageOSServiceStatus contains status data of the cluster.
-type StorageOSServiceStatus struct {
+// StorageOSStatus contains status data of the cluster.
+type StorageOSStatus struct {
 	Phase            ClusterPhase          `json:"phase"`
 	NodeHealthStatus map[string]NodeHealth `json:"nodeHealthStatus,omitempty"`
 	Nodes            []string              `json:"nodes"`
