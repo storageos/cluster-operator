@@ -50,16 +50,17 @@ type StorageOSCluster struct {
 
 // StorageOSSpec is the Spec of a StorageOS Cluster.
 type StorageOSSpec struct {
-	Join               string           `json:"join"`
-	CSI                StorageOSCSI     `json:"csi"`
-	ResourceNS         string           `json:"namespace"`
-	Service            StorageOSService `json:"service"`
-	SecretRefName      string           `json:"secretRefName"`
-	SecretRefNamespace string           `json:"secretRefNamespace"`
-	SharedDir          string           `json:"sharedDir"`
-	Ingress            StorageOSIngress `json:"ingress"`
-	Images             ContainerImages  `json:"images"`
-	CleanupAtDelete    bool             `json:"cleanupAtDelete"`
+	Join               string             `json:"join"`
+	CSI                StorageOSCSI       `json:"csi"`
+	ResourceNS         string             `json:"namespace"`
+	Service            StorageOSService   `json:"service"`
+	SecretRefName      string             `json:"secretRefName"`
+	SecretRefNamespace string             `json:"secretRefNamespace"`
+	SharedDir          string             `json:"sharedDir"`
+	Ingress            StorageOSIngress   `json:"ingress"`
+	Images             ContainerImages    `json:"images"`
+	CleanupAtDelete    bool               `json:"cleanupAtDelete"`
+	KVBackend          StorageOSKVBackend `json:"kvBackend"`
 }
 
 // GetResourceNS returns the namespace where all the resources should be provisioned.
@@ -210,4 +211,10 @@ type NodeHealth struct {
 	Nats              string `json:"nats"`
 	Presentation      string `json:"presentation"`
 	Rdb               string `json:"rdb"`
+}
+
+// StorageOSKVBackend stores key-value store backend configurations.
+type StorageOSKVBackend struct {
+	Address string `json:"address"`
+	Backend string `json:"backend"`
 }

@@ -112,6 +112,8 @@ Parameter | Description | Default
 `ingress.tls` | Enable TLS for the ingress | `false`
 `ingress.annotations` | Annotations of the ingress used by the cluster |
 `sharedDir` | Path to be shared with kubelet container when deployed as a pod | `/var/lib/kubelet/plugins/kubernetes.io~storageos`
+`kvBackend.address` | Comma-separated list of addresses of external key-value store. (`1.2.3.4:2379,2.3.4.5:2379`) |
+`kvBackend.backend` | Name of the external key-value store backend (`etcd,boltdb,consul`) |
 
 
 ## TLS Support

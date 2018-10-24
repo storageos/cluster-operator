@@ -62,7 +62,10 @@ const (
 	csiNodePubCredsPasswordEnvVar       = "CSI_NODE_PUB_CREDS_PASSWORD"
 	addressEnvVar                       = "ADDRESS"
 	kubeNodeNameEnvVar                  = "KUBE_NODE_NAME"
-	sysAdminCap                         = "SYS_ADMIN"
+	kvAddrEnvVar                        = "KV_ADDR"
+	kvBackendEnvVar                     = "KV_BACKEND"
+
+	sysAdminCap = "SYS_ADMIN"
 
 	secretNamespaceKey                     = "adminSecretNamespace"
 	secretNameKey                          = "adminSecretName"
@@ -683,6 +686,28 @@ func (s *Deployment) createDaemonSet() error {
 				},
 			},
 		},
+	}
+
+	// Add key-value store backend related env vars.
+	kvStoreEnv := []v1.EnvVar{}
+	if s.stos.Spec.KVBackend.Address != "" {
+		kvAddressEnv := v1.EnvVar{
+			Name:  kvAddrEnvVar,
+			Value: s.stos.Spec.KVBackend.Address,
+		}
+		kvStoreEnv = append(kvStoreEnv, kvAddressEnv)
+	}
+
+	if s.stos.Spec.KVBackend.Backend != "" {
+		kvBackendEnv := v1.EnvVar{
+			Name:  kvBackendEnvVar,
+			Value: s.stos.Spec.KVBackend.Backend,
+		}
+		kvStoreEnv = append(kvStoreEnv, kvBackendEnv)
+	}
+
+	if len(kvStoreEnv) > 0 {
+		dset.Spec.Template.Spec.Containers[0].Env = append(dset.Spec.Template.Spec.Containers[0].Env, kvStoreEnv...)
 	}
 
 	// If kubelet is running in a container, sharedDir should be set.
