@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (s *Deployment) updateStorageOSStatus(status *api.StorageOSServiceStatus) error {
+func (s *Deployment) updateStorageOSStatus(status *api.StorageOSStatus) error {
 	if reflect.DeepEqual(s.stos.Status, *status) {
 		return nil
 	}
@@ -42,7 +42,7 @@ func (s *Deployment) updateStorageOSStatus(status *api.StorageOSServiceStatus) e
 	return s.client.Update(context.Background(), s.stos)
 }
 
-func (s *Deployment) getStorageOSStatus() (*api.StorageOSServiceStatus, error) {
+func (s *Deployment) getStorageOSStatus() (*api.StorageOSStatus, error) {
 	nodeList := NodeList()
 
 	lopts := &client.ListOptions{
@@ -75,7 +75,7 @@ func (s *Deployment) getStorageOSStatus() (*api.StorageOSServiceStatus, error) {
 		phase = api.ClusterPhaseRunning
 	}
 
-	return &api.StorageOSServiceStatus{
+	return &api.StorageOSStatus{
 		Phase:            phase,
 		Nodes:            nodeIPs,
 		NodeHealthStatus: healthStatus,
