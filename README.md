@@ -1,4 +1,4 @@
-# storageos cluster-operator
+# StorageOS cluster-operator
 
 The StorageOS Cluster Operator deploys and configures a StorageOS cluster on
 Kubernetes.
@@ -101,7 +101,13 @@ Status:
 Events:   <none>
 ```
 
+
 ## StorageOSCluster Resource Configuration
+
+Once the StorageOS operator is running, a StorageOS cluster can be deployed by
+creating a Cluster Configuration. The parameters specified in the
+configuration will define how StorageOS is deployed, the rest of the
+installation details are handled by the operator.
 
 The following tables lists the configurable spec parameters of the StorageOSCluster custom resource and their default values.
 
@@ -130,7 +136,7 @@ Parameter | Description | Default
 `ingress.annotations` | Annotations of the ingress used by the cluster |
 `sharedDir` | Path to be shared with kubelet container when deployed as a pod | `/var/lib/kubelet/plugins/kubernetes.io~storageos`
 `kvBackend.address` | Comma-separated list of addresses of external key-value store. (`1.2.3.4:2379,2.3.4.5:2379`) |
-`kvBackend.backend` | Name of the external key-value store backend (`etcd,boltdb,consul`) |
+`kvBackend.backend` | Name of the key-value store to use. Set to `etcd` for external key-value store. | `embedded`
 `pause` | Pause the operator for cluster maintenance | `false`
 `debug` | Enable debug mode for all the cluster nodes | `false`
 `nodeSelectorTerms` | Set node selector for storageos pod placement |
@@ -160,10 +166,10 @@ data:
 
 ## CSI
 
-The recommended way to run StorageOS on a Kubernetes 1.10+ cluster is to deploy
-with [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec)
-support. Using CSI ensures forward compatibility with future releases of
+StorageOS also supports the [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec) to communicate with Kubernetes.
+Only versions 1.10+ are supported. CSI ensures forward compatibility with future releases of
 Kubernetes, as vendor-specific drivers will soon be deprecated from Kubernetes.
+However, some functionalities are not supported yet.
 
 To enable CSI, set `csi.enable` to `true` in the `StorageOSCluster` resource config.
 
