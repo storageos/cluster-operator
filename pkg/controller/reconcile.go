@@ -69,6 +69,11 @@ func (c *ClusterController) ResetCurrentCluster() {
 // Reconcile ensures that the state specified in the Spec of the object matches
 // the state of the system.
 func (c *ClusterController) Reconcile(m *api.StorageOSCluster, recorder record.EventRecorder) error {
+	// Do not reconcile, the operator is paused for the cluster.
+	if m.Spec.Pause {
+		return nil
+	}
+
 	// Get a new list of nodes and update the join token with new nodes.
 	nodeList := storageos.NodeList()
 	if err := sdk.List(m.Spec.GetResourceNS(), nodeList); err != nil {

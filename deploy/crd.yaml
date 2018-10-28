@@ -96,6 +96,8 @@ spec:
                   type: string
                 backend:
                   type: string
+            pause:
+              type: boolean
         status:
           properties:
             phase:

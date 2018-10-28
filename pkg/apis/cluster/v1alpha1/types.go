@@ -50,17 +50,47 @@ type StorageOSCluster struct {
 
 // StorageOSSpec is the Spec of a StorageOS Cluster.
 type StorageOSSpec struct {
-	Join               string             `json:"join"`
-	CSI                StorageOSCSI       `json:"csi"`
-	ResourceNS         string             `json:"namespace"`
-	Service            StorageOSService   `json:"service"`
-	SecretRefName      string             `json:"secretRefName"`
-	SecretRefNamespace string             `json:"secretRefNamespace"`
-	SharedDir          string             `json:"sharedDir"`
-	Ingress            StorageOSIngress   `json:"ingress"`
-	Images             ContainerImages    `json:"images"`
-	CleanupAtDelete    bool               `json:"cleanupAtDelete"`
-	KVBackend          StorageOSKVBackend `json:"kvBackend"`
+	// Join is the join token used for service discovery.
+	Join string `json:"join"`
+
+	// CSI defines the configurations for CSI.
+	CSI StorageOSCSI `json:"csi"`
+
+	// ResourceNS is the kubernetes Namespace where storageos resources are
+	// provisioned.
+	ResourceNS string `json:"namespace"`
+
+	// Service is the Service configuration for the cluster nodes.
+	Service StorageOSService `json:"service"`
+
+	// SecretRefName is the name of the secret object that contains all the
+	// sensitive cluster configurations.
+	SecretRefName string `json:"secretRefName"`
+
+	// SecretRefNamespace is the namespace of the secret reference.
+	SecretRefNamespace string `json:"secretRefNamespace"`
+
+	// SharedDir is the shared directory to be used when the kubelet is running
+	// in a container.
+	// Typically: "/var/lib/kubelet/plugins/kubernetes.io~storageos".
+	// If not set, defaults will be used.
+	SharedDir string `json:"sharedDir"`
+
+	// Ingress defines the ingress configurations used in the cluster.
+	Ingress StorageOSIngress `json:"ingress"`
+
+	// Images defines the various container images used in the cluster.
+	Images ContainerImages `json:"images"`
+
+	// CleanupAtDelete is to trigger the cleanup operator when the cluster is
+	// deleted.
+	CleanupAtDelete bool `json:"cleanupAtDelete"`
+
+	// KVBackend defines the key-value store backend used in the cluster.
+	KVBackend StorageOSKVBackend `json:"kvBackend"`
+
+	// Pause is to pause the operator for the cluster.
+	Pause bool `json:"pause"`
 }
 
 // GetResourceNS returns the namespace where all the resources should be provisioned.
