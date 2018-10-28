@@ -64,8 +64,10 @@ const (
 	kubeNodeNameEnvVar                  = "KUBE_NODE_NAME"
 	kvAddrEnvVar                        = "KV_ADDR"
 	kvBackendEnvVar                     = "KV_BACKEND"
+	debugEnvVar                         = "LOG_LEVEL"
 
 	sysAdminCap = "SYS_ADMIN"
+	debugVal    = "xdebug"
 
 	secretNamespaceKey                     = "adminSecretNamespace"
 	secretNameKey                          = "adminSecretName"
@@ -710,6 +712,8 @@ func (s *Deployment) createDaemonSet() error {
 		dset.Spec.Template.Spec.Containers[0].Env = append(dset.Spec.Template.Spec.Containers[0].Env, kvStoreEnv...)
 	}
 
+	dset.Spec.Template.Spec.Containers[0].Env = s.addDebugEnvVars(dset.Spec.Template.Spec.Containers[0].Env)
+
 	// If kubelet is running in a container, sharedDir should be set.
 	if s.stos.Spec.SharedDir != "" {
 		envVar := v1.EnvVar{
@@ -944,6 +948,18 @@ func kubeletPluginsWatcherSupported(version string) bool {
 		return true
 	}
 	return false
+}
+
+// addDebugEnvVars checks if the debug mode is set and set the appropriate env var.
+func (s *Deployment) addDebugEnvVars(env []v1.EnvVar) []v1.EnvVar {
+	if s.stos.Spec.Debug {
+		debugEnvVar := v1.EnvVar{
+			Name:  debugEnvVar,
+			Value: debugVal,
+		}
+		return append(env, debugEnvVar)
+	}
+	return env
 }
 
 // getCSICredsEnvVar returns a v1.EnvVar object with value from a secret key
