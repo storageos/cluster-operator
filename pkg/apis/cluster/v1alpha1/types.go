@@ -88,6 +88,9 @@ type StorageOSSpec struct {
 
 	// KVBackend defines the key-value store backend used in the cluster.
 	KVBackend StorageOSKVBackend `json:"kvBackend"`
+
+	// Pause is to pause the operator for the cluster.
+	Pause bool `json:"pause"`
 }
 
 // GetResourceNS returns the namespace where all the resources should be provisioned.
