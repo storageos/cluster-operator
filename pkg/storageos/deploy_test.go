@@ -670,3 +670,61 @@ func TestDeployKVBackend(t *testing.T) {
 		t.Errorf("expected %s to be in the pod spec env", kvBackendEnvVar)
 	}
 }
+
+func TestDeployDebug(t *testing.T) {
+	stosCluster := &api.StorageOSCluster{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: gvk.GroupVersion().String(),
+			Kind:       gvk.Kind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "teststos",
+			Namespace: "default",
+		},
+		Spec: api.StorageOSSpec{
+			Debug: true,
+		},
+	}
+
+	c := fake.NewFakeClient()
+	deploy := NewDeployment(c, stosCluster, nil, "")
+	deploy.Deploy()
+
+	createdDaemonset := &appsv1.DaemonSet{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "DaemonSet",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      daemonsetName,
+			Namespace: stosCluster.Spec.GetResourceNS(),
+		},
+	}
+
+	nsName := types.NamespacedName{
+		Name:      daemonsetName,
+		Namespace: defaultNS,
+	}
+
+	if err := c.Get(context.Background(), nsName, createdDaemonset); err != nil {
+		t.Fatal("failed to get the created daemonset", err)
+	}
+
+	podSpec := createdDaemonset.Spec.Template.Spec.Containers[0]
+
+	foundDebug := false
+
+	for _, e := range podSpec.Env {
+		switch e.Name {
+		case debugEnvVar:
+			foundDebug = true
+			if e.Value != debugVal {
+				t.Errorf("unexpected %s value:\n\t(GOT) %s\n\t(WNT) %s", debugEnvVar, e.Value, debugVal)
+			}
+		}
+	}
+
+	if !foundDebug {
+		t.Errorf("expected %s to be in the pod spec env", debugEnvVar)
+	}
+}
