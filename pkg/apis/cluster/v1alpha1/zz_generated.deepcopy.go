@@ -187,6 +187,7 @@ func (in *StorageOSSpec) DeepCopyInto(out *StorageOSSpec) {
 	in.Ingress.DeepCopyInto(&out.Ingress)
 	out.Images = in.Images
 	out.KVBackend = in.KVBackend
+	in.NodeAffinity.DeepCopyInto(&out.NodeAffinity)
 	return
 }
 

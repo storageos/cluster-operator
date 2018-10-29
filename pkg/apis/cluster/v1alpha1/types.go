@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -94,6 +95,9 @@ type StorageOSSpec struct {
 
 	// Debug is to set debug mode of the cluster.
 	Debug bool `json:"debug"`
+
+	// NodeAffinity is to set the NodeAffinity of the DaemonSet.
+	NodeAffinity corev1.NodeAffinity `json:"nodeAffinity"`
 }
 
 // GetResourceNS returns the namespace where all the resources should be provisioned.
