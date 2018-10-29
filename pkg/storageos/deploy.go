@@ -494,8 +494,6 @@ func (s *Deployment) createDaemonSet() error {
 	ls := labelsForDaemonSet(s.stos.Name)
 	privileged := true
 	mountPropagationBidirectional := v1.MountPropagationBidirectional
-	hostpathDirOrCreate := v1.HostPathDirectoryOrCreate
-	hostpathDir := v1.HostPathDirectory
 	allowPrivilegeEscalation := true
 
 	dset := &appsv1.DaemonSet{
@@ -690,11 +688,89 @@ func (s *Deployment) createDaemonSet() error {
 		},
 	}
 
-	nodeContainer := &dset.Spec.Template.Spec.Containers[0]
+	podSpec := &dset.Spec.Template.Spec
+	nodeContainer := &podSpec.Containers[0]
 
 	nodeContainer.Env = s.addKVBackendEnvVars(nodeContainer.Env)
 
 	nodeContainer.Env = s.addDebugEnvVars(nodeContainer.Env)
+
+	s.addSharedDir(podSpec)
+
+	s.addCSI(podSpec)
+
+	addOwnerRefToObject(dset, asOwner(s.stos))
+	if err := s.client.Create(context.Background(), dset); err != nil && !apierrors.IsAlreadyExists(err) {
+		return fmt.Errorf("failed to create daemonset: %v", err)
+	}
+	return nil
+}
+
+// kubeletPluginsWatcherSupported checks if the given version of k8s supports
+// KubeletPluginsWatcher. This is used to change the CSI driver registry setup
+// based on the kubernetes cluster setup.
+func kubeletPluginsWatcherSupported(version string) bool {
+	supportedVersion, err := semver.Parse("1.12.0")
+	if err != nil {
+		log.Printf("failed to parse version: %v", err)
+		return false
+	}
+
+	currentVersion, err := semver.Parse(version)
+	if err != nil {
+		log.Printf("failed to parse version: %v", err)
+		return false
+	}
+
+	// Supported if v1.12.0 or above.
+	if currentVersion.Compare(supportedVersion) >= 0 {
+		return true
+	}
+	return false
+}
+
+// addKVBackendEnvVars checks if KVBackend is set and sets the appropriate env vars.
+func (s *Deployment) addKVBackendEnvVars(env []v1.EnvVar) []v1.EnvVar {
+	kvStoreEnv := []v1.EnvVar{}
+	if s.stos.Spec.KVBackend.Address != "" {
+		kvAddressEnv := v1.EnvVar{
+			Name:  kvAddrEnvVar,
+			Value: s.stos.Spec.KVBackend.Address,
+		}
+		kvStoreEnv = append(kvStoreEnv, kvAddressEnv)
+	}
+
+	if s.stos.Spec.KVBackend.Backend != "" {
+		kvBackendEnv := v1.EnvVar{
+			Name:  kvBackendEnvVar,
+			Value: s.stos.Spec.KVBackend.Backend,
+		}
+		kvStoreEnv = append(kvStoreEnv, kvBackendEnv)
+	}
+
+	if len(kvStoreEnv) > 0 {
+		return append(env, kvStoreEnv...)
+	}
+	return env
+}
+
+// addDebugEnvVars checks if the debug mode is set and set the appropriate env var.
+func (s *Deployment) addDebugEnvVars(env []v1.EnvVar) []v1.EnvVar {
+	if s.stos.Spec.Debug {
+		debugEnvVar := v1.EnvVar{
+			Name:  debugEnvVar,
+			Value: debugVal,
+		}
+		return append(env, debugEnvVar)
+	}
+	return env
+}
+
+// addSharedDir adds env var and volumes for shared dir when running kubelet in
+// a container.
+func (s *Deployment) addSharedDir(podSpec *v1.PodSpec) {
+	mountPropagationBidirectional := v1.MountPropagationBidirectional
+	nodeContainer := &podSpec.Containers[0]
 
 	// If kubelet is running in a container, sharedDir should be set.
 	if s.stos.Spec.SharedDir != "" {
@@ -712,7 +788,7 @@ func (s *Deployment) createDaemonSet() error {
 				},
 			},
 		}
-		dset.Spec.Template.Spec.Volumes = append(dset.Spec.Template.Spec.Volumes, sharedDir)
+		podSpec.Volumes = append(podSpec.Volumes, sharedDir)
 
 		volMnt := v1.VolumeMount{
 			Name:             "shared",
@@ -721,6 +797,15 @@ func (s *Deployment) createDaemonSet() error {
 		}
 		nodeContainer.VolumeMounts = append(nodeContainer.VolumeMounts, volMnt)
 	}
+}
+
+// addCSI adds the CSI env vars, volumes and containers to the provided podSpec.
+func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
+	hostpathDirOrCreate := v1.HostPathDirectoryOrCreate
+	hostpathDir := v1.HostPathDirectory
+	mountPropagationBidirectional := v1.MountPropagationBidirectional
+
+	nodeContainer := &podSpec.Containers[0]
 
 	// Add CSI specific configurations if enabled.
 	if s.stos.Spec.CSI.Enable {
@@ -772,7 +857,7 @@ func (s *Deployment) createDaemonSet() error {
 			},
 		}
 
-		dset.Spec.Template.Spec.Volumes = append(dset.Spec.Template.Spec.Volumes, vols...)
+		podSpec.Volumes = append(podSpec.Volumes, vols...)
 
 		volMnts := []v1.VolumeMount{
 			{
@@ -899,74 +984,8 @@ func (s *Deployment) createDaemonSet() error {
 				"--pod-info-mount-version=v1",
 				"--kubelet-registration-path=/var/lib/kubelet/plugins/storageos/csi.sock")
 		}
-		dset.Spec.Template.Spec.Containers = append(dset.Spec.Template.Spec.Containers, driverReg)
+		podSpec.Containers = append(podSpec.Containers, driverReg)
 	}
-
-	addOwnerRefToObject(dset, asOwner(s.stos))
-	if err := s.client.Create(context.Background(), dset); err != nil && !apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("failed to create daemonset: %v", err)
-	}
-	return nil
-}
-
-// kubeletPluginsWatcherSupported checks if the given version of k8s supports
-// KubeletPluginsWatcher. This is used to change the CSI driver registry setup
-// based on the kubernetes cluster setup.
-func kubeletPluginsWatcherSupported(version string) bool {
-	supportedVersion, err := semver.Parse("1.12.0")
-	if err != nil {
-		log.Printf("failed to parse version: %v", err)
-		return false
-	}
-
-	currentVersion, err := semver.Parse(version)
-	if err != nil {
-		log.Printf("failed to parse version: %v", err)
-		return false
-	}
-
-	// Supported if v1.12.0 or above.
-	if currentVersion.Compare(supportedVersion) >= 0 {
-		return true
-	}
-	return false
-}
-
-// addKVBackendEnvVars checks if KVBackend is set and sets the appropriate env vars.
-func (s *Deployment) addKVBackendEnvVars(env []v1.EnvVar) []v1.EnvVar {
-	kvStoreEnv := []v1.EnvVar{}
-	if s.stos.Spec.KVBackend.Address != "" {
-		kvAddressEnv := v1.EnvVar{
-			Name:  kvAddrEnvVar,
-			Value: s.stos.Spec.KVBackend.Address,
-		}
-		kvStoreEnv = append(kvStoreEnv, kvAddressEnv)
-	}
-
-	if s.stos.Spec.KVBackend.Backend != "" {
-		kvBackendEnv := v1.EnvVar{
-			Name:  kvBackendEnvVar,
-			Value: s.stos.Spec.KVBackend.Backend,
-		}
-		kvStoreEnv = append(kvStoreEnv, kvBackendEnv)
-	}
-
-	if len(kvStoreEnv) > 0 {
-		return append(env, kvStoreEnv...)
-	}
-	return env
-}
-
-// addDebugEnvVars checks if the debug mode is set and set the appropriate env var.
-func (s *Deployment) addDebugEnvVars(env []v1.EnvVar) []v1.EnvVar {
-	if s.stos.Spec.Debug {
-		debugEnvVar := v1.EnvVar{
-			Name:  debugEnvVar,
-			Value: debugVal,
-		}
-		return append(env, debugEnvVar)
-	}
-	return env
 }
 
 // getCSICredsEnvVar returns a v1.EnvVar object with value from a secret key
