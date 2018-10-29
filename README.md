@@ -16,7 +16,8 @@ Refer to the [StorageOS prerequisites docs](https://docs.storageos.com/docs/prer
 
 ## Setup/Development:
 
-1. Install [operator-sdk](https://github.com/operator-framework/operator-sdk#quick-start).
+1. Install [operator-sdk v0.0.6](https://github.com/operator-framework/operator-sdk/tree/v0.0.6#quick-start).
+v0.0.7 has breaking changes. Use v0.0.6 for now.
 2. Run `operator-sdk generate k8s` if there's a change in api type.
 3. Build operator container with `operator-sdk build storageos/cluster-operator:<tag>`
 4. Apply the manifests in `deploy/` to install the operator
