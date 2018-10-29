@@ -91,6 +91,9 @@ type StorageOSSpec struct {
 
 	// Pause is to pause the operator for the cluster.
 	Pause bool `json:"pause"`
+
+	// Debug is to set debug mode of the cluster.
+	Debug bool `json:"debug"`
 }
 
 // GetResourceNS returns the namespace where all the resources should be provisioned.

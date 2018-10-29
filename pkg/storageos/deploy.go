@@ -64,8 +64,10 @@ const (
 	kubeNodeNameEnvVar                  = "KUBE_NODE_NAME"
 	kvAddrEnvVar                        = "KV_ADDR"
 	kvBackendEnvVar                     = "KV_BACKEND"
+	debugEnvVar                         = "LOG_LEVEL"
 
 	sysAdminCap = "SYS_ADMIN"
+	debugVal    = "xdebug"
 
 	secretNamespaceKey                     = "adminSecretNamespace"
 	secretNameKey                          = "adminSecretName"
@@ -688,27 +690,11 @@ func (s *Deployment) createDaemonSet() error {
 		},
 	}
 
-	// Add key-value store backend related env vars.
-	kvStoreEnv := []v1.EnvVar{}
-	if s.stos.Spec.KVBackend.Address != "" {
-		kvAddressEnv := v1.EnvVar{
-			Name:  kvAddrEnvVar,
-			Value: s.stos.Spec.KVBackend.Address,
-		}
-		kvStoreEnv = append(kvStoreEnv, kvAddressEnv)
-	}
+	nodeContainer := &dset.Spec.Template.Spec.Containers[0]
 
-	if s.stos.Spec.KVBackend.Backend != "" {
-		kvBackendEnv := v1.EnvVar{
-			Name:  kvBackendEnvVar,
-			Value: s.stos.Spec.KVBackend.Backend,
-		}
-		kvStoreEnv = append(kvStoreEnv, kvBackendEnv)
-	}
+	nodeContainer.Env = s.addKVBackendEnvVars(nodeContainer.Env)
 
-	if len(kvStoreEnv) > 0 {
-		dset.Spec.Template.Spec.Containers[0].Env = append(dset.Spec.Template.Spec.Containers[0].Env, kvStoreEnv...)
-	}
+	nodeContainer.Env = s.addDebugEnvVars(nodeContainer.Env)
 
 	// If kubelet is running in a container, sharedDir should be set.
 	if s.stos.Spec.SharedDir != "" {
@@ -716,7 +702,7 @@ func (s *Deployment) createDaemonSet() error {
 			Name:  deviceDirEnvVar,
 			Value: fmt.Sprintf("%s/devices", s.stos.Spec.SharedDir),
 		}
-		dset.Spec.Template.Spec.Containers[0].Env = append(dset.Spec.Template.Spec.Containers[0].Env, envVar)
+		nodeContainer.Env = append(nodeContainer.Env, envVar)
 
 		sharedDir := v1.Volume{
 			Name: "shared",
@@ -733,7 +719,7 @@ func (s *Deployment) createDaemonSet() error {
 			MountPath:        s.stos.Spec.SharedDir,
 			MountPropagation: &mountPropagationBidirectional,
 		}
-		dset.Spec.Template.Spec.Containers[0].VolumeMounts = append(dset.Spec.Template.Spec.Containers[0].VolumeMounts, volMnt)
+		nodeContainer.VolumeMounts = append(nodeContainer.VolumeMounts, volMnt)
 	}
 
 	// Add CSI specific configurations if enabled.
@@ -805,7 +791,7 @@ func (s *Deployment) createDaemonSet() error {
 		}
 
 		// Append volume mounts to the first container, the only container is the node container, at this point.
-		dset.Spec.Template.Spec.Containers[0].VolumeMounts = append(dset.Spec.Template.Spec.Containers[0].VolumeMounts, volMnts...)
+		nodeContainer.VolumeMounts = append(nodeContainer.VolumeMounts, volMnts...)
 
 		envVar := []v1.EnvVar{
 			{
@@ -862,7 +848,7 @@ func (s *Deployment) createDaemonSet() error {
 		}
 
 		// Append env vars to the first container, node container.
-		dset.Spec.Template.Spec.Containers[0].Env = append(dset.Spec.Template.Spec.Containers[0].Env, envVar...)
+		nodeContainer.Env = append(nodeContainer.Env, envVar...)
 
 		driverReg := v1.Container{
 			Image:           s.stos.Spec.GetCSIDriverRegistrarImage(),
@@ -944,6 +930,43 @@ func kubeletPluginsWatcherSupported(version string) bool {
 		return true
 	}
 	return false
+}
+
+// addKVBackendEnvVars checks if KVBackend is set and sets the appropriate env vars.
+func (s *Deployment) addKVBackendEnvVars(env []v1.EnvVar) []v1.EnvVar {
+	kvStoreEnv := []v1.EnvVar{}
+	if s.stos.Spec.KVBackend.Address != "" {
+		kvAddressEnv := v1.EnvVar{
+			Name:  kvAddrEnvVar,
+			Value: s.stos.Spec.KVBackend.Address,
+		}
+		kvStoreEnv = append(kvStoreEnv, kvAddressEnv)
+	}
+
+	if s.stos.Spec.KVBackend.Backend != "" {
+		kvBackendEnv := v1.EnvVar{
+			Name:  kvBackendEnvVar,
+			Value: s.stos.Spec.KVBackend.Backend,
+		}
+		kvStoreEnv = append(kvStoreEnv, kvBackendEnv)
+	}
+
+	if len(kvStoreEnv) > 0 {
+		return append(env, kvStoreEnv...)
+	}
+	return env
+}
+
+// addDebugEnvVars checks if the debug mode is set and set the appropriate env var.
+func (s *Deployment) addDebugEnvVars(env []v1.EnvVar) []v1.EnvVar {
+	if s.stos.Spec.Debug {
+		debugEnvVar := v1.EnvVar{
+			Name:  debugEnvVar,
+			Value: debugVal,
+		}
+		return append(env, debugEnvVar)
+	}
+	return env
 }
 
 // getCSICredsEnvVar returns a v1.EnvVar object with value from a secret key

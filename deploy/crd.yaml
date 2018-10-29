@@ -98,6 +98,8 @@ spec:
                   type: string
             pause:
               type: boolean
+            debug:
+              type: boolean
         status:
           properties:
             phase:
