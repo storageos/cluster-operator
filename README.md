@@ -133,6 +133,7 @@ Parameter | Description | Default
 `kvBackend.backend` | Name of the external key-value store backend (`etcd,boltdb,consul`) |
 `pause` | Pause the operator for cluster maintenance | `false`
 `debug` | Enable debug mode for all the cluster nodes | `false`
+`nodeSelectorTerms` | Set node selector for storageos pod placement |
 
 
 ## TLS Support

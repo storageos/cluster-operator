@@ -14,8 +14,6 @@ import (
 	storageosapi "github.com/storageos/go-api"
 	"github.com/storageos/go-api/types"
 	"k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (s *Deployment) updateStorageOSStatus(status *api.StorageOSStatus) error {
@@ -42,17 +40,10 @@ func (s *Deployment) updateStorageOSStatus(status *api.StorageOSStatus) error {
 	return s.client.Update(context.Background(), s.stos)
 }
 
+// getStorageOSStatus queries health of all the nodes in the join token and
+// returns the cluster status.
 func (s *Deployment) getStorageOSStatus() (*api.StorageOSStatus, error) {
-	nodeList := NodeList()
-
-	lopts := &client.ListOptions{
-		Namespace: s.stos.Spec.GetResourceNS(),
-		Raw:       &metav1.ListOptions{},
-	}
-	if err := s.client.List(context.Background(), lopts, nodeList); err != nil {
-		return nil, fmt.Errorf("failed to list nodes: %v", err)
-	}
-	nodeIPs := GetNodeIPs(nodeList.Items)
+	nodeIPs := strings.Split(s.stos.Spec.Join, ",")
 
 	totalNodes := len(nodeIPs)
 	readyNodes := 0

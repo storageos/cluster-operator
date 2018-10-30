@@ -41,6 +41,13 @@ spec:
   # kvBackend:
   #   address:
   #   backend:
+  # nodeSelectorTerms:
+  #   - matchExpressions:
+  #     - key: somekey
+  #       operator: In
+  #       values:
+  #       - nodefoo
+
 
 ---
 apiVersion: v1

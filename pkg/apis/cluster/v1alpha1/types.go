@@ -96,8 +96,9 @@ type StorageOSSpec struct {
 	// Debug is to set debug mode of the cluster.
 	Debug bool `json:"debug"`
 
-	// NodeAffinity is to set the NodeAffinity of the DaemonSet.
-	NodeAffinity corev1.NodeAffinity `json:"nodeAffinity"`
+	// NodeSelectorTerms is to set the placement of storageos pods using
+	// node affinity requiredDuringSchedulingIgnoredDuringExecution.
+	NodeSelectorTerms []corev1.NodeSelectorTerm `json:"nodeSelectorTerms"`
 }
 
 // GetResourceNS returns the namespace where all the resources should be provisioned.

@@ -990,13 +990,15 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 	}
 }
 
-// addNodeAffinity adds node affinity to the given pod spec from the cluster spec.
+// addNodeAffinity adds node affinity to the given pod spec from the cluster
+// spec NodeSelectorLabel.
 func (s *Deployment) addNodeAffinity(podSpec *v1.PodSpec) {
-	if s.stos.Spec.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution != nil ||
-		s.stos.Spec.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution != nil {
-		// Allocate memory for Affinity and deep copy node affinity to it.
-		podSpec.Affinity = &v1.Affinity{NodeAffinity: &v1.NodeAffinity{}}
-		s.stos.Spec.NodeAffinity.DeepCopyInto(podSpec.Affinity.NodeAffinity)
+	if len(s.stos.Spec.NodeSelectorTerms) > 0 {
+		podSpec.Affinity = &v1.Affinity{NodeAffinity: &v1.NodeAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: &v1.NodeSelector{
+				NodeSelectorTerms: s.stos.Spec.NodeSelectorTerms,
+			},
+		}}
 	}
 }
 

@@ -100,17 +100,7 @@ spec:
               type: boolean
             debug:
               type: boolean
-            nodeAffinity:
-              properties:
-                requiredDuringSchedulingIgnoredDuringExecution:
-                  properties:
-                    nodeSelectorTerms: {}
-                preferredDuringSchedulingIgnoredDuringExecution:
-                  properties:
-                    weight:
-                      type: integer
-                      format: int32
-                    preference: {}
+            nodeSelectorTerms: {}
         status:
           properties:
             phase:

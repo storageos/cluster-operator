@@ -5,6 +5,7 @@
 package v1alpha1
 
 import (
+	v1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -187,7 +188,13 @@ func (in *StorageOSSpec) DeepCopyInto(out *StorageOSSpec) {
 	in.Ingress.DeepCopyInto(&out.Ingress)
 	out.Images = in.Images
 	out.KVBackend = in.KVBackend
-	in.NodeAffinity.DeepCopyInto(&out.NodeAffinity)
+	if in.NodeSelectorTerms != nil {
+		in, out := &in.NodeSelectorTerms, &out.NodeSelectorTerms
+		*out = make([]v1.NodeSelectorTerm, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	return
 }
 

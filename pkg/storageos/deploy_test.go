@@ -740,31 +740,13 @@ func TestDeployNodeAffinity(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: api.StorageOSSpec{
-			NodeAffinity: v1.NodeAffinity{
-				RequiredDuringSchedulingIgnoredDuringExecution: &v1.NodeSelector{
-					NodeSelectorTerms: []v1.NodeSelectorTerm{
+			NodeSelectorTerms: []v1.NodeSelectorTerm{
+				{
+					MatchExpressions: []v1.NodeSelectorRequirement{
 						{
-							MatchExpressions: []v1.NodeSelectorRequirement{
-								{
-									Key:      "foo",
-									Operator: v1.NodeSelectorOpIn,
-									Values:   []string{"baz"},
-								},
-							},
-						},
-					},
-				},
-				PreferredDuringSchedulingIgnoredDuringExecution: []v1.PreferredSchedulingTerm{
-					{
-						Weight: 1,
-						Preference: v1.NodeSelectorTerm{
-							MatchExpressions: []v1.NodeSelectorRequirement{
-								{
-									Key:      "bar",
-									Operator: v1.NodeSelectorOpIn,
-									Values:   []string{"xyz"},
-								},
-							},
+							Key:      "foo",
+							Operator: v1.NodeSelectorOpIn,
+							Values:   []string{"baz"},
 						},
 					},
 				},
@@ -798,11 +780,7 @@ func TestDeployNodeAffinity(t *testing.T) {
 
 	podSpec := createdDaemonset.Spec.Template.Spec
 
-	if !reflect.DeepEqual(podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution, stosCluster.Spec.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution) {
-		t.Errorf("unexpected nodeAffinity Required value:\n\t(GOT) %v\n\t(WNT) %v", stosCluster.Spec.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution, podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution)
-	}
-
-	if !reflect.DeepEqual(podSpec.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution, stosCluster.Spec.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution) {
-		t.Errorf("unexpected nodeAffinity Preferred value:\n\t(GOT) %v\n\t(WNT) %v", stosCluster.Spec.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution, podSpec.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution)
+	if !reflect.DeepEqual(podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms, stosCluster.Spec.NodeSelectorTerms) {
+		t.Errorf("unexpected NodeSelectorTerms value:\n\t(GOT) %v\n\t(WNT) %v", stosCluster.Spec.NodeSelectorTerms, podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution)
 	}
 }
