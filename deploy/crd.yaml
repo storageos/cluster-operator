@@ -101,6 +101,10 @@ spec:
             debug:
               type: boolean
             nodeSelectorTerms: {}
+            resources:
+              properties:
+                limits: {}
+                requests: {}
         status:
           properties:
             phase:

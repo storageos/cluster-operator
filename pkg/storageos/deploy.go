@@ -697,6 +697,8 @@ func (s *Deployment) createDaemonSet() error {
 
 	nodeContainer.Env = s.addDebugEnvVars(nodeContainer.Env)
 
+	s.addNodeContainerResources(nodeContainer)
+
 	s.addSharedDir(podSpec)
 
 	s.addCSI(podSpec)
@@ -706,6 +708,18 @@ func (s *Deployment) createDaemonSet() error {
 		return fmt.Errorf("failed to create daemonset: %v", err)
 	}
 	return nil
+}
+
+// addNodeContainerResources adds resource requirements for the node containers.
+func (s *Deployment) addNodeContainerResources(nodeContainer *v1.Container) {
+	if s.stos.Spec.Resources.Limits != nil ||
+		s.stos.Spec.Resources.Requests != nil {
+		nodeContainer.Resources = v1.ResourceRequirements{
+			Limits:   v1.ResourceList{},
+			Requests: v1.ResourceList{},
+		}
+		s.stos.Spec.Resources.DeepCopyInto(&nodeContainer.Resources)
+	}
 }
 
 // kubeletPluginsWatcherSupported checks if the given version of k8s supports
