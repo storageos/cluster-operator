@@ -53,7 +53,6 @@ metadata:
 type: "kubernetes.io/storageos"
 data:
   # echo -n '<secret>' | base64
-  apiAddress: c3RvcmFnZW9zOjU3MDU=
   apiUsername: c3RvcmFnZW9z
   apiPassword: c3RvcmFnZW9z
   # Add base64 encoded TLS cert and key below if ingress.tls is set to true.
