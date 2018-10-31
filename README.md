@@ -3,6 +3,8 @@
 The StorageOS Cluster Operator deploys and configures a StorageOS cluster on
 Kubernetes.
 
+For quick installation of cluster operator, use the [cluster operator helm chart](https://github.com/storageos/charts/tree/master/stable/storageoscluster-operator).
+
 ## Pre-requisites
 
 * Kubernetes 1.9+
