@@ -691,6 +691,8 @@ func (s *Deployment) createDaemonSet() error {
 	podSpec := &dset.Spec.Template.Spec
 	nodeContainer := &podSpec.Containers[0]
 
+	s.addNodeAffinity(podSpec)
+
 	nodeContainer.Env = s.addKVBackendEnvVars(nodeContainer.Env)
 
 	nodeContainer.Env = s.addDebugEnvVars(nodeContainer.Env)
@@ -985,6 +987,18 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 				"--kubelet-registration-path=/var/lib/kubelet/plugins/storageos/csi.sock")
 		}
 		podSpec.Containers = append(podSpec.Containers, driverReg)
+	}
+}
+
+// addNodeAffinity adds node affinity to the given pod spec from the cluster
+// spec NodeSelectorLabel.
+func (s *Deployment) addNodeAffinity(podSpec *v1.PodSpec) {
+	if len(s.stos.Spec.NodeSelectorTerms) > 0 {
+		podSpec.Affinity = &v1.Affinity{NodeAffinity: &v1.NodeAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: &v1.NodeSelector{
+				NodeSelectorTerms: s.stos.Spec.NodeSelectorTerms,
+			},
+		}}
 	}
 }
 

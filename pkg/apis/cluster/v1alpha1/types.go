@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -94,6 +95,10 @@ type StorageOSSpec struct {
 
 	// Debug is to set debug mode of the cluster.
 	Debug bool `json:"debug"`
+
+	// NodeSelectorTerms is to set the placement of storageos pods using
+	// node affinity requiredDuringSchedulingIgnoredDuringExecution.
+	NodeSelectorTerms []corev1.NodeSelectorTerm `json:"nodeSelectorTerms"`
 }
 
 // GetResourceNS returns the namespace where all the resources should be provisioned.

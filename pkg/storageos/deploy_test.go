@@ -728,3 +728,59 @@ func TestDeployDebug(t *testing.T) {
 		t.Errorf("expected %s to be in the pod spec env", debugEnvVar)
 	}
 }
+
+func TestDeployNodeAffinity(t *testing.T) {
+	stosCluster := &api.StorageOSCluster{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: gvk.GroupVersion().String(),
+			Kind:       gvk.Kind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "teststos",
+			Namespace: "default",
+		},
+		Spec: api.StorageOSSpec{
+			NodeSelectorTerms: []v1.NodeSelectorTerm{
+				{
+					MatchExpressions: []v1.NodeSelectorRequirement{
+						{
+							Key:      "foo",
+							Operator: v1.NodeSelectorOpIn,
+							Values:   []string{"baz"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	c := fake.NewFakeClient()
+	deploy := NewDeployment(c, stosCluster, nil, "")
+	deploy.Deploy()
+
+	createdDaemonset := &appsv1.DaemonSet{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "DaemonSet",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      daemonsetName,
+			Namespace: stosCluster.Spec.GetResourceNS(),
+		},
+	}
+
+	nsName := types.NamespacedName{
+		Name:      daemonsetName,
+		Namespace: defaultNS,
+	}
+
+	if err := c.Get(context.Background(), nsName, createdDaemonset); err != nil {
+		t.Fatal("failed to get the created daemonset", err)
+	}
+
+	podSpec := createdDaemonset.Spec.Template.Spec
+
+	if !reflect.DeepEqual(podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms, stosCluster.Spec.NodeSelectorTerms) {
+		t.Errorf("unexpected NodeSelectorTerms value:\n\t(GOT) %v\n\t(WNT) %v", stosCluster.Spec.NodeSelectorTerms, podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution)
+	}
+}

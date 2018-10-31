@@ -9,6 +9,8 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
 	clusterv1alpha1 "github.com/storageos/cluster-operator/pkg/apis/cluster/v1alpha1"
 	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -74,24 +76,19 @@ func (c *ClusterController) Reconcile(m *api.StorageOSCluster, recorder record.E
 		return nil
 	}
 
-	// Get a new list of nodes and update the join token with new nodes.
-	nodeList := storageos.NodeList()
-	if err := sdk.List(m.Spec.GetResourceNS(), nodeList); err != nil {
-		return fmt.Errorf("failed to list nodes: %v", err)
+	join, err := c.generateJoinToken(m)
+	if err != nil {
+		return err
 	}
-
-	nodeIPs := storageos.GetNodeIPs(nodeList.Items)
-	join := strings.Join(nodeIPs, ",")
 
 	if m.Spec.Join != join {
 		m.Spec.Join = join
 		// Update Nodes as well, because updating StorageOS with null Nodes
 		// results in invalid config.
-		m.Status.Nodes = nodeIPs
+		m.Status.Nodes = strings.Split(join, ",")
 		if err := sdk.Update(m); err != nil {
 			return err
 		}
-
 	}
 
 	// Update the spec values. This ensures that the default values are applied
@@ -143,4 +140,56 @@ func (c *ClusterController) Reconcile(m *api.StorageOSCluster, recorder record.E
 	}
 
 	return nil
+}
+
+// generateJoinToken performs node selection based on NodeSelectorTerms if
+// specified, and forms a join token by combining the node IPs.
+func (c *ClusterController) generateJoinToken(m *api.StorageOSCluster) (string, error) {
+	// Get a new list of all the nodes.
+	nodeList := storageos.NodeList()
+	if err := sdk.List(m.Spec.GetResourceNS(), nodeList); err != nil {
+		return "", fmt.Errorf("failed to list nodes: %v", err)
+	}
+
+	selectedNodes := []v1.Node{}
+
+	// Filter the node list when a node selector is applied.
+	if len(m.Spec.NodeSelectorTerms) > 0 {
+		for _, node := range nodeList.Items {
+			// Skip a node with any taints. StorageOS pods don't support any
+			// toleration.
+			if len(node.Spec.Taints) > 0 {
+				continue
+			}
+			for _, term := range m.Spec.NodeSelectorTerms {
+				for _, exp := range term.MatchExpressions {
+					var ex selection.Operator
+
+					// Convert the node selector operator into requirement
+					// selection operator.
+					switch exp.Operator {
+					case v1.NodeSelectorOpIn:
+						ex = selection.Equals
+					case v1.NodeSelectorOpNotIn:
+						ex = selection.NotEquals
+					}
+
+					// Create a new Requirement to perform label matching.
+					req, err := labels.NewRequirement(exp.Key, ex, exp.Values)
+					if err != nil {
+						return "", fmt.Errorf("failed to create requirement: %v", err)
+					}
+
+					if req.Matches(labels.Set(node.GetLabels())) {
+						selectedNodes = append(selectedNodes, node)
+					}
+				}
+			}
+		}
+	} else {
+		selectedNodes = nodeList.Items
+	}
+
+	nodeIPs := storageos.GetNodeIPs(selectedNodes)
+	return strings.Join(nodeIPs, ","), nil
 }
