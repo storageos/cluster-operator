@@ -8,6 +8,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -782,5 +783,64 @@ func TestDeployNodeAffinity(t *testing.T) {
 
 	if !reflect.DeepEqual(podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms, stosCluster.Spec.NodeSelectorTerms) {
 		t.Errorf("unexpected NodeSelectorTerms value:\n\t(GOT) %v\n\t(WNT) %v", stosCluster.Spec.NodeSelectorTerms, podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution)
+	}
+}
+
+func TestDeployNodeResources(t *testing.T) {
+	memLimit, _ := resource.ParseQuantity("1Gi")
+	memReq, _ := resource.ParseQuantity("702Mi")
+	stosCluster := &api.StorageOSCluster{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: gvk.GroupVersion().String(),
+			Kind:       gvk.Kind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "teststos",
+			Namespace: "default",
+		},
+		Spec: api.StorageOSSpec{
+			Resources: v1.ResourceRequirements{
+				Limits: v1.ResourceList{
+					v1.ResourceMemory: memLimit,
+				},
+				Requests: v1.ResourceList{
+					v1.ResourceMemory: memReq,
+				},
+			},
+		},
+	}
+
+	c := fake.NewFakeClient()
+	deploy := NewDeployment(c, stosCluster, nil, "")
+	deploy.Deploy()
+
+	createdDaemonset := &appsv1.DaemonSet{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "DaemonSet",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      daemonsetName,
+			Namespace: stosCluster.Spec.GetResourceNS(),
+		},
+	}
+
+	nsName := types.NamespacedName{
+		Name:      daemonsetName,
+		Namespace: defaultNS,
+	}
+
+	if err := c.Get(context.Background(), nsName, createdDaemonset); err != nil {
+		t.Fatal("failed to get the created daemonset", err)
+	}
+
+	nodeContainer := createdDaemonset.Spec.Template.Spec.Containers[0]
+
+	if !reflect.DeepEqual(nodeContainer.Resources.Limits, stosCluster.Spec.Resources.Limits) {
+		t.Errorf("unexpected resources limits value:\n\t(GOT) %v\n\t(WNT) %v", nodeContainer.Resources.Limits, stosCluster.Spec.Resources.Limits)
+	}
+
+	if !reflect.DeepEqual(nodeContainer.Resources.Requests, stosCluster.Spec.Resources.Requests) {
+		t.Errorf("unexpected resources requests value:\n\t(GOT) %v\n\t(WNT) %v", nodeContainer.Resources.Requests, stosCluster.Spec.Resources.Limits)
 	}
 }

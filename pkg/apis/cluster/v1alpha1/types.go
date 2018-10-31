@@ -99,6 +99,8 @@ type StorageOSSpec struct {
 	// NodeSelectorTerms is to set the placement of storageos pods using
 	// node affinity requiredDuringSchedulingIgnoredDuringExecution.
 	NodeSelectorTerms []corev1.NodeSelectorTerm `json:"nodeSelectorTerms"`
+	// Resources is to set the resource requirements of the storageos containers.
+	Resources corev1.ResourceRequirements `json:"resources"`
 }
 
 // GetResourceNS returns the namespace where all the resources should be provisioned.

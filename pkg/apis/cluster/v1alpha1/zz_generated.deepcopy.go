@@ -195,6 +195,7 @@ func (in *StorageOSSpec) DeepCopyInto(out *StorageOSSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	in.Resources.DeepCopyInto(&out.Resources)
 	return
 }
 

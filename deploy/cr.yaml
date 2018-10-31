@@ -47,6 +47,11 @@ spec:
   #       operator: In
   #       values:
   #       - nodefoo
+  # resources:
+  #   limits:
+  #     memory: "1Gi"
+  #   requests:
+  #     memory: "702Mi"
 
 
 ---
