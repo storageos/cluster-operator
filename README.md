@@ -65,33 +65,8 @@ Spec:
   Join:  test07
 Status:
   Node Health Status:
-    Test 07:
-      Directfs Initiator:  alive
-      Director:            alive
-      Kv:                  alive
-      Kv Write:            alive
-      Nats:                alive
-      Presentation:        alive
-      Rdb:                 alive
-      Scheduler:           alive
-    Test 08:
-      Directfs Initiator:  alive
-      Director:            alive
-      Kv:                  alive
-      Kv Write:            alive
-      Nats:                alive
-      Presentation:        alive
-      Rdb:                 alive
-      Scheduler:           alive
-    Test 09:
-      Directfs Initiator:  alive
-      Director:            alive
-      Kv:                  alive
-      Kv Write:            alive
-      Nats:                alive
-      Presentation:        alive
-      Rdb:                 alive
-      Scheduler:           alive
+  ...
+  ...
   Nodes:
     test09
     test08
@@ -100,7 +75,6 @@ Status:
   Ready:  3/3
 Events:   <none>
 ```
-
 
 ## StorageOSCluster Resource Configuration
 
