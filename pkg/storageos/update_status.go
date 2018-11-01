@@ -10,13 +10,13 @@ import (
 	"strings"
 	"time"
 
-	api "github.com/storageos/cluster-operator/pkg/apis/cluster/v1alpha1"
+	api "github.com/storageos/cluster-operator/pkg/apis/storageos/v1alpha1"
 	storageosapi "github.com/storageos/go-api"
 	"github.com/storageos/go-api/types"
 	"k8s.io/api/core/v1"
 )
 
-func (s *Deployment) updateStorageOSStatus(status *api.StorageOSStatus) error {
+func (s *Deployment) updateStorageOSStatus(status *api.StorageOSClusterStatus) error {
 	if reflect.DeepEqual(s.stos.Status, *status) {
 		return nil
 	}
@@ -42,7 +42,7 @@ func (s *Deployment) updateStorageOSStatus(status *api.StorageOSStatus) error {
 
 // getStorageOSStatus queries health of all the nodes in the join token and
 // returns the cluster status.
-func (s *Deployment) getStorageOSStatus() (*api.StorageOSStatus, error) {
+func (s *Deployment) getStorageOSStatus() (*api.StorageOSClusterStatus, error) {
 	nodeIPs := strings.Split(s.stos.Spec.Join, ",")
 
 	totalNodes := len(nodeIPs)
@@ -66,7 +66,7 @@ func (s *Deployment) getStorageOSStatus() (*api.StorageOSStatus, error) {
 		phase = api.ClusterPhaseRunning
 	}
 
-	return &api.StorageOSStatus{
+	return &api.StorageOSClusterStatus{
 		Phase:            phase,
 		Nodes:            nodeIPs,
 		NodeHealthStatus: healthStatus,

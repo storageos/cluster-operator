@@ -1,3 +1,0 @@
-apiVersion: storageos.com/v1alpha1
-kind: StorageOSCluster
-projectName: cluster-operator

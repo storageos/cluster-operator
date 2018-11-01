@@ -6,7 +6,7 @@ import (
 	"log"
 
 	"github.com/blang/semver"
-	api "github.com/storageos/cluster-operator/pkg/apis/cluster/v1alpha1"
+	api "github.com/storageos/cluster-operator/pkg/apis/storageos/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
@@ -14,11 +14,13 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/record"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -100,16 +102,18 @@ type Deployment struct {
 	stos       *api.StorageOSCluster
 	recorder   record.EventRecorder
 	k8sVersion string
+	scheme     *runtime.Scheme
 }
 
 // NewDeployment creates a new Deployment given a k8c client, storageos manifest
 // and an event broadcast recorder.
-func NewDeployment(client client.Client, stos *api.StorageOSCluster, recorder record.EventRecorder, version string) *Deployment {
+func NewDeployment(client client.Client, stos *api.StorageOSCluster, recorder record.EventRecorder, scheme *runtime.Scheme, version string) *Deployment {
 	return &Deployment{
 		client:     client,
 		stos:       stos,
 		recorder:   recorder,
 		k8sVersion: version,
+		scheme:     scheme,
 	}
 }
 
@@ -219,7 +223,7 @@ func (s *Deployment) createNamespace() error {
 		},
 	}
 
-	addOwnerRefToObject(ns, asOwner(s.stos))
+	controllerutil.SetControllerReference(s.stos, ns, s.scheme)
 	if err := s.client.Create(context.Background(), ns); err != nil && !apierrors.IsAlreadyExists(err) {
 		return fmt.Errorf("failed to create namespace: %v", err)
 	}
@@ -241,7 +245,7 @@ func (s *Deployment) createServiceAccount(name string) error {
 		},
 	}
 
-	addOwnerRefToObject(sa, asOwner(s.stos))
+	controllerutil.SetControllerReference(s.stos, sa, s.scheme)
 	if err := s.client.Create(context.Background(), sa); err != nil && !apierrors.IsAlreadyExists(err) {
 		return fmt.Errorf("failed to create service account: %v", err)
 	}
@@ -278,7 +282,7 @@ func (s *Deployment) createRoleForKeyMgmt() error {
 		},
 	}
 
-	addOwnerRefToObject(role, asOwner(s.stos))
+	controllerutil.SetControllerReference(s.stos, role, s.scheme)
 	if err := s.client.Create(context.Background(), role); err != nil && !apierrors.IsAlreadyExists(err) {
 		return fmt.Errorf("failed to create role: %v", err)
 	}
@@ -300,7 +304,7 @@ func (s *Deployment) createClusterRole(name string, rules []rbacv1.PolicyRule) e
 		Rules: rules,
 	}
 
-	addOwnerRefToObject(role, asOwner(s.stos))
+	controllerutil.SetControllerReference(s.stos, role, s.scheme)
 	if err := s.client.Create(context.Background(), role); err != nil && !apierrors.IsAlreadyExists(err) {
 		return fmt.Errorf("failed to create cluster role: %v", err)
 	}
@@ -412,7 +416,7 @@ func (s *Deployment) createRoleBindingForKeyMgmt() error {
 		},
 	}
 
-	addOwnerRefToObject(roleBinding, asOwner(s.stos))
+	controllerutil.SetControllerReference(s.stos, roleBinding, s.scheme)
 	if err := s.client.Create(context.Background(), roleBinding); err != nil && !apierrors.IsAlreadyExists(err) {
 		return fmt.Errorf("failed to create role binding: %v", err)
 	}
@@ -435,7 +439,7 @@ func (s *Deployment) createClusterRoleBinding(name string, subjects []rbacv1.Sub
 		RoleRef:  roleRef,
 	}
 
-	addOwnerRefToObject(roleBinding, asOwner(s.stos))
+	controllerutil.SetControllerReference(s.stos, roleBinding, s.scheme)
 	if err := s.client.Create(context.Background(), roleBinding); err != nil && !apierrors.IsAlreadyExists(err) {
 		return fmt.Errorf("failed to create cluster role binding: %v", err)
 	}
@@ -703,7 +707,7 @@ func (s *Deployment) createDaemonSet() error {
 
 	s.addCSI(podSpec)
 
-	addOwnerRefToObject(dset, asOwner(s.stos))
+	controllerutil.SetControllerReference(s.stos, dset, s.scheme)
 	if err := s.client.Create(context.Background(), dset); err != nil && !apierrors.IsAlreadyExists(err) {
 		return fmt.Errorf("failed to create daemonset: %v", err)
 	}
@@ -1119,7 +1123,7 @@ func (s *Deployment) createStatefulSet() error {
 		},
 	}
 
-	addOwnerRefToObject(sset, asOwner(s.stos))
+	controllerutil.SetControllerReference(s.stos, sset, s.scheme)
 	if err := s.client.Create(context.Background(), sset); err != nil && !apierrors.IsAlreadyExists(err) {
 		return fmt.Errorf("failed to create statefulset: %v", err)
 	}
@@ -1157,7 +1161,7 @@ func (s *Deployment) createService() error {
 		},
 	}
 
-	addOwnerRefToObject(svc, asOwner(s.stos))
+	controllerutil.SetControllerReference(s.stos, svc, s.scheme)
 	if err := s.client.Create(context.Background(), svc); err != nil && !apierrors.IsAlreadyExists(err) {
 		return fmt.Errorf("failed to create service: %v", err)
 	}
@@ -1232,7 +1236,7 @@ func (s *Deployment) createIngress() error {
 		}
 	}
 
-	addOwnerRefToObject(ingress, asOwner(s.stos))
+	controllerutil.SetControllerReference(s.stos, ingress, s.scheme)
 	if err := s.client.Create(context.Background(), ingress); err != nil && !apierrors.IsAlreadyExists(err) {
 		return fmt.Errorf("failed to create ingress")
 	}
@@ -1264,7 +1268,7 @@ func (s *Deployment) createTLSSecret() error {
 		},
 	}
 
-	addOwnerRefToObject(secret, asOwner(s.stos))
+	controllerutil.SetControllerReference(s.stos, secret, s.scheme)
 	if err := s.client.Create(context.Background(), secret); err != nil && !apierrors.IsAlreadyExists(err) {
 		return fmt.Errorf("failed to create tls-secret: %v", err)
 	}
@@ -1404,7 +1408,7 @@ func (s *Deployment) createCredSecret(name string, username, password []byte) er
 		},
 	}
 
-	addOwnerRefToObject(secret, asOwner(s.stos))
+	controllerutil.SetControllerReference(s.stos, secret, s.scheme)
 	if err := s.client.Create(context.Background(), secret); err != nil && !apierrors.IsAlreadyExists(err) {
 		return fmt.Errorf("failed to create secret: %v", err)
 	}
@@ -1485,7 +1489,7 @@ func (s *Deployment) createStorageClass() error {
 		sc.Parameters[secretNameKey] = s.stos.Spec.SecretRefName
 	}
 
-	addOwnerRefToObject(sc, asOwner(s.stos))
+	controllerutil.SetControllerReference(s.stos, sc, s.scheme)
 	if err := s.client.Create(context.Background(), sc); err != nil && !apierrors.IsAlreadyExists(err) {
 		return fmt.Errorf("failed to create storage class: %v", err)
 	}

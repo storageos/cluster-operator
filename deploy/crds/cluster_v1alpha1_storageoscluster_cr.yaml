@@ -1,0 +1,79 @@
+apiVersion: storageos.com/v1alpha1
+kind: StorageOSCluster
+metadata:
+  name: example-storageoscluster
+  namespace: "default"
+spec:
+  secretRefName: "storageos-api"
+  secretRefNamespace: "default"
+  namespace: "storageos"
+  # images:
+  #   nodeContainer:
+  #   initContainer:
+  #   csiDriverRegistrarContainer:
+  #   csiExternalProvisionerContainer:
+  #   csiExternalAttacherContainer:
+  csi:
+    enable: true
+  #   enableProvisionCreds: false
+  #   enableControllerPublishCreds: false
+  #   enableNodePublishCreds: false
+  # service:
+  #   name: "storageos"
+  #   type: "ClusterIP"
+  #   externalPort: 5705
+  #   internalPort: 5705
+  #   annotations:
+  #     service.beta.kubernetes.io/aws-load-balancer-backend-protocol: http
+  #     service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443,8443"
+  # ingress:
+  #   enable: false
+  #   hostname: storageos.local
+  #   tls: false
+  #   annotations:
+  #     kubernetes.io/ingress.class: nginx
+  #     kubernetes.io/tls-acme: true
+  # sharedDir should be set if running kubelet in a container.  This should
+  # be the path shared into to kubelet container, typically:
+  # "/var/lib/kubelet/plugins/kubernetes.io~storageos".  If not set, defaults
+  # will be used.
+  # sharedDir:
+  # kvBackend:
+  #   address:
+  #   backend:
+  # nodeSelectorTerms:
+  #   - matchExpressions:
+  #     - key: somekey
+  #       operator: In
+  #       values:
+  #       - nodefoo
+  # resources:
+  #   limits:
+  #     memory: "1Gi"
+  #   requests:
+  #     memory: "702Mi"
+
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: "storageos-api"
+  namespace: "default"
+  labels:
+    app: "storageos"
+type: "kubernetes.io/storageos"
+data:
+  # echo -n '<secret>' | base64
+  apiUsername: c3RvcmFnZW9z
+  apiPassword: c3RvcmFnZW9z
+  # Add base64 encoded TLS cert and key below if ingress.tls is set to true.
+  # tls.crt:
+  # tls.key:
+  # Add base64 encoded creds below for CSI credentials.
+  # csiProvisionUsername:
+  # csiProvisionPassword:
+  # csiControllerPublishUsername:
+  # csiControllerPublishPassword:
+  # csiNodePublishUsername:
+  # csiNodePublishPassword:

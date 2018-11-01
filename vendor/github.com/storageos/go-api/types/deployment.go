@@ -22,16 +22,6 @@ type Deployment struct {
 	// Read Only: true
 	NodeName string `json:"nodeName"`
 
-	// Controller ID
-	// Read Only: true
-	// DEPRECATED: remove in 0.11
-	Controller string `json:"controller"`
-
-	// Controller name
-	// Read Only: true
-	// DEPRECATED: remove in 0.11
-	ControllerName string `json:"controllerName"`
-
 	// Health
 	// Read Only: true
 	Health string `json:"health"`
