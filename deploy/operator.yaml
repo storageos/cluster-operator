@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: storageoscluster-operator
-  namespace: default
+  name: storageos-cluster-operator
 spec:
   replicas: 1
   selector:
     matchLabels:
-      name: storageoscluster-operator
+      name: storageos-cluster-operator
   template:
     metadata:
       labels:
-        name: storageoscluster-operator
+        name: storageos-cluster-operator
     spec:
       serviceAccountName: storageoscluster-operator-sa
       containers:
-        - name: storageoscluster-operator
-          image: storageos/operator:v0.0.1
+        - name: storageos-cluster-operator
+          # Replace this with the built image name
+          image: REPLACE_IMAGE
           ports:
           - containerPort: 60000
             name: metrics
@@ -28,5 +28,9 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "cluster-operator"

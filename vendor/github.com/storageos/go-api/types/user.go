@@ -1,61 +1,23 @@
 package types
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"strings"
 )
 
+// User represents a created user
 type User struct {
-	UUID     string   `json:"id"`
-	Username string   `json:"username"`
-	Groups   []string `json:"groups"`
-	Password string   `json:"password,omitempty"`
-	Role     string   `json:"role"`
+	UUID string `json:"id"`
+
+	UserCreateOptions // expand inner fields
 }
 
-func (u *User) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&struct {
-		UUID     string `json:"id"`
-		Username string `json:"username"`
-		Groups   string `json:"groups"`
-		Password string `json:"password,omitempty"`
-		Role     string `json:"role"`
-	}{
-		UUID:     u.UUID,
-		Username: u.Username,
-		Groups:   strings.Join(u.Groups, ","),
-		Password: u.Password,
-		Role:     u.Role,
-	})
-
-}
-
-func (u *User) UnmarshalJSON(data []byte) error {
-	temp := &struct {
-		UUID     string `json:"id"`
-		Username string `json:"username"`
-		Groups   string `json:"groups"`
-		Password string `json:"password"`
-		Role     string `json:"role"`
-	}{}
-
-	if err := json.Unmarshal(data, temp); err != nil {
-		return err
-	}
-
-	u.UUID = temp.UUID
-	u.Username = temp.Username
-	u.Password = temp.Password
-	u.Role = temp.Role
-	u.Groups = strings.Split(temp.Groups, ",")
-
-	return nil
-}
-
+// UserCreateOptions is used to provide information for user creation
 type UserCreateOptions struct {
 	Username string   `json:"username"`
-	Groups   []string `json:"groups"`
+	Groups   commaStr `json:"groups"`
 	Password string   `json:"password"`
 	Role     string   `json:"role"`
 
@@ -63,17 +25,24 @@ type UserCreateOptions struct {
 	Context context.Context `json:"-"`
 }
 
-func (u UserCreateOptions) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&struct {
-		Username string `json:"username"`
-		Groups   string `json:"groups"`
-		Password string `json:"password"`
-		Role     string `json:"role"`
-	}{
-		Username: u.Username,
-		Groups:   strings.Join(u.Groups, ","),
-		Password: u.Password,
-		Role:     u.Role,
-	})
+// commaStr can unmarshal both JSON string array and a comma separated string
+type commaStr []string
 
+// UnmarshalJSON implements json.Unmarshaller
+func (s *commaStr) UnmarshalJSON(data []byte) error {
+	data = bytes.TrimSpace(data)
+	if len(data) == 0 {
+		return nil
+	}
+
+	if data[0] == '"' {
+		*s = strings.Split(strings.Trim(string(data), `"`), ",")
+		return nil
+	}
+	ss := []string{}
+	if err := json.Unmarshal(data, &ss); err != nil {
+		return err
+	}
+	*s = ss
+	return nil
 }

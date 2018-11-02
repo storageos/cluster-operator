@@ -28,7 +28,9 @@ func (c *Client) CPHealth(ctx context.Context, hostname string) (*types.CPHealth
 		req.SetBasicAuth(c.username, c.secret)
 	}
 
-	resp, err := c.HTTPClient.Do(req.WithContext(ctx))
+	c.configLock.RLock()
+	resp, err := c.httpClient.Do(req.WithContext(ctx))
+	c.configLock.RUnlock()
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +58,9 @@ func (c *Client) DPHealth(ctx context.Context, hostname string) (*types.DPHealth
 		req.SetBasicAuth(c.username, c.secret)
 	}
 
-	resp, err := c.HTTPClient.Do(req.WithContext(ctx))
+	c.configLock.RLock()
+	resp, err := c.httpClient.Do(req.WithContext(ctx))
+	c.configLock.RUnlock()
 	if err != nil {
 		return nil, err
 	}
