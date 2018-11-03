@@ -121,8 +121,7 @@ func storageosClusterDeployTest(t *testing.T, f *framework.Framework, ctx *frame
 		return err
 	}
 
-	// err = e2eutil.WaitForDeployment(t, f.KubeClient, namespace, "storageos-cluster-operator", 2, retryInterval, timeout)
-	err = WaitForDaemonset(t, f.KubeClient, "storageos", "storageos-daemonset", retryInterval, timeout)
+	err = WaitForDaemonset(t, f.KubeClient, "storageos", "storageos-daemonset", retryInterval, timeout*2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,9 +144,6 @@ func WaitForDaemonset(t *testing.T, kubeclient kubernetes.Interface, namespace, 
 			return true, nil
 		}
 
-		// if int(deployment.Status.AvailableReplicas) == replicas {
-		// 	return true, nil
-		// }
 		t.Logf("Waiting for ready status of %s daemonset (%d)\n", name, daemonset.Status.NumberReady)
 		return false, nil
 	})

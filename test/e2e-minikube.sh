@@ -57,9 +57,65 @@ run_minikube() {
 
 install_operatorsdk() {
     echo "Install operator-sdk"
-    wget https://github.com/operator-framework/operator-sdk/releases/download/v0.1.0/operator-sdk-v0.1.0-x86_64-linux-gnu
     curl -Lo operator-sdk https://github.com/operator-framework/operator-sdk/releases/download/v0.1.0/operator-sdk-v0.1.0-x86_64-linux-gnu && chmod +x operator-sdk && sudo mv operator-sdk /usr/local/bin/
     echo
+}
+
+# Prints log for all pods in the specified namespace.
+# Args:
+#   $1 The namespace
+print_pod_details_and_logs() {
+    local namespace="${1?Namespace is required}"
+
+    kubectl get pods --show-all --no-headers --namespace "$namespace" | awk '{ print $1 }' | while read -r pod; do
+        if [[ -n "$pod" ]]; then
+            printf '\n================================================================================\n'
+            printf ' Details from pod %s\n' "$pod"
+            printf '================================================================================\n'
+
+            printf '\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n'
+            printf ' Description of pod %s\n' "$pod"
+            printf '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n'
+
+            kubectl describe pod --namespace "$namespace" "$pod" || true
+
+            printf '\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n'
+            printf ' End of description for pod %s\n' "$pod"
+            printf '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n'
+
+            local init_containers
+            init_containers=$(kubectl get pods --show-all --output jsonpath="{.spec.initContainers[*].name}" --namespace "$namespace" "$pod")
+            for container in $init_containers; do
+                printf -- '\n--------------------------------------------------------------------------------\n'
+                printf ' Logs of init container %s in pod %s\n' "$container" "$pod"
+                printf -- '--------------------------------------------------------------------------------\n\n'
+
+                kubectl logs --namespace "$namespace" --container "$container" "$pod" || true
+
+                printf -- '\n--------------------------------------------------------------------------------\n'
+                printf ' End of logs of init container %s in pod %s\n' "$container" "$pod"
+                printf -- '--------------------------------------------------------------------------------\n'
+            done
+
+            local containers
+            containers=$(kubectl get pods --show-all --output jsonpath="{.spec.containers[*].name}" --namespace "$namespace" "$pod")
+            for container in $containers; do
+                printf '\n--------------------------------------------------------------------------------\n'
+                printf -- ' Logs of container %s in pod %s\n' "$container" "$pod"
+                printf -- '--------------------------------------------------------------------------------\n\n'
+
+                kubectl logs --namespace "$namespace" --container "$container" "$pod" || true
+
+                printf -- '\n--------------------------------------------------------------------------------\n'
+                printf ' End of logs of container %s in pod %s\n' "$container" "$pod"
+                printf -- '--------------------------------------------------------------------------------\n'
+            done
+
+            printf '\n================================================================================\n'
+            printf ' End of details for pod %s\n' "$pod"
+            printf '================================================================================\n\n'
+        fi
+    done
 }
 
 main() {
@@ -70,13 +126,25 @@ main() {
     echo "Ready for testing"
 
     # Create a namespace for testing operator.
+    # This is needed because the service account created using
+    # deploy/service_account.yaml has a static namespace. Craeting operator in
+    # other namespace will result in permission errors.
     kubectl create ns storageos-operator
 
     # Build the operator container image.
     operator-sdk build storageos/cluster-operator:test
 
     # Run the e2e test in the created namespace.
+    # NOTE: Append this test command with `|| true` to debug by inspecting the
+    # resource details. Also comment `defer ctx.Cleanup()` in the cluster to
+    # avoid resouce cleanup.
     operator-sdk test local ./test/e2e --go-test-flags "-v" --namespace storageos-operator
+
+    # echo "**** Resource details for storageos-operator namespace ****"
+    # print_pod_details_and_logs storageos-operator
+
+    # echo "**** Resource details for storageos namespace ****"
+    # print_pod_details_and_logs storageos
 
     echo "Done Testing!"
 }
