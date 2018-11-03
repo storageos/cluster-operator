@@ -37,40 +37,67 @@ func TestCluster(t *testing.T) {
 		t.Fatalf("failed to add custom resource scheme to framework: %v", err)
 	}
 
-	t.Run("storageos-group", func(t *testing.T) {
-		t.Run("Cluster", StorageOSCluster)
-	})
+	testCases := []struct {
+		name string
+		spec storageos.StorageOSClusterSpec
+	}{
+		{
+			name: "k8s in-tree plugin setup",
+			spec: storageos.StorageOSClusterSpec{
+				SecretRefName:      "storageos-api",
+				SecretRefNamespace: "default",
+				ResourceNS:         "storageos",
+			},
+		},
+		{
+			name: "CSI setup",
+			spec: storageos.StorageOSClusterSpec{
+				SecretRefName:      "storageos-api",
+				SecretRefNamespace: "default",
+				ResourceNS:         "storageos",
+				CSI: storageos.StorageOSClusterCSI{
+					Enable: true,
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Deploys the cluster operator and checks if the deployment is
+			// successful. It then creates a custom resource of the cluster.
+
+			ctx := framework.NewTestCtx(t)
+			defer ctx.Cleanup()
+
+			err := ctx.InitializeClusterResources(&framework.CleanupOptions{TestContext: ctx, Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
+			if err != nil {
+				t.Fatalf("failed to initialize cluster resources: %v", err)
+			}
+			t.Log("Initialized cluster resources")
+
+			namespace, err := ctx.GetNamespace()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			f := framework.Global
+
+			err = e2eutil.WaitForDeployment(t, f.KubeClient, namespace, "storageos-cluster-operator", 1, retryInterval, timeout)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if err = storageosClusterDeployTest(t, f, ctx, tc.spec); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
 }
 
-func StorageOSCluster(t *testing.T) {
-	t.Parallel()
-	ctx := framework.NewTestCtx(t)
-	defer ctx.Cleanup()
-
-	err := ctx.InitializeClusterResources(&framework.CleanupOptions{TestContext: ctx, Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
-	if err != nil {
-		t.Fatalf("failed to initialize cluster resources: %v", err)
-	}
-	t.Log("Initialized cluster resources")
-
-	namespace, err := ctx.GetNamespace()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	f := framework.Global
-
-	err = e2eutil.WaitForDeployment(t, f.KubeClient, namespace, "storageos-cluster-operator", 1, retryInterval, timeout)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err = storageosClusterDeployTest(t, f, ctx); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func storageosClusterDeployTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx) error {
+// storageosClusterDeployTest creates a custom resource and checks if the
+// storageos daemonset is deployed successfully.
+func storageosClusterDeployTest(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, clusterSpec storageos.StorageOSClusterSpec) error {
 	namespace, err := ctx.GetNamespace()
 	if err != nil {
 		return fmt.Errorf("could not get namespace: %v", err)
@@ -106,11 +133,7 @@ func storageosClusterDeployTest(t *testing.T, f *framework.Framework, ctx *frame
 			Name:      "example-storageos",
 			Namespace: namespace,
 		},
-		Spec: storageos.StorageOSClusterSpec{
-			SecretRefName:      "storageos-api",
-			SecretRefNamespace: "default",
-			ResourceNS:         "storageos",
-		},
+		Spec: clusterSpec,
 		Status: storageos.StorageOSClusterStatus{
 			Nodes: []string{},
 		},
