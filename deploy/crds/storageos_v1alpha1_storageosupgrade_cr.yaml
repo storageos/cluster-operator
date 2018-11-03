@@ -1,0 +1,7 @@
+apiVersion: storageos.com/v1alpha1
+kind: StorageOSUpgrade
+metadata:
+  name: example-storageosupgrade
+spec:
+  # Add fields here
+  size: 3
