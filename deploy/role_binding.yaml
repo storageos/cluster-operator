@@ -5,7 +5,7 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: storageoscluster-operator-sa
-  namespace: default
+  namespace: storageos-operator
 roleRef:
   kind: ClusterRole
   name: cluster-admin
