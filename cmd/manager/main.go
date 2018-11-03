@@ -5,7 +5,6 @@ import (
 	"log"
 	"runtime"
 
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	"github.com/storageos/cluster-operator/pkg/apis"
 	"github.com/storageos/cluster-operator/pkg/controller"
@@ -25,11 +24,6 @@ func main() {
 	printVersion()
 	flag.Parse()
 
-	namespace, err := k8sutil.GetWatchNamespace()
-	if err != nil {
-		log.Fatalf("failed to get watch namespace: %v", err)
-	}
-
 	// TODO: Expose metrics port after SDK uses controller-runtime's dynamic client
 	// sdk.ExposeMetricsPort()
 
@@ -40,7 +34,8 @@ func main() {
 	}
 
 	// Create a new Cmd to provide shared dependencies and start components
-	mgr, err := manager.New(cfg, manager.Options{Namespace: namespace})
+	// Use "" namespace to watch all the namespaces.
+	mgr, err := manager.New(cfg, manager.Options{Namespace: ""})
 	if err != nil {
 		log.Fatal(err)
 	}
