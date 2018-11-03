@@ -1,5 +1,8 @@
 # StorageOS cluster-operator
 
+[![Build Status](https://travis-ci.org/storageos/cluster-operator.svg?branch=master)](https://travis-ci.org/storageos/cluster-operator)
+[![CircleCI](https://circleci.com/gh/storageos/cluster-operator.svg?style=svg)](https://circleci.com/gh/storageos/cluster-operator)
+
 The StorageOS Cluster Operator deploys and configures a StorageOS cluster on
 Kubernetes.
 
