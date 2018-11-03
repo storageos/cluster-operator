@@ -271,7 +271,8 @@
   digest = "1:ee01ef8a6bac37c704936dfd61a59421a1a5e26b3f9f2c669c5eeb41dde9c5ca"
   name = "github.com/operator-framework/operator-sdk"
   packages = [
-    "pkg/k8sutil",
+    "pkg/test",
+    "pkg/test/e2eutil",
     "version",
   ]
   pruneopts = "NT"
@@ -522,6 +523,18 @@
   version = "kubernetes-1.11.4"
 
 [[projects]]
+  digest = "1:03304627f24607914bdc0f47f27a64433f3641d929879f43cfc06592c215e22e"
+  name = "k8s.io/apiextensions-apiserver"
+  packages = [
+    "pkg/apis/apiextensions",
+    "pkg/apis/apiextensions/v1beta1",
+    "pkg/client/clientset/clientset/scheme",
+  ]
+  pruneopts = "NT"
+  revision = "67bb9d92aa024a38a3e323cbb9e115e82c0d50b3"
+  version = "kubernetes-1.11.4"
+
+[[projects]]
   digest = "1:a3613a34df556df8181dbb26610450349732fa9407a3d0e0c8de55646ffaf091"
   name = "k8s.io/apimachinery"
   packages = [
@@ -577,6 +590,7 @@
   name = "k8s.io/client-go"
   packages = [
     "discovery",
+    "discovery/cached",
     "dynamic",
     "kubernetes",
     "kubernetes/scheme",
@@ -754,7 +768,8 @@
   input-imports = [
     "github.com/blang/semver",
     "github.com/darkowlzz/daemonset-job/pkg/apis/daemonset/v1beta1",
-    "github.com/operator-framework/operator-sdk/pkg/k8sutil",
+    "github.com/operator-framework/operator-sdk/pkg/test",
+    "github.com/operator-framework/operator-sdk/pkg/test/e2eutil",
     "github.com/operator-framework/operator-sdk/version",
     "github.com/storageos/go-api",
     "github.com/storageos/go-api/types",
@@ -772,6 +787,7 @@
     "k8s.io/apimachinery/pkg/selection",
     "k8s.io/apimachinery/pkg/types",
     "k8s.io/apimachinery/pkg/util/intstr",
+    "k8s.io/apimachinery/pkg/util/wait",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/scheme",
     "k8s.io/client-go/kubernetes/typed/core/v1",
