@@ -118,6 +118,7 @@ print_pod_details_and_logs() {
     done
 }
 
+# All the arguments are passed as -tags flag value of go test command.
 main() {
     enable_lio
     run_minikube
@@ -138,7 +139,7 @@ main() {
     # NOTE: Append this test command with `|| true` to debug by inspecting the
     # resource details. Also comment `defer ctx.Cleanup()` in the cluster to
     # avoid resouce cleanup.
-    operator-sdk test local ./test/e2e --go-test-flags "-v" --namespace storageos-operator
+    operator-sdk test local ./test/e2e --go-test-flags "-v -tags $@" --namespace storageos-operator
 
     # echo "**** Resource details for storageos-operator namespace ****"
     # print_pod_details_and_logs storageos-operator
@@ -149,4 +150,4 @@ main() {
     echo "Done Testing!"
 }
 
-main
+main "$@"
