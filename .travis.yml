@@ -7,6 +7,9 @@ env:
     - CHANGE_MINIKUBE_NONE_USER=true
     - K8S_VERSION="v1.10.0"
     - MINIKUBE_VERSION="v0.28.2"
+  matrix:
+    - "TEST_SUITE=csi"
+    - "TEST_SUITE=intree"
 
 # before_install:
 #     - docker run -d -p 2399:2399 quay.io/coreos/etcd:v3.3.10 /usr/local/bin/etcd -advertise-client-urls http://0.0.0.0:2399 -listen-client-urls http://0.0.0.0:2399
@@ -15,4 +18,4 @@ env:
 install: true
 
 script:
-    - ./test/e2e-minikube.sh
+  - ./test/e2e-minikube.sh $TEST_SUITE
