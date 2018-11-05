@@ -55,6 +55,35 @@ run_minikube() {
     echo
 }
 
+run_openshift() {
+    echo "Run openshift"
+    # Configure insecure docker registry for openshift
+    sudo service docker stop
+    sudo sed -i 's/DOCKER_OPTS=\"/DOCKER_OPTS=\"--insecure-registry 172.30.0.0\/16 /' /etc/default/docker
+    sudo service docker start
+
+    # Change directory to $HOME to avoid creating openshift cluster files in the project git repo.
+    # This is needed to avoid including the cluster files in docker build context.
+    cd $HOME
+    # Download oc to spin up openshift on local docker instance
+    curl -Lo oc.tar.gz https://github.com/openshift/origin/releases/download/v3.11.0/openshift-origin-client-tools-v3.11.0-0cbc58b-linux-64bit.tar.gz
+    # Put oc binary in path
+    tar xvzOf oc.tar.gz openshift-origin-client-tools-v3.11.0-0cbc58b-linux-64bit/oc > oc && chmod +x oc && sudo mv oc /usr/local/bin/
+    # Start oc cluster
+    oc cluster up
+    # Become cluster admin
+    oc login -u system:admin
+    # Install kubectl
+    curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.11.3/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+    # Change directory to the project directory.
+    cd -
+    # Add storageos service account to Security Context Constraint (SCC).
+    # This is openshift specific permission which is required for the operator
+    # to work.
+    oc adm policy add-scc-to-user privileged system:serviceaccount:storageos:storageos-daemonset-sa
+    echo
+}
+
 install_operatorsdk() {
     echo "Install operator-sdk"
     curl -Lo operator-sdk https://github.com/operator-framework/operator-sdk/releases/download/v0.1.0/operator-sdk-v0.1.0-x86_64-linux-gnu && chmod +x operator-sdk && sudo mv operator-sdk /usr/local/bin/
@@ -118,10 +147,15 @@ print_pod_details_and_logs() {
     done
 }
 
-# All the arguments are passed as -tags flag value of go test command.
 main() {
     enable_lio
-    run_minikube
+
+    if [ "$1" = "minikube" ]; then
+        run_minikube
+    elif [ "$1" = "openshift" ]; then
+        run_openshift
+    fi
+
     install_operatorsdk
 
     echo "Ready for testing"
@@ -139,7 +173,7 @@ main() {
     # NOTE: Append this test command with `|| true` to debug by inspecting the
     # resource details. Also comment `defer ctx.Cleanup()` in the cluster to
     # avoid resouce cleanup.
-    operator-sdk test local ./test/e2e --go-test-flags "-v -tags $@" --namespace storageos-operator
+    operator-sdk test local ./test/e2e --go-test-flags "-v -tags $2" --namespace storageos-operator
 
     # echo "**** Resource details for storageos-operator namespace ****"
     # print_pod_details_and_logs storageos-operator
