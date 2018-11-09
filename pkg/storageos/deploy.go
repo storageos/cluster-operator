@@ -524,7 +524,7 @@ func (s *Deployment) createDaemonSet() error {
 					ServiceAccountName: "storageos-daemonset-sa",
 					HostPID:            true,
 					HostNetwork:        true,
-					DNSPolicy: "ClusterFirstWithHostNet",
+					DNSPolicy:          v1.DNSClusterFirstWithHostNet,
 					InitContainers: []v1.Container{
 						{
 							Name:  "enable-lio",
