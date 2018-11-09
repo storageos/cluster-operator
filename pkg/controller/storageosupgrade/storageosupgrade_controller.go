@@ -19,11 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
-
 // Add creates a new StorageOSUpgrade Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
@@ -68,8 +63,9 @@ var _ reconcile.Reconciler = &ReconcileStorageOSUpgrade{}
 type ReconcileStorageOSUpgrade struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
+	client         client.Client
+	scheme         *runtime.Scheme
+	currentUpgrade *storageosv1alpha1.StorageOSUpgrade
 }
 
 // Reconcile reads that state of the cluster for a StorageOSUpgrade object and makes changes based on the state read

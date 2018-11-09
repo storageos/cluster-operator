@@ -12,6 +12,8 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -19,12 +21,13 @@ import (
 )
 
 const (
-	pvcStorageClassKey       = "volume.beta.kubernetes.io/storage-class"
-	storageosProvisioner     = "storageos"
-	replicaKey               = "stos/replicas-before-scale-down"
-	deploymentUpdateTimeout  = 5 * time.Minute
-	statefulSetUpdateTimeout = 10 * time.Minute
-	defaultRetryInterval     = 10 * time.Second
+	pvcStorageClassKey            = "volume.beta.kubernetes.io/storage-class"
+	storageosProvisioner          = "storageos"
+	replicaKey                    = "stos/replicas-before-scale-down"
+	deploymentUpdateTimeout       = 5 * time.Minute
+	statefulSetUpdateTimeout      = 10 * time.Minute
+	defaultRetryInterval          = 10 * time.Second
+	daemonsetUpdateTriggerTimeout = 5 * time.Minute
 )
 
 // K8SOps is a kubernetes operations type which can be used to query and perform
@@ -334,6 +337,188 @@ func (k K8SOps) ScaleUpApps() error {
 	}
 
 	return nil
+}
+
+// UpgradeDaemonSet upgrades the storageos daemonsets with a new container
+// image. It blocks and waits checking the status of pods before exiting. Once
+// all the pods are ready, it exits.
+func (k K8SOps) UpgradeDaemonSet(newImage string) error {
+	ds, err := k.GetStorageOSDaemonSet()
+	if err != nil {
+		return err
+	}
+
+	log.Printf("updating storageos daemonset: [%s] %s", ds.GetNamespace(), ds.GetName())
+
+	expectedGenerations := make(map[types.UID]int64)
+
+	t := func() (interface{}, bool, error) {
+		dCopy, err := k.client.AppsV1().DaemonSets(ds.GetNamespace()).Get(ds.GetName(), metav1.GetOptions{})
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return nil, false, nil
+			}
+
+			return nil, true, err
+		}
+
+		// Save and use ObservedGeneration + 1 to figure out the currently
+		// applied config of a daemonset.
+		expectedGenerations[dCopy.GetUID()] = dCopy.Status.ObservedGeneration + 1
+
+		dCopy.Spec.UpdateStrategy = appsv1.DaemonSetUpdateStrategy{
+			Type: appsv1.RollingUpdateDaemonSetStrategyType,
+			RollingUpdate: &appsv1.RollingUpdateDaemonSet{
+				MaxUnavailable: &intstr.IntOrString{Type: intstr.Int, IntVal: 1},
+			},
+		}
+		dCopy.Spec.Template.Spec.Containers[0].Image = newImage
+		_, updateErr := k.client.AppsV1().DaemonSets(dCopy.GetNamespace()).Update(dCopy)
+		if updateErr != nil {
+			log.Printf("failed to update Daemonset %s: %v", dCopy.GetName(), updateErr)
+			return nil, true, updateErr
+		}
+
+		return nil, false, nil
+	}
+
+	if _, err := task.DoRetryWithTimeout(t, deploymentUpdateTimeout, defaultRetryInterval); err != nil {
+		return err
+	}
+
+	// Wait for the new daemonset to be ready
+	log.Printf("Checking upgrade status of daemonset: [%s] %s to version %s", ds.GetNamespace(), ds.GetName(), newImage)
+
+	t = func() (interface{}, bool, error) {
+		updatedDS, err := k.client.AppsV1().DaemonSets(ds.GetNamespace()).Get(ds.GetName(), metav1.GetOptions{})
+		if err != nil {
+			return nil, true, err
+		}
+
+		expectedGeneration, _ := expectedGenerations[ds.UID]
+		if updatedDS.Status.ObservedGeneration != expectedGeneration {
+			return nil, true, fmt.Errorf("daemonset: [%s] %s still running previous generation: %d. Expected generation %d", ds.GetNamespace(), ds.GetName(), updatedDS.Status.ObservedGeneration, expectedGeneration)
+		}
+
+		return nil, false, nil
+	}
+
+	if _, err := task.DoRetryWithTimeout(t, daemonsetUpdateTriggerTimeout, defaultRetryInterval); err != nil {
+		return err
+	}
+
+	log.Println("Waiting for the daemonset to be reay")
+
+	if err = k.WaitForDaemonSetToBeReady(ds.GetName(), ds.GetNamespace()); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// WaitForDaemonSetToBeReady checks a given DaemonSet to be available and ready.
+func (k K8SOps) WaitForDaemonSetToBeReady(name, namespace string) error {
+	t := func() (interface{}, bool, error) {
+		ds, err := k.client.AppsV1().DaemonSets(namespace).Get(name, metav1.GetOptions{})
+		if err != nil {
+			return nil, true, err
+		}
+
+		if ds.Status.ObservedGeneration == 0 {
+			return nil, true, fmt.Errorf("Observed generation is still 0. Check after some time")
+		}
+
+		pods, err := k.GetDaemonSetPods(ds)
+		if err != nil {
+			return nil, true, fmt.Errorf("Failed to get daemonset pods")
+		}
+
+		if len(pods.Items) == 0 {
+			return nil, true, fmt.Errorf("Daemonset has 0 pods")
+		}
+
+		if ds.Status.DesiredNumberScheduled != ds.Status.UpdatedNumberScheduled {
+			return nil, true, fmt.Errorf("Not all pods are updated")
+		}
+
+		if ds.Status.NumberUnavailable > 0 {
+			return nil, true, fmt.Errorf("%d pods are unavailable", ds.Status.NumberUnavailable)
+		}
+
+		return nil, false, nil
+	}
+
+	if _, err := task.DoRetryWithTimeout(t, daemonsetUpdateTriggerTimeout, defaultRetryInterval); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetStorageOSDaemonSet returns a DaemonSet that runs storageos.
+func (k K8SOps) GetStorageOSDaemonSet() (*appsv1.DaemonSet, error) {
+	dss, err := k.GetDaemonSetsByLabel("app=storageos")
+	if err != nil {
+		return nil, err
+	}
+
+	if len(dss.Items) == 0 {
+		return nil, fmt.Errorf("could not find any storageos daemonset")
+	}
+
+	if len(dss.Items) > 1 {
+		return nil, fmt.Errorf("can't upgrade, found more than one storageos daemonset")
+	}
+
+	return &dss.Items[0], nil
+}
+
+// GetDaemonSetsByLabel returns DaemonSets selected by the given label.
+func (k K8SOps) GetDaemonSetsByLabel(label string) (*appsv1.DaemonSetList, error) {
+	listOpts := metav1.ListOptions{
+		LabelSelector: label,
+	}
+
+	dss, err := k.client.AppsV1().DaemonSets("").List(listOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, d := range dss.Items {
+		fmt.Println(d.GetName())
+	}
+
+	return dss, nil
+}
+
+// GetDaemonSetPods return PodList of all the pods that belong to a given
+// DaemonSet.
+func (k K8SOps) GetDaemonSetPods(ds *appsv1.DaemonSet) (*corev1.PodList, error) {
+	return k.GetPodsByOwner(ds.GetUID(), ds.GetNamespace())
+}
+
+// GetPodsByOwner returns PodList of all the pods that are owned by the given
+// ownerUID in the given namespace.
+func (k K8SOps) GetPodsByOwner(ownerUID types.UID, namespace string) (*corev1.PodList, error) {
+	pods, err := k.client.CoreV1().Pods(namespace).List(metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	result := &corev1.PodList{}
+	for _, pod := range pods.Items {
+		for _, owner := range pod.OwnerReferences {
+			if owner.UID == ownerUID {
+				result.Items = append(result.Items, pod)
+			}
+		}
+	}
+
+	if len(result.Items) == 0 {
+		return nil, fmt.Errorf("pods with not found")
+	}
+
+	return result, nil
 }
 
 func int32Ptr(i int32) *int32 { return &i }
