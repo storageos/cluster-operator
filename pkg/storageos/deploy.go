@@ -508,6 +508,9 @@ func (s *Deployment) createDaemonSet() error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      daemonsetName,
 			Namespace: s.stos.Spec.GetResourceNS(),
+			Labels: map[string]string{
+				"app": "storageos",
+			},
 		},
 		Spec: appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
@@ -1050,6 +1053,9 @@ func (s *Deployment) createStatefulSet() error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      statefulsetName,
 			Namespace: s.stos.Spec.GetResourceNS(),
+			Labels: map[string]string{
+				"app": "storageos",
+			},
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: "storageos",
