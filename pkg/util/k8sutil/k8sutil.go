@@ -83,7 +83,10 @@ func (k K8SOps) GetDeploymentsUsingStorageClassProvisioner(provisionerName strin
 
 			pvc, err := k.client.CoreV1().PersistentVolumeClaims(dep.GetNamespace()).Get(v.PersistentVolumeClaim.ClaimName, metav1.GetOptions{})
 			if err != nil {
-				continue
+				if errors.IsNotFound(err) {
+					continue
+				}
+				return nil, err
 			}
 
 			sc, err := k.GetStorageClassForPVC(pvc)
@@ -117,6 +120,7 @@ func (k K8SOps) GetStatefulSetsUsingStorageClassProvisioner(provisionerName stri
 				scStatefulsets.Items = append(scStatefulsets.Items, s)
 				break
 			}
+			return nil, err
 		}
 	}
 
@@ -407,7 +411,7 @@ func (k K8SOps) UpgradeDaemonSet(newImage string) error {
 		return err
 	}
 
-	log.Println("Waiting for the daemonset to be reay")
+	log.Println("Waiting for the daemonset to be ready")
 
 	if err = k.WaitForDaemonSetToBeReady(ds.GetName(), ds.GetNamespace()); err != nil {
 		return err
@@ -482,10 +486,6 @@ func (k K8SOps) GetDaemonSetsByLabel(label string) (*appsv1.DaemonSetList, error
 	dss, err := k.client.AppsV1().DaemonSets("").List(listOpts)
 	if err != nil {
 		return nil, err
-	}
-
-	for _, d := range dss.Items {
-		fmt.Println(d.GetName())
 	}
 
 	return dss, nil

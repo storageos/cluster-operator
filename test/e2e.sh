@@ -150,6 +150,7 @@ print_pod_details_and_logs() {
 main() {
     enable_lio
 
+    # Install minikube or openshift on the test machine based on the passed args.
     if [ "$1" = "minikube" ]; then
         run_minikube
     elif [ "$1" = "openshift" ]; then
@@ -167,9 +168,21 @@ main() {
     kubectl create ns storageos-operator
 
     # Build the operator container image.
-    operator-sdk build storageos/cluster-operator:test
+    # This would build a container with tag storageos/cluster-operator:test,
+    # which is used in the e2e test setup below.
+    make image/cluster-operator
 
     # Run the e2e test in the created namespace.
+    #
+    # Tags are passed to test local command to run e2e test packages only with
+    # specific config.
+    # Tag "intree" would run k8s intree plugin test setup.
+    # Tag "csi" would run csi test setup.
+    # The cluster-operator container image used in the e2e setup is based on the
+    # operator container image in the manifest file deploy/operator.yaml. The
+    # deploy manifests are combined and applied to deploy the operator before
+    # running the e2e tests.
+    #
     # NOTE: Append this test command with `|| true` to debug by inspecting the
     # resource details. Also comment `defer ctx.Cleanup()` in the cluster to
     # avoid resouce cleanup.

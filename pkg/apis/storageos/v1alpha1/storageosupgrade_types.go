@@ -11,12 +11,15 @@ import (
 type StorageOSUpgradeSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
+
+	NewImage string `json:"newImage"`
 }
 
 // StorageOSUpgradeStatus defines the observed state of StorageOSUpgrade
 type StorageOSUpgradeStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
+	Completed bool `json:"completed"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
