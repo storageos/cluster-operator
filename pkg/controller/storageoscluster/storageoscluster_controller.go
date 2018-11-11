@@ -31,7 +31,8 @@ import (
 func Add(mgr manager.Manager) error {
 	// Get k8s version from client and set the version in ReconcileStorageOSCluster.
 	clientset := kubernetes.NewForConfigOrDie(mgr.GetConfig())
-	version, err := k8sutil.GetK8SVersion(clientset)
+	k := k8sutil.NewK8SOps(clientset)
+	version, err := k.GetK8SVersion()
 	if err != nil {
 		return err
 	}
