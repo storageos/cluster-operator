@@ -34,12 +34,14 @@ Refer to the [StorageOS prerequisites docs](https://docs.storageos.com/docs/prer
 
 For development, run the operator outside of the k8s cluster by running:
 ```
-$ OPERATOR_NAME=cluster-operator operator-sdk up local
+$ make local-run
 ```
-Pass kubeconfig:
+
+Build operator container image:
 ```
-OPERATOR_NAME=cluster-operator operator-sdk up local --kubeconfig=/path/to/kubeconfig
+$ make image/cluster-operator OPERATOR_IMAGE=storageos/cluster-operator:test
 ```
+This builds all the components and copies the binaries into the same container.
 
 After creating a resource, query the resource:
 ```
@@ -119,6 +121,50 @@ Parameter | Description | Default
 `debug` | Enable debug mode for all the cluster nodes | `false`
 `nodeSelectorTerms` | Set node selector for storageos pod placement |
 `resources` | Set resource requirements for the containers |
+
+
+## Upgrading a StorageOS Cluster
+
+An existing StorageOS cluster can be upgraded to a new version of StorageOS by
+creating an Upgrade Configuration. The cluster-operator takes care of
+downloading the new container image and updating all the nodes with new version
+of StorageOS.
+An example of of `StorageOSUpgrade` resource is [storageos_v1alpha1_storageosupgrade_cr.yaml](/deploy/crds/storageos_v1alpha1_storageosupgrade_cr.yaml).
+
+Only offline upgrade is supported for now by cluster-operator. During the
+upgrade, the applications that use StorageOS volumes are scaled down and the
+whole StorageOS cluster is restarted with a new version. Once the StorageOS
+cluster becomes usable, the applications are scaled up to their previous configuration.
+
+Once an upgrade resource is created, events related to the upgrade can be
+viewed in the upgrade object description. All the status and errors, if any,
+encountered during the upgrade are posted as events.
+
+```
+$ kubectl describe storageosupgrades example-storageosupgrade
+Name:         example-storageosupgrade
+Namespace:    default
+Labels:       <none>
+Annotations:  kubectl.kubernetes.io/last-applied-configuration={"apiVersion":"storageos.com/v1alpha1","kind":"StorageOSUpgrade","metadata":{"annotations":{},"name":"example-storageosupgrade","namespace":"default"},...
+API Version:  storageos.com/v1alpha1
+Kind:         StorageOSUpgrade
+...
+Spec:
+  New Image:  storageos/node:1.0.0
+Events:
+  Type    Reason           Age   From                Message
+  ----    ------           ----  ----                -------
+  Normal  UpgradeComplete  21s   storageos-upgrader  StorageOS upgraded to storageos/node:1.0.0
+```
+
+## StorageOSUpgrade Resource Configuration
+
+The following table lists the configurable spec parameters of the
+StorageOSUpgrade custom resource and their default values.
+
+Parameter | Description | Default
+--------- | ----------- | -------
+`newImage` | StorageOS node container image to upgrade to |
 
 
 ## TLS Support

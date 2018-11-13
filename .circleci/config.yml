@@ -14,7 +14,4 @@ jobs:
 
       # specify any bash command here prefixed with `run: `
       - run: go get golang.org/x/lint/golint
-      - run: golint -set_exit_status $(go list ./...)
-      - run: go vet ./...
-      - run: go test -v `go list -v ./... | grep -v test/e2e`
-      - run: go build github.com/storageos/cluster-operator/cmd/manager
+      - run: make all
