@@ -4,18 +4,24 @@ GO_ENV = GOOS=linux CGO_ENABLED=0
 
 LDFLAGS += -X github.com/storageos/cluster-operator/pkg/controller/storageosupgrade.operatorImage=$(OPERATOR_IMAGE)
 
+all: lint unittest build/upgrader build/cluster-operator
+
 build/upgrader:
 	@echo "Building upgrader"
-	GOOS=linux CGO_ENABLED=0 $(GO_BUILD_CMD) \
+	$(GO_ENV) $(GO_BUILD_CMD) \
 		-o ./build/_output/bin/upgrader \
 		./cmd/upgrader
 
-image/cluster-operator: build/upgrader
-	operator-sdk generate k8s
+build/cluster-operator:
+	@echo "Building cluster-operator"
 	$(GO_ENV) $(GO_BUILD_CMD) -ldflags "$(LDFLAGS)" \
 		-o ./build/_output/bin/cluster-operator \
 		./cmd/manager
-	# Build the final container
+
+generate:
+	operator-sdk generate k8s
+
+image/cluster-operator: generate build/upgrader build/cluster-operator
 	docker build . -f build/Dockerfile -t $(OPERATOR_IMAGE)
 
 local-run: build/upgrader

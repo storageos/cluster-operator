@@ -14,7 +14,4 @@ jobs:
 
       # specify any bash command here prefixed with `run: `
       - run: go get golang.org/x/lint/golint
-      - run: make lint
-      - run: make unittest
-      - run: go build github.com/storageos/cluster-operator/cmd/manager
-      - run: go build github.com/storageos/cluster-operator/cmd/upgrader
+      - run: make all
