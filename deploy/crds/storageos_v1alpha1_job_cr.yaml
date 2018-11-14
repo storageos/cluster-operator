@@ -1,0 +1,7 @@
+apiVersion: storageos.com/v1alpha1
+kind: Job
+metadata:
+  name: example-job
+spec:
+  # Add fields here
+  size: 3
