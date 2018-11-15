@@ -105,15 +105,6 @@ func (r *ReconcileStorageOSCluster) IsCurrentCluster(cluster *storageosv1alpha1.
 
 // ResetCurrentCluster resets the current cluster of the controller.
 func (r *ReconcileStorageOSCluster) ResetCurrentCluster() {
-	// TODO: Remove cleanup at delete. This should never trigger automatically.
-	// Users should trigger it explicitly via other means.
-	// if r.currentCluster.Spec.CleanupAtDelete {
-	// 	if err := cleanup(r.client, r.currentCluster); err != nil {
-	// 		// This error is just logged and not returned. Failing to cleanup
-	// 		// need not fail cluster reset.
-	// 		log.Println(err)
-	// 	}
-	// }
 	r.currentCluster = nil
 }
 
@@ -187,7 +178,6 @@ func (r *ReconcileStorageOSCluster) reconcile(m *storageosv1alpha1.StorageOSClus
 	m.Spec.ResourceNS = m.Spec.GetResourceNS()
 	m.Spec.Images.NodeContainer = m.Spec.GetNodeContainerImage()
 	m.Spec.Images.InitContainer = m.Spec.GetInitContainerImage()
-	m.Spec.Images.CleanupContainer = m.Spec.GetCleanupContainerImage()
 
 	if m.Spec.CSI.Enable {
 		m.Spec.Images.CSIDriverRegistrarContainer = m.Spec.GetCSIDriverRegistrarImage()
@@ -215,6 +205,10 @@ func (r *ReconcileStorageOSCluster) reconcile(m *storageosv1alpha1.StorageOSClus
 			updateIfExists = true
 			r.SetCurrentCluster(m)
 		}
+
+		// TODO: Remove this after resolving the conflict between two way
+		// binding and upgrade.
+		updateIfExists = false
 
 		stosDeployment := storageos.NewDeployment(r.client, m, r.recorder, r.scheme, r.k8sVersion, updateIfExists)
 		if err := stosDeployment.Deploy(); err != nil {

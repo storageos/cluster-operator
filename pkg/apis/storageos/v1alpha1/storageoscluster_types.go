@@ -25,12 +25,11 @@ const (
 
 	DefaultIngressHostname = "storageos.local"
 
-	DefaultNodeContainerImage                   = "storageos/node:1.0.0-rc5"
+	DefaultNodeContainerImage                   = "storageos/node:1.0.0"
 	DefaultCSIDriverRegistrarContainerImage     = "quay.io/k8scsi/driver-registrar:v0.4.1"
 	DefaultCSIExternalProvisionerContainerImage = "quay.io/k8scsi/csi-provisioner:v0.4.0"
 	DefaultCSIExternalAttacherContainerImage    = "quay.io/k8scsi/csi-attacher:v0.4.0"
 	DefaultInitContainerImage                   = "storageos/init:0.1"
-	DefaultCleanupContainerImage                = "darkowlzz/cleanup:v0.0.2"
 )
 
 // StorageOSClusterSpec defines the desired state of StorageOSCluster
@@ -69,10 +68,6 @@ type StorageOSClusterSpec struct {
 
 	// Images defines the various container images used in the cluster.
 	Images ContainerImages `json:"images"`
-
-	// CleanupAtDelete is to trigger the cleanup operator when the cluster is
-	// deleted.
-	CleanupAtDelete bool `json:"cleanupAtDelete"`
 
 	// KVBackend defines the key-value store backend used in the cluster.
 	KVBackend StorageOSClusterKVBackend `json:"kvBackend"`
@@ -174,14 +169,6 @@ func (s StorageOSClusterSpec) GetCSIExternalAttacherImage() string {
 	return DefaultCSIExternalAttacherContainerImage
 }
 
-// GetCleanupContainerImage returns the container image used for cleanup.
-func (s StorageOSClusterSpec) GetCleanupContainerImage() string {
-	if s.Images.CleanupContainer != "" {
-		return s.Images.CleanupContainer
-	}
-	return DefaultCleanupContainerImage
-}
-
 // GetServiceName returns the service name.
 func (s StorageOSClusterSpec) GetServiceName() string {
 	if s.Service.Name != "" {
@@ -229,7 +216,6 @@ type ContainerImages struct {
 	CSIDriverRegistrarContainer     string `json:"csiDriverRegistrarContainer"`
 	CSIExternalProvisionerContainer string `json:"csiExternalProvisionerContainer"`
 	CSIExternalAttacherContainer    string `json:"csiExternalAttacherContainer"`
-	CleanupContainer                string `json:"cleanupContainer"`
 }
 
 // StorageOSClusterCSI contains CSI configurations.
