@@ -207,7 +207,16 @@ func (r *ReconcileStorageOSCluster) reconcile(m *storageosv1alpha1.StorageOSClus
 	// Finalizers are set when an object should be deleted. Apply deploy only
 	// when finalizers is empty.
 	if len(m.GetFinalizers()) == 0 {
-		stosDeployment := storageos.NewDeployment(r.client, m, r.recorder, r.scheme, r.k8sVersion)
+		// Check if there's a new version of the cluster config and create a new
+		// deployment accordingly to update the resources that already exist.
+		updateIfExists := false
+		if r.currentCluster.GetResourceVersion() != m.GetResourceVersion() {
+			log.Println("new cluster config detected")
+			updateIfExists = true
+			r.SetCurrentCluster(m)
+		}
+
+		stosDeployment := storageos.NewDeployment(r.client, m, r.recorder, r.scheme, r.k8sVersion, updateIfExists)
 		if err := stosDeployment.Deploy(); err != nil {
 			// Ignore "Operation cannot be fulfilled" error. It happens when the
 			// actual state of object is different from what is known to the operator.

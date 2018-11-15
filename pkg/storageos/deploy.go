@@ -103,17 +103,19 @@ type Deployment struct {
 	recorder   record.EventRecorder
 	k8sVersion string
 	scheme     *runtime.Scheme
+	update     bool
 }
 
 // NewDeployment creates a new Deployment given a k8c client, storageos manifest
 // and an event broadcast recorder.
-func NewDeployment(client client.Client, stos *api.StorageOSCluster, recorder record.EventRecorder, scheme *runtime.Scheme, version string) *Deployment {
+func NewDeployment(client client.Client, stos *api.StorageOSCluster, recorder record.EventRecorder, scheme *runtime.Scheme, version string, update bool) *Deployment {
 	return &Deployment{
 		client:     client,
 		stos:       stos,
 		recorder:   recorder,
 		k8sVersion: version,
 		scheme:     scheme,
+		update:     update,
 	}
 }
 
@@ -224,10 +226,7 @@ func (s *Deployment) createNamespace() error {
 	}
 
 	controllerutil.SetControllerReference(s.stos, ns, s.scheme)
-	if err := s.client.Create(context.Background(), ns); err != nil && !apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("failed to create namespace: %v", err)
-	}
-	return nil
+	return s.createOrUpdateObject(ns)
 }
 
 func (s *Deployment) createServiceAccount(name string) error {
@@ -246,10 +245,7 @@ func (s *Deployment) createServiceAccount(name string) error {
 	}
 
 	controllerutil.SetControllerReference(s.stos, sa, s.scheme)
-	if err := s.client.Create(context.Background(), sa); err != nil && !apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("failed to create service account: %v", err)
-	}
-	return nil
+	return s.createOrUpdateObject(sa)
 }
 
 func (s *Deployment) createServiceAccountForDaemonSet() error {
@@ -283,10 +279,7 @@ func (s *Deployment) createRoleForKeyMgmt() error {
 	}
 
 	controllerutil.SetControllerReference(s.stos, role, s.scheme)
-	if err := s.client.Create(context.Background(), role); err != nil && !apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("failed to create role: %v", err)
-	}
-	return nil
+	return s.createOrUpdateObject(role)
 }
 
 func (s *Deployment) createClusterRole(name string, rules []rbacv1.PolicyRule) error {
@@ -305,10 +298,7 @@ func (s *Deployment) createClusterRole(name string, rules []rbacv1.PolicyRule) e
 	}
 
 	controllerutil.SetControllerReference(s.stos, role, s.scheme)
-	if err := s.client.Create(context.Background(), role); err != nil && !apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("failed to create cluster role: %v", err)
-	}
-	return nil
+	return s.createOrUpdateObject(role)
 }
 
 func (s *Deployment) createClusterRoleForDriverRegistrar() error {
@@ -417,10 +407,7 @@ func (s *Deployment) createRoleBindingForKeyMgmt() error {
 	}
 
 	controllerutil.SetControllerReference(s.stos, roleBinding, s.scheme)
-	if err := s.client.Create(context.Background(), roleBinding); err != nil && !apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("failed to create role binding: %v", err)
-	}
-	return nil
+	return s.createOrUpdateObject(roleBinding)
 }
 
 func (s *Deployment) createClusterRoleBinding(name string, subjects []rbacv1.Subject, roleRef rbacv1.RoleRef) error {
@@ -440,10 +427,7 @@ func (s *Deployment) createClusterRoleBinding(name string, subjects []rbacv1.Sub
 	}
 
 	controllerutil.SetControllerReference(s.stos, roleBinding, s.scheme)
-	if err := s.client.Create(context.Background(), roleBinding); err != nil && !apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("failed to create cluster role binding: %v", err)
-	}
-	return nil
+	return s.createOrUpdateObject(roleBinding)
 }
 
 func (s *Deployment) createClusterRoleBindingForDriverRegistrar() error {
@@ -712,10 +696,7 @@ func (s *Deployment) createDaemonSet() error {
 	s.addCSI(podSpec)
 
 	controllerutil.SetControllerReference(s.stos, dset, s.scheme)
-	if err := s.client.Create(context.Background(), dset); err != nil && !apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("failed to create daemonset: %v", err)
-	}
-	return nil
+	return s.createOrUpdateObject(dset)
 }
 
 // addNodeContainerResources adds resource requirements for the node containers.
@@ -1131,10 +1112,7 @@ func (s *Deployment) createStatefulSet() error {
 	}
 
 	controllerutil.SetControllerReference(s.stos, sset, s.scheme)
-	if err := s.client.Create(context.Background(), sset); err != nil && !apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("failed to create statefulset: %v", err)
-	}
-	return nil
+	return s.createOrUpdateObject(sset)
 }
 
 func (s *Deployment) createService() error {
@@ -1169,8 +1147,8 @@ func (s *Deployment) createService() error {
 	}
 
 	controllerutil.SetControllerReference(s.stos, svc, s.scheme)
-	if err := s.client.Create(context.Background(), svc); err != nil && !apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("failed to create service: %v", err)
+	if err := s.createOrUpdateObject(svc); err != nil {
+		return err
 	}
 
 	// Patch storageos-api secret with above service IP in apiAddress.
@@ -1244,10 +1222,7 @@ func (s *Deployment) createIngress() error {
 	}
 
 	controllerutil.SetControllerReference(s.stos, ingress, s.scheme)
-	if err := s.client.Create(context.Background(), ingress); err != nil && !apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("failed to create ingress")
-	}
-	return nil
+	return s.createOrUpdateObject(ingress)
 }
 
 func (s *Deployment) createTLSSecret() error {
@@ -1276,10 +1251,7 @@ func (s *Deployment) createTLSSecret() error {
 	}
 
 	controllerutil.SetControllerReference(s.stos, secret, s.scheme)
-	if err := s.client.Create(context.Background(), secret); err != nil && !apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("failed to create tls-secret: %v", err)
-	}
-	return nil
+	return s.createOrUpdateObject(secret)
 }
 
 func (s *Deployment) createInitSecret() error {
@@ -1416,10 +1388,7 @@ func (s *Deployment) createCredSecret(name string, username, password []byte) er
 	}
 
 	controllerutil.SetControllerReference(s.stos, secret, s.scheme)
-	if err := s.client.Create(context.Background(), secret); err != nil && !apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("failed to create secret: %v", err)
-	}
-	return nil
+	return s.createOrUpdateObject(secret)
 }
 
 // getCSICreds - given username and password keys, it fetches the creds from
@@ -1497,8 +1466,20 @@ func (s *Deployment) createStorageClass() error {
 	}
 
 	controllerutil.SetControllerReference(s.stos, sc, s.scheme)
-	if err := s.client.Create(context.Background(), sc); err != nil && !apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("failed to create storage class: %v", err)
+	return s.createOrUpdateObject(sc)
+}
+
+// createOrUpdateObject attempts to create a given object. If the object already
+// exists and `Deployment.update` is false, no change is made. If update is true,
+// the existing object is updated.
+func (s *Deployment) createOrUpdateObject(obj runtime.Object) error {
+	if err := s.client.Create(context.Background(), obj); err != nil {
+		if apierrors.IsAlreadyExists(err) && s.update {
+			return s.client.Update(context.Background(), obj)
+		} else if !apierrors.IsAlreadyExists(err) {
+			kind := obj.GetObjectKind().GroupVersionKind().Kind
+			return fmt.Errorf("failed to create %s: %v", kind, err)
+		}
 	}
 	return nil
 }

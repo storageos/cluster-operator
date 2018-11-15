@@ -38,7 +38,7 @@ func setupFakeDeployment() (client.Client, *Deployment) {
 		},
 	}
 
-	deploy := NewDeployment(c, stosCluster, nil, testScheme, "")
+	deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
 	return c, deploy
 }
 
@@ -325,7 +325,7 @@ func TestCreateDaemonSet(t *testing.T) {
 
 	for _, tc := range testcases {
 		stosCluster.Spec = tc.spec
-		deploy := NewDeployment(c, stosCluster, nil, testScheme, "")
+		deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
 		if err := deploy.createDaemonSet(); err != nil {
 			t.Fatal("failed to create daemonset", err)
 		}
@@ -455,7 +455,7 @@ func TestDeployLegacy(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			c := fake.NewFakeClient()
-			deploy := NewDeployment(c, stosCluster, nil, testScheme, tc.k8sVersion)
+			deploy := NewDeployment(c, stosCluster, nil, testScheme, tc.k8sVersion, false)
 			deploy.Deploy()
 
 			createdDaemonset := &appsv1.DaemonSet{
@@ -551,7 +551,7 @@ func TestDeployCSI(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			c := fake.NewFakeClient()
-			deploy := NewDeployment(c, stosCluster, nil, testScheme, tc.k8sVersion)
+			deploy := NewDeployment(c, stosCluster, nil, testScheme, tc.k8sVersion, false)
 			deploy.Deploy()
 
 			createdDaemonset := &appsv1.DaemonSet{
@@ -624,7 +624,7 @@ func TestDeployKVBackend(t *testing.T) {
 	}
 
 	c := fake.NewFakeClient()
-	deploy := NewDeployment(c, stosCluster, nil, testScheme, "")
+	deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
 	deploy.Deploy()
 
 	createdDaemonset := &appsv1.DaemonSet{
@@ -691,7 +691,7 @@ func TestDeployDebug(t *testing.T) {
 	}
 
 	c := fake.NewFakeClient()
-	deploy := NewDeployment(c, stosCluster, nil, testScheme, "")
+	deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
 	deploy.Deploy()
 
 	createdDaemonset := &appsv1.DaemonSet{
@@ -759,7 +759,7 @@ func TestDeployNodeAffinity(t *testing.T) {
 	}
 
 	c := fake.NewFakeClient()
-	deploy := NewDeployment(c, stosCluster, nil, testScheme, "")
+	deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
 	deploy.Deploy()
 
 	createdDaemonset := &appsv1.DaemonSet{
@@ -814,7 +814,7 @@ func TestDeployNodeResources(t *testing.T) {
 	}
 
 	c := fake.NewFakeClient()
-	deploy := NewDeployment(c, stosCluster, nil, testScheme, "")
+	deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
 	deploy.Deploy()
 
 	createdDaemonset := &appsv1.DaemonSet{
