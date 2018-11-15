@@ -20,6 +20,21 @@ type JobSpec struct {
 
 	// MountPath is the path that's mounted on the job container.
 	MountPath string `json:"mountPath"`
+
+	// CompletionWord is the word that's looked for in the pod logs to find out
+	// if a DaemonSet Pod has completed its task.
+	CompletionWord string `json:"CompletionWord"`
+
+	// LabelSelector is the label selector for the job Pods.
+	LabelSelector string `json:"labelSelector"`
+}
+
+// GetLabelSelector returns Job's pod label selector.
+func (s JobSpec) GetLabelSelector() string {
+	if len(s.LabelSelector) != 0 {
+		return s.LabelSelector
+	}
+	return "daemonset-job=true"
 }
 
 // JobStatus defines the observed state of Job
@@ -28,7 +43,7 @@ type JobStatus struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 
 	// Completed indicates the complete status of job.
-	Completed string `json:"completed"`
+	Completed bool `json:"completed"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

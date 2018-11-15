@@ -3,5 +3,7 @@ kind: Job
 metadata:
   name: example-job
 spec:
-  # Add fields here
-  size: 3
+  image: darkowlzz/cleanup:v0.0.2
+  args: ["/basetarget/storageos"]
+  mountPath: "/var/lib"
+  completionWord: "done"
