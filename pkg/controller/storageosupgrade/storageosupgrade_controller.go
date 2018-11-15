@@ -218,8 +218,10 @@ func (r *ReconcileStorageOSUpgrade) Reconcile(request reconcile.Request) (reconc
 			return reconcileResult, err
 		}
 
-		// Job created successfully - don't requeue
-		return reconcile.Result{}, nil
+		// Job created successfully - requeue.
+		// Requeue is needed here to enable repeated check on the upgrade
+		// process.
+		return reconcileResult, nil
 	} else if err != nil {
 		return reconcileResult, err
 	}
