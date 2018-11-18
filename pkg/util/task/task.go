@@ -9,7 +9,9 @@ import (
 // ErrTimedOut is returned when an operation times out
 var ErrTimedOut = errors.New("timed out performing task")
 
-// DoRetryWithTimeout performs given task with given timeout and timeBeforeRetry
+// DoRetryWithTimeout performs given task with given timeout and timeBeforeRetry.
+// The function t returns a result out, a boolean to retry, and an error
+// containing the reason for failure.
 func DoRetryWithTimeout(t func() (interface{}, bool, error), timeout, timeBeforeRetry time.Duration) (interface{}, error) {
 	done := make(chan bool, 1)
 	quit := make(chan bool, 1)

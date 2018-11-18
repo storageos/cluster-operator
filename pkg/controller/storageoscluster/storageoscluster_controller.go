@@ -197,18 +197,23 @@ func (r *ReconcileStorageOSCluster) reconcile(m *storageosv1alpha1.StorageOSClus
 	// Finalizers are set when an object should be deleted. Apply deploy only
 	// when finalizers is empty.
 	if len(m.GetFinalizers()) == 0 {
-		// Check if there's a new version of the cluster config and create a new
-		// deployment accordingly to update the resources that already exist.
-		updateIfExists := false
-		if r.currentCluster.GetResourceVersion() != m.GetResourceVersion() {
-			log.Println("new cluster config detected")
-			updateIfExists = true
-			r.SetCurrentCluster(m)
-		}
+		// // Check if there's a new version of the cluster config and create a new
+		// // deployment accordingly to update the resources that already exist.
+		// // TODO: Add more granular checks. Resource version check is not enough
+		// // to detect and apply changes. Maybe add an admission webhook to
+		// // perform validation when the cluster config is updated and handle the
+		// // resource update at an individual level. Updating all the resources
+		// // is dangerous.
+		// updateIfExists := false
+		// if r.currentCluster.GetResourceVersion() != m.GetResourceVersion() {
+		// 	log.Println("new cluster config detected")
+		// 	updateIfExists = true
+		// 	r.SetCurrentCluster(m)
+		// }
 
 		// TODO: Remove this after resolving the conflict between two way
 		// binding and upgrade.
-		updateIfExists = false
+		updateIfExists := false
 
 		stosDeployment := storageos.NewDeployment(r.client, m, r.recorder, r.scheme, r.k8sVersion, updateIfExists)
 		if err := stosDeployment.Deploy(); err != nil {
