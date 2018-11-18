@@ -68,6 +68,7 @@ type ReconcileStorageOSUpgrade struct {
 	client         client.Client
 	scheme         *runtime.Scheme
 	currentUpgrade *storageosv1alpha1.StorageOSUpgrade
+	currentCluster *storageosv1alpha1.StorageOSCluster
 	recorder       record.EventRecorder
 }
 
@@ -102,6 +103,54 @@ func (r *ReconcileStorageOSUpgrade) ResetCurrentUpgrade() {
 	r.currentUpgrade = nil
 }
 
+// findCurrentCluster finds the running cluster and sets it as currentCluster.
+func (r *ReconcileStorageOSUpgrade) findCurrentCluster() error {
+	clusterList := &storageosv1alpha1.StorageOSClusterList{}
+	if err := r.client.List(context.TODO(), &client.ListOptions{}, clusterList); err != nil {
+		return fmt.Errorf("failed to list clusters: %v", err)
+	}
+
+	for _, cluster := range clusterList.Items {
+		// The cluster with Phase "Running" is the only active cluster.
+		if cluster.Status.Phase == storageosv1alpha1.ClusterPhaseRunning {
+			r.currentCluster = &cluster
+			break
+		}
+	}
+
+	if r.currentCluster == nil {
+		return fmt.Errorf("failed to find currently running cluster")
+	}
+
+	return nil
+}
+
+func (r *ReconcileStorageOSUpgrade) resetCurrentCluster() {
+	r.currentCluster = nil
+}
+
+// pauseCluster pauses the current cluster.
+func (r *ReconcileStorageOSUpgrade) pauseCluster() error {
+	r.currentCluster.Spec.Pause = true
+	if err := r.client.Update(context.Background(), r.currentCluster); err != nil {
+		return err
+	}
+	return nil
+}
+
+// resumeCluster resumes the current cluster.
+func (r *ReconcileStorageOSUpgrade) resumeCluster() error {
+	if r.currentCluster == nil {
+		// Already resumed and current cluster reset.
+		return nil
+	}
+	r.currentCluster.Spec.Pause = false
+	if err := r.client.Update(context.Background(), r.currentCluster); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Reconcile reads that state of the cluster for a StorageOSUpgrade object and makes changes based on the state read
 // and what is in the StorageOSUpgrade.Spec
 // TODO(user): Modify this Reconcile function to implement your Controller logic.  This example creates
@@ -121,6 +170,9 @@ func (r *ReconcileStorageOSUpgrade) Reconcile(request reconcile.Request) (reconc
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Upgrade instance not found. Reset the current cluster.
+			// In this order: resume cluster, reset cluster, reset upgrade.
+			r.resumeCluster()
+			r.resetCurrentCluster()
 			r.ResetCurrentUpgrade()
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
@@ -132,6 +184,16 @@ func (r *ReconcileStorageOSUpgrade) Reconcile(request reconcile.Request) (reconc
 	}
 
 	r.SetCurrentUpgradeIfNone(instance)
+
+	if r.currentCluster == nil {
+		if err := r.findCurrentCluster(); err != nil {
+			return reconcileResult, err
+		}
+		if err := r.pauseCluster(); err != nil {
+			return reconcileResult, err
+		}
+		r.recorder.Event(instance, corev1.EventTypeNormal, "PauseClusterCtrl", "Pausing the cluster controller")
+	}
 
 	if !r.IsCurrentUpgrade(instance) {
 		err := fmt.Errorf("can't create more than one storageos upgrade")
@@ -221,6 +283,8 @@ func (r *ReconcileStorageOSUpgrade) Reconcile(request reconcile.Request) (reconc
 		// Job created successfully - requeue.
 		// Requeue is needed here to enable repeated check on the upgrade
 		// process.
+		upgradeInitMessage := fmt.Sprintf("StorageOS upgrade of cluster %s started", r.currentCluster.GetName())
+		r.recorder.Event(instance, corev1.EventTypeNormal, "UpgradeInit", upgradeInitMessage)
 		return reconcileResult, nil
 	} else if err != nil {
 		return reconcileResult, err
@@ -233,7 +297,7 @@ func (r *ReconcileStorageOSUpgrade) Reconcile(request reconcile.Request) (reconc
 
 	if found.Status.Succeeded == 1 {
 		r.currentUpgrade.Status.Completed = true
-		successMessage := fmt.Sprintf("StorageOS upgraded to %s", instance.Spec.NewImage)
+		successMessage := fmt.Sprintf("StorageOS upgraded to %s. Delete upgrade object to resume cluster management by cluster controller.", instance.Spec.NewImage)
 		r.recorder.Event(instance, corev1.EventTypeNormal, "UpgradeComplete", successMessage)
 	}
 
@@ -258,9 +322,10 @@ func newJobForCR(cr *storageosv1alpha1.StorageOSUpgrade) *batchv1.Job {
 					ServiceAccountName: "storageos-upgrader-sa",
 					Containers: []corev1.Container{
 						{
-							Image:   operatorImage,
-							Name:    "storageos-upgrader",
-							Command: []string{"upgrader"},
+							Image:           operatorImage,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Name:            "storageos-upgrader",
+							Command:         []string{"upgrader"},
 							Env: []corev1.EnvVar{
 								{
 									Name:  "NEW_IMAGE",
