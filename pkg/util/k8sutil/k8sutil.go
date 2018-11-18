@@ -366,16 +366,28 @@ func (k K8SOps) UpgradeDaemonSet(newImage string) error {
 			return nil, true, err
 		}
 
+		podList, err := k.GetDaemonSetPods(dCopy)
+		if err != nil {
+			return nil, true, err
+		}
+
+		// totalDaemonSetPods should be set as the MaxUnavailable in
+		// RollingUpdate so that all the current generation pods are terminated
+		// together and the new generation pods are created together.
+		totalDaemonSetPods := len(podList.Items)
+
 		// Save and use ObservedGeneration + 1 to figure out the currently
 		// applied config of a daemonset.
 		expectedGenerations[dCopy.GetUID()] = dCopy.Status.ObservedGeneration + 1
 
+		// Set the DaemonSet update strategy.
 		dCopy.Spec.UpdateStrategy = appsv1.DaemonSetUpdateStrategy{
 			Type: appsv1.RollingUpdateDaemonSetStrategyType,
 			RollingUpdate: &appsv1.RollingUpdateDaemonSet{
-				MaxUnavailable: &intstr.IntOrString{Type: intstr.Int, IntVal: 1},
+				MaxUnavailable: &intstr.IntOrString{Type: intstr.Int, IntVal: int32(totalDaemonSetPods)},
 			},
 		}
+		// Set the new container image.
 		dCopy.Spec.Template.Spec.Containers[0].Image = newImage
 		_, updateErr := k.client.AppsV1().DaemonSets(dCopy.GetNamespace()).Update(dCopy)
 		if updateErr != nil {
@@ -393,6 +405,8 @@ func (k K8SOps) UpgradeDaemonSet(newImage string) error {
 	// Wait for the new daemonset to be ready
 	log.Printf("Checking upgrade status of daemonset: [%s] %s to version %s", ds.GetNamespace(), ds.GetName(), newImage)
 
+	// Check the DaemonSet generation and block until the latest expected
+	// generation is available.
 	t = func() (interface{}, bool, error) {
 		updatedDS, err := k.client.AppsV1().DaemonSets(ds.GetNamespace()).Get(ds.GetName(), metav1.GetOptions{})
 		if err != nil {
