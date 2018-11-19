@@ -3,6 +3,7 @@ package storageosupgrade
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	storageosv1alpha1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1alpha1"
@@ -21,6 +22,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	storageosapi "github.com/storageos/go-api"
 )
 
 var (
@@ -135,6 +138,9 @@ func (r *ReconcileStorageOSUpgrade) pauseCluster() error {
 	if err := r.client.Update(context.Background(), r.currentCluster); err != nil {
 		return err
 	}
+	if err := r.EnableClusterMaintenance(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -146,6 +152,9 @@ func (r *ReconcileStorageOSUpgrade) resumeCluster() error {
 	}
 	r.currentCluster.Spec.Pause = false
 	if err := r.client.Update(context.Background(), r.currentCluster); err != nil {
+		return err
+	}
+	if err := r.DisableClusterMaintenance(); err != nil {
 		return err
 	}
 	return nil
@@ -192,7 +201,7 @@ func (r *ReconcileStorageOSUpgrade) Reconcile(request reconcile.Request) (reconc
 		if err := r.pauseCluster(); err != nil {
 			return reconcileResult, err
 		}
-		r.recorder.Event(instance, corev1.EventTypeNormal, "PauseClusterCtrl", "Pausing the cluster controller")
+		r.recorder.Event(instance, corev1.EventTypeNormal, "PauseClusterCtrl", "Pausing the cluster controller and enabling cluster maintenance mode")
 	}
 
 	if !r.IsCurrentUpgrade(instance) {
@@ -297,11 +306,70 @@ func (r *ReconcileStorageOSUpgrade) Reconcile(request reconcile.Request) (reconc
 
 	if found.Status.Succeeded == 1 {
 		r.currentUpgrade.Status.Completed = true
-		successMessage := fmt.Sprintf("StorageOS upgraded to %s. Delete upgrade object to resume cluster management by cluster controller.", instance.Spec.NewImage)
+		successMessage := fmt.Sprintf("StorageOS upgraded to %s. Delete upgrade object to disable cluster maintenance mode", instance.Spec.NewImage)
 		r.recorder.Event(instance, corev1.EventTypeNormal, "UpgradeComplete", successMessage)
 	}
 
 	return reconcileResult, nil
+}
+
+// GetStorageOSClient returns a StorageOS client.
+func (r *ReconcileStorageOSUpgrade) GetStorageOSClient() (*storageosapi.Client, error) {
+	serviceNamespacedName := types.NamespacedName{
+		Namespace: r.currentCluster.Spec.GetResourceNS(),
+		Name:      r.currentCluster.Spec.GetServiceName(),
+	}
+	serviceInstance := &corev1.Service{}
+	err := r.client.Get(context.TODO(), serviceNamespacedName, serviceInstance)
+	if err != nil {
+		return nil, err
+	}
+
+	stosCli, err := storageosapi.NewVersionedClient(strings.Join([]string{serviceInstance.Spec.ClusterIP, storageosapi.DefaultPort}, ":"), storageosapi.DefaultVersionStr)
+	if err != nil {
+		return nil, err
+	}
+
+	secretNamespacedName := types.NamespacedName{
+		Namespace: r.currentCluster.Spec.SecretRefNamespace,
+		Name:      r.currentCluster.Spec.SecretRefName,
+	}
+	secretInstance := &corev1.Secret{}
+	err = r.client.Get(context.TODO(), secretNamespacedName, secretInstance)
+	if err != nil {
+		return nil, err
+	}
+
+	stosCli.SetUserAgent("cluster-operator")
+	stosCli.SetAuth(string(secretInstance.Data["apiUsername"]), string(secretInstance.Data["apiPassword"]))
+
+	return stosCli, nil
+}
+
+// EnableClusterMaintenance enables maintenance mode in the current cluster.
+func (r *ReconcileStorageOSUpgrade) EnableClusterMaintenance() error {
+	stosCli, err := r.GetStorageOSClient()
+	if err != nil {
+		return err
+	}
+
+	if err := stosCli.EnableMaintenance(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// DisableClusterMaintenance disables maintenance mode in the current cluster.
+func (r *ReconcileStorageOSUpgrade) DisableClusterMaintenance() error {
+	stosCli, err := r.GetStorageOSClient()
+	if err != nil {
+		return err
+	}
+
+	if err := stosCli.DisableMaintenance(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // newJobForCR returns a job with the same name/namespace as the cr.
