@@ -30,6 +30,13 @@ const (
 	DefaultCSIExternalProvisionerContainerImage = "quay.io/k8scsi/csi-provisioner:v0.4.0"
 	DefaultCSIExternalAttacherContainerImage    = "quay.io/k8scsi/csi-attacher:v0.4.0"
 	DefaultInitContainerImage                   = "storageos/init:0.1"
+
+	DefaultCSIEndpoint           = "unix://var/lib/kubelet/plugins/storageos/csi.sock"
+	DefaultCSIRegistrarSocketDir = "/var/lib/kubelet/device-plugins/"
+	DefaultCSIKubeletDir         = "/var/lib/kubelet"
+	DefaultCSIPluginDir          = "/var/lib/kubelet/plugins/storageos/"
+	DefaultCSIDeviceDir          = "/dev"
+	DefaultCSIRegistrationDir    = "/var/lib/kubelet/plugins"
 )
 
 // StorageOSClusterSpec defines the desired state of StorageOSCluster
@@ -209,6 +216,54 @@ func (s StorageOSClusterSpec) GetIngressHostname() string {
 	return DefaultIngressHostname
 }
 
+// GetCSIEndpoint returns the CSI unix socket endpoint path.
+func (s StorageOSClusterSpec) GetCSIEndpoint() string {
+	if s.CSI.Endpoint != "" {
+		return s.CSI.Endpoint
+	}
+	return DefaultCSIEndpoint
+}
+
+// GetCSIRegistrarSocketDir returns the CSI registrar socket dir.
+func (s StorageOSClusterSpec) GetCSIRegistrarSocketDir() string {
+	if s.CSI.RegistrarSocketDir != "" {
+		return s.CSI.RegistrarSocketDir
+	}
+	return DefaultCSIRegistrarSocketDir
+}
+
+// GetCSIKubeletDir returns the Kubelet dir.
+func (s StorageOSClusterSpec) GetCSIKubeletDir() string {
+	if s.CSI.KubeletDir != "" {
+		return s.CSI.KubeletDir
+	}
+	return DefaultCSIKubeletDir
+}
+
+// GetCSIPluginDir returns the CSI plugin dir.
+func (s StorageOSClusterSpec) GetCSIPluginDir() string {
+	if s.CSI.PluginDir != "" {
+		return s.CSI.PluginDir
+	}
+	return DefaultCSIPluginDir
+}
+
+// GetCSIDeviceDir returns the CSI device dir.
+func (s StorageOSClusterSpec) GetCSIDeviceDir() string {
+	if s.CSI.DeviceDir != "" {
+		return s.CSI.DeviceDir
+	}
+	return DefaultCSIDeviceDir
+}
+
+// GetCSIRegistrationDir returns the CSI registration dir.
+func (s StorageOSClusterSpec) GetCSIRegistrationDir() string {
+	if s.CSI.RegistrationDir != "" {
+		return s.CSI.RegistrationDir
+	}
+	return DefaultCSIRegistrationDir
+}
+
 // ContainerImages contains image names of all the containers used by the operator.
 type ContainerImages struct {
 	NodeContainer                   string `json:"nodeContainer"`
@@ -220,10 +275,16 @@ type ContainerImages struct {
 
 // StorageOSClusterCSI contains CSI configurations.
 type StorageOSClusterCSI struct {
-	Enable                       bool `json:"enable"`
-	EnableProvisionCreds         bool `json:"enableProvisionCreds"`
-	EnableControllerPublishCreds bool `json:"enableControllerPublishCreds"`
-	EnableNodePublishCreds       bool `json:"enableNodePublishCreds"`
+	Enable                       bool   `json:"enable"`
+	Endpoint                     string `json:"endpoint"`
+	EnableProvisionCreds         bool   `json:"enableProvisionCreds"`
+	EnableControllerPublishCreds bool   `json:"enableControllerPublishCreds"`
+	EnableNodePublishCreds       bool   `json:"enableNodePublishCreds"`
+	RegistrarSocketDir           string `json:"registrarSocketDir"`
+	KubeletDir                   string `json:"kubeletDir"`
+	PluginDir                    string `json:"pluginDir"`
+	DeviceDir                    string `json:"deviceDir"`
+	RegistrationDir              string `json:"registrationDir"`
 }
 
 // StorageOSClusterService contains Service configurations.

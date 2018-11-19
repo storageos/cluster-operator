@@ -15,6 +15,12 @@ spec:
   #   csiExternalAttacherContainer:
   csi:
     enable: true
+  #   endpoint: /var/lib/kubelet/device-plugins/
+  #   registrarSocketDir: /var/lib/kubelet/device-plugins/
+  #   kubeletDir: /var/lib/kubelet
+  #   pluginDir: /var/lib/kubelet/plugins/storageos/
+  #   deviceDir: /dev
+  #   registrationDir: /var/lib/kubelet/plugins
   #   enableProvisionCreds: false
   #   enableControllerPublishCreds: false
   #   enableNodePublishCreds: false
