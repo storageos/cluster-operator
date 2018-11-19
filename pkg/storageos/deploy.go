@@ -819,7 +819,7 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 				Name: "registrar-socket-dir",
 				VolumeSource: v1.VolumeSource{
 					HostPath: &v1.HostPathVolumeSource{
-						Path: "/var/lib/kubelet/device-plugins/",
+						Path: s.stos.Spec.GetCSIRegistrarSocketDir(),
 						Type: &hostpathDirOrCreate,
 					},
 				},
@@ -828,7 +828,7 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 				Name: "kubelet-dir",
 				VolumeSource: v1.VolumeSource{
 					HostPath: &v1.HostPathVolumeSource{
-						Path: "/var/lib/kubelet",
+						Path: s.stos.Spec.GetCSIKubeletDir(),
 						Type: &hostpathDir,
 					},
 				},
@@ -837,7 +837,7 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 				Name: "plugin-dir",
 				VolumeSource: v1.VolumeSource{
 					HostPath: &v1.HostPathVolumeSource{
-						Path: "/var/lib/kubelet/plugins/storageos/",
+						Path: s.stos.Spec.GetCSIPluginDir(),
 						Type: &hostpathDirOrCreate,
 					},
 				},
@@ -846,7 +846,7 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 				Name: "device-dir",
 				VolumeSource: v1.VolumeSource{
 					HostPath: &v1.HostPathVolumeSource{
-						Path: "/dev",
+						Path: s.stos.Spec.GetCSIDeviceDir(),
 						Type: &hostpathDir,
 					},
 				},
@@ -855,7 +855,7 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 				Name: "registration-dir",
 				VolumeSource: v1.VolumeSource{
 					HostPath: &v1.HostPathVolumeSource{
-						Path: "/var/lib/kubelet/plugins",
+						Path: s.stos.Spec.GetCSIRegistrationDir(),
 						Type: &hostpathDir,
 					},
 				},
@@ -867,16 +867,16 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 		volMnts := []v1.VolumeMount{
 			{
 				Name:             "kubelet-dir",
-				MountPath:        "/var/lib/kubelet",
+				MountPath:        s.stos.Spec.GetCSIKubeletDir(),
 				MountPropagation: &mountPropagationBidirectional,
 			},
 			{
 				Name:      "plugin-dir",
-				MountPath: "/var/lib/kubelet/plugins/storageos/",
+				MountPath: s.stos.Spec.GetCSIPluginDir(),
 			},
 			{
 				Name:      "device-dir",
-				MountPath: "/dev",
+				MountPath: s.stos.Spec.GetCSIDeviceDir(),
 			},
 		}
 
@@ -886,7 +886,7 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 		envVar := []v1.EnvVar{
 			{
 				Name:  csiEndpointEnvVar,
-				Value: "unix://var/lib/kubelet/plugins/storageos/csi.sock",
+				Value: s.stos.Spec.GetCSIEndpoint(),
 			},
 		}
 
@@ -1100,7 +1100,7 @@ func (s *Deployment) createStatefulSet() error {
 							Name: "plugin-dir",
 							VolumeSource: v1.VolumeSource{
 								HostPath: &v1.HostPathVolumeSource{
-									Path: "/var/lib/kubelet/plugins/storageos/",
+									Path: s.stos.Spec.GetCSIPluginDir(),
 									Type: &hostpathDirOrCreate,
 								},
 							},
