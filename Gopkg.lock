@@ -34,14 +34,6 @@
   version = "v3.5.1"
 
 [[projects]]
-  branch = "master"
-  digest = "1:ed9a29f2d6c91e7a78d3bf900108036ee337a0c5a657635afbcf7ccc9851639f"
-  name = "github.com/darkowlzz/daemonset-job"
-  packages = ["pkg/apis/daemonset/v1beta1"]
-  pruneopts = "NT"
-  revision = "1c286407ede5a64c0db86813a414cc734aebaa8a"
-
-[[projects]]
   digest = "1:4b8b5811da6970495e04d1f4e98bb89518cc3cfc3b3f456bdb876ed7b6c74049"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -313,7 +305,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:5dfc6dbb877ed15f9340fe805dfc848836531f428be24e4d23ae7950c9c6c9b0"
+  digest = "1:0451fd016603ac166f827df74a71b77a4366c6216db763ed07ae4ef77105ec37"
   name = "github.com/storageos/go-api"
   packages = [
     ".",
@@ -322,7 +314,7 @@
     "types",
   ]
   pruneopts = "NT"
-  revision = "1293349c740492d9c8ba48e9fb95e8999ebd6fd0"
+  revision = "29374b2dad94dc28efed1bfda49e094069641e9e"
 
 [[projects]]
   digest = "1:22f696cee54865fb8e9ff91df7b633f6b8f22037a8015253c6b6a71ca82219c7"
@@ -767,13 +759,13 @@
   analyzer-version = 1
   input-imports = [
     "github.com/blang/semver",
-    "github.com/darkowlzz/daemonset-job/pkg/apis/daemonset/v1beta1",
     "github.com/operator-framework/operator-sdk/pkg/test",
     "github.com/operator-framework/operator-sdk/pkg/test/e2eutil",
     "github.com/operator-framework/operator-sdk/version",
     "github.com/storageos/go-api",
     "github.com/storageos/go-api/types",
     "k8s.io/api/apps/v1",
+    "k8s.io/api/batch/v1",
     "k8s.io/api/core/v1",
     "k8s.io/api/extensions/v1beta1",
     "k8s.io/api/rbac/v1",
@@ -792,6 +784,7 @@
     "k8s.io/client-go/kubernetes/scheme",
     "k8s.io/client-go/kubernetes/typed/core/v1",
     "k8s.io/client-go/plugin/pkg/client/auth/gcp",
+    "k8s.io/client-go/rest",
     "k8s.io/client-go/tools/record",
     "k8s.io/code-generator/cmd/client-gen",
     "k8s.io/code-generator/cmd/conversion-gen",

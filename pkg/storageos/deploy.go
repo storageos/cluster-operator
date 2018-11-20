@@ -1147,9 +1147,12 @@ func (s *Deployment) createService() error {
 	}
 
 	controllerutil.SetControllerReference(s.stos, svc, s.scheme)
-	if err := s.createOrUpdateObject(svc); err != nil {
-		return err
+	if err := s.client.Create(context.Background(), svc); err != nil && !apierrors.IsAlreadyExists(err) {
+		return fmt.Errorf("failed to create %s: %v", svc.GroupVersionKind().Kind, err)
 	}
+	// if err := s.createOrUpdateObject(svc); err != nil {
+	// 	return err
+	// }
 
 	// Patch storageos-api secret with above service IP in apiAddress.
 	if !s.stos.Spec.CSI.Enable {

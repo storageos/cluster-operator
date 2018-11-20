@@ -171,6 +171,8 @@ func (r *ReconcileStorageOSCluster) reconcile(m *storageosv1alpha1.StorageOSClus
 		if err := r.client.Update(context.Background(), m); err != nil {
 			return err
 		}
+		// Update current cluster.
+		r.SetCurrentCluster(m)
 	}
 
 	// Update the spec values. This ensures that the default values are applied
