@@ -259,18 +259,18 @@ func newDaemonSetForCR(cr *storageosv1alpha1.Job) (*appsv1.DaemonSet, error) {
 							Args:  cr.Spec.Args,
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "basetarget",
-									MountPath: "/basetarget",
+									Name:      "target",
+									MountPath: cr.Spec.MountPath,
 								},
 							},
 						},
 					},
 					Volumes: []corev1.Volume{
 						{
-							Name: "basetarget",
+							Name: "target",
 							VolumeSource: corev1.VolumeSource{
 								HostPath: &corev1.HostPathVolumeSource{
-									Path: cr.Spec.MountPath,
+									Path: cr.Spec.HostPath,
 								},
 							},
 						},

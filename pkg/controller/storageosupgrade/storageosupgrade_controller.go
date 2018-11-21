@@ -3,6 +3,7 @@ package storageosupgrade
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -72,6 +73,7 @@ type ReconcileStorageOSUpgrade struct {
 	scheme         *runtime.Scheme
 	currentUpgrade *storageosv1alpha1.StorageOSUpgrade
 	currentCluster *storageosv1alpha1.StorageOSCluster
+	imagePuller    *storageosv1alpha1.Job
 	recorder       record.EventRecorder
 }
 
@@ -132,6 +134,10 @@ func (r *ReconcileStorageOSUpgrade) resetCurrentCluster() {
 	r.currentCluster = nil
 }
 
+func (r *ReconcileStorageOSUpgrade) resetImagePuller() {
+	r.imagePuller = nil
+}
+
 // pauseCluster pauses the current cluster.
 func (r *ReconcileStorageOSUpgrade) pauseCluster() error {
 	r.currentCluster.Spec.Pause = true
@@ -181,6 +187,7 @@ func (r *ReconcileStorageOSUpgrade) Reconcile(request reconcile.Request) (reconc
 			// Upgrade instance not found. Reset the current cluster.
 			// In this order: resume cluster, reset cluster, reset upgrade.
 			r.resumeCluster()
+			r.resetImagePuller()
 			r.resetCurrentCluster()
 			r.ResetCurrentUpgrade()
 			// Request object not found, could have been deleted after reconcile request.
@@ -193,6 +200,49 @@ func (r *ReconcileStorageOSUpgrade) Reconcile(request reconcile.Request) (reconc
 	}
 
 	r.SetCurrentUpgradeIfNone(instance)
+
+	// Pull image.
+	if r.imagePuller == nil {
+		// Create image puller.
+		r.imagePuller = &storageosv1alpha1.Job{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      instance.Name + "-image-puller",
+				Namespace: instance.Namespace,
+			},
+			Spec: storageosv1alpha1.JobSpec{
+				Image:          operatorImage,
+				Args:           []string{"docker-puller.sh", instance.Spec.NewImage},
+				MountPath:      "/var/run",
+				HostPath:       "/var/run",
+				CompletionWord: "done",
+			},
+		}
+		if err := controllerutil.SetControllerReference(instance, r.imagePuller, r.scheme); err != nil {
+			return reconcileResult, err
+		}
+		if err := r.client.Create(context.Background(), r.imagePuller); err != nil && !errors.IsAlreadyExists(err) {
+			return reconcileResult, fmt.Errorf("failed to create image puller job: %v", err)
+		}
+
+		r.recorder.Event(instance, corev1.EventTypeNormal, "PullImage", "Pulling the new container image")
+
+		// Re-queue, let the puller create and continue.
+		return reconcileResult, nil
+	}
+
+	// Update the image puller instance.
+	nsdName := types.NamespacedName{
+		Name:      r.imagePuller.Name,
+		Namespace: r.imagePuller.Namespace,
+	}
+	err = r.client.Get(context.TODO(), nsdName, r.imagePuller)
+	if err != nil {
+		log.Println("error fetching image puller status:", err)
+	}
+	// Re-queue if the image pull didn't complete.
+	if !r.imagePuller.Status.Completed {
+		return reconcileResult, fmt.Errorf("image pull didn't complete")
+	}
 
 	if r.currentCluster == nil {
 		if err := r.findCurrentCluster(); err != nil {

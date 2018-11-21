@@ -18,8 +18,11 @@ type JobSpec struct {
 	// Args is an array of strings passed as an argumen to the job container.
 	Args []string `json:"args"`
 
-	// MountPath is the path that's mounted on the job container.
+	// MountPath is the path in the job container where a volume is mounted.
 	MountPath string `json:"mountPath"`
+
+	// HostPath is the path in the host that's mounted into a job container.
+	HostPath string `json:"hostPath"`
 
 	// CompletionWord is the word that's looked for in the pod logs to find out
 	// if a DaemonSet Pod has completed its task.
