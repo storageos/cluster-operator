@@ -3,6 +3,7 @@ package storageosupgrade
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -72,6 +73,7 @@ type ReconcileStorageOSUpgrade struct {
 	scheme         *runtime.Scheme
 	currentUpgrade *storageosv1alpha1.StorageOSUpgrade
 	currentCluster *storageosv1alpha1.StorageOSCluster
+	imagePuller    *storageosv1alpha1.Job
 	recorder       record.EventRecorder
 }
 
@@ -102,34 +104,59 @@ func (r *ReconcileStorageOSUpgrade) IsCurrentUpgrade(upgrade *storageosv1alpha1.
 }
 
 // ResetCurrentUpgrade resets the current upgrade of the controller.
-func (r *ReconcileStorageOSUpgrade) ResetCurrentUpgrade() {
-	r.currentUpgrade = nil
+func (r *ReconcileStorageOSUpgrade) ResetCurrentUpgrade(request reconcile.Request) {
+	// Reset current upgrade only when the request is from the current upgrade.
+	if r.requestFromCurrentUpgrade(request) {
+		r.currentUpgrade = nil
+	}
 }
 
-// findCurrentCluster finds the running cluster and sets it as currentCluster.
-func (r *ReconcileStorageOSUpgrade) findCurrentCluster() error {
+// findCurrentCluster finds the running cluster.
+func (r *ReconcileStorageOSUpgrade) findCurrentCluster() (*storageosv1alpha1.StorageOSCluster, error) {
 	clusterList := &storageosv1alpha1.StorageOSClusterList{}
 	if err := r.client.List(context.TODO(), &client.ListOptions{}, clusterList); err != nil {
-		return fmt.Errorf("failed to list clusters: %v", err)
+		return nil, fmt.Errorf("failed to list clusters: %v", err)
 	}
 
+	var currentCluster *storageosv1alpha1.StorageOSCluster
 	for _, cluster := range clusterList.Items {
 		// The cluster with Phase "Running" is the only active cluster.
 		if cluster.Status.Phase == storageosv1alpha1.ClusterPhaseRunning {
-			r.currentCluster = &cluster
+			currentCluster = &cluster
 			break
 		}
 	}
 
-	if r.currentCluster == nil {
-		return fmt.Errorf("failed to find currently running cluster")
+	if currentCluster == nil {
+		return nil, fmt.Errorf("failed to find currently running cluster")
 	}
 
+	return currentCluster, nil
+}
+
+// findAndSetCurrentCluster finds the running cluster and sets it as
+// currentCluster.
+func (r *ReconcileStorageOSUpgrade) findAndSetCurrentCluster() error {
+	cc, err := r.findCurrentCluster()
+	if err != nil {
+		return err
+	}
+	r.currentCluster = cc
 	return nil
 }
 
-func (r *ReconcileStorageOSUpgrade) resetCurrentCluster() {
-	r.currentCluster = nil
+func (r *ReconcileStorageOSUpgrade) resetCurrentCluster(request reconcile.Request) {
+	// Reset current cluster only when the request is from the current upgrade.
+	if r.requestFromCurrentUpgrade(request) {
+		r.currentCluster = nil
+	}
+}
+
+func (r *ReconcileStorageOSUpgrade) resetImagePuller(request reconcile.Request) {
+	// Reset image puller only when the request is from the current upgrade.
+	if r.requestFromCurrentUpgrade(request) {
+		r.imagePuller = nil
+	}
 }
 
 // pauseCluster pauses the current cluster.
@@ -145,19 +172,35 @@ func (r *ReconcileStorageOSUpgrade) pauseCluster() error {
 }
 
 // resumeCluster resumes the current cluster.
-func (r *ReconcileStorageOSUpgrade) resumeCluster() error {
+func (r *ReconcileStorageOSUpgrade) resumeCluster(request reconcile.Request) error {
 	if r.currentCluster == nil {
 		// Already resumed and current cluster reset.
 		return nil
 	}
-	r.currentCluster.Spec.Pause = false
-	if err := r.client.Update(context.Background(), r.currentCluster); err != nil {
-		return err
-	}
-	if err := r.DisableClusterMaintenance(); err != nil {
-		return err
+
+	// Check if the request is from the current upgrade instance.
+	// Current cluster must be updated only when the request is from current
+	// upgrade.
+	if r.requestFromCurrentUpgrade(request) {
+		r.currentCluster.Spec.Pause = false
+		if err := r.client.Update(context.Background(), r.currentCluster); err != nil {
+			return err
+		}
+		if err := r.DisableClusterMaintenance(); err != nil {
+			return err
+		}
 	}
 	return nil
+}
+
+// requestFromCurrentUpgrade checks if the given request is from the current
+// upgrade.
+func (r *ReconcileStorageOSUpgrade) requestFromCurrentUpgrade(request reconcile.Request) bool {
+	if r.currentUpgrade.GetName() == request.NamespacedName.Name &&
+		r.currentUpgrade.GetNamespace() == request.NamespacedName.Namespace {
+		return true
+	}
+	return false
 }
 
 // Reconcile reads that state of the cluster for a StorageOSUpgrade object and makes changes based on the state read
@@ -180,9 +223,10 @@ func (r *ReconcileStorageOSUpgrade) Reconcile(request reconcile.Request) (reconc
 		if errors.IsNotFound(err) {
 			// Upgrade instance not found. Reset the current cluster.
 			// In this order: resume cluster, reset cluster, reset upgrade.
-			r.resumeCluster()
-			r.resetCurrentCluster()
-			r.ResetCurrentUpgrade()
+			r.resumeCluster(request)
+			r.resetImagePuller(request)
+			r.resetCurrentCluster(request)
+			r.ResetCurrentUpgrade(request)
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue.
@@ -194,20 +238,61 @@ func (r *ReconcileStorageOSUpgrade) Reconcile(request reconcile.Request) (reconc
 
 	r.SetCurrentUpgradeIfNone(instance)
 
+	// Check if it's the only upgrade before continuing.
+	if !r.IsCurrentUpgrade(instance) {
+		err := fmt.Errorf("can't create more than one storageos upgrade")
+		r.recorder.Event(instance, corev1.EventTypeWarning, "FailedCreation", err.Error())
+		// Don't requeue. This is a failed upgrade.
+		return reconcile.Result{}, err
+	}
+
+	// Pull image.
+	if r.imagePuller == nil {
+		// Get the current cluster. Use this to define node selector for image
+		// puller job, based on the cluster's node selector.
+		currentCluster, err := r.findCurrentCluster()
+		if err != nil {
+			// Re-queue if it fails to get the current cluster.
+			return reconcileResult, err
+		}
+		// Create image puller.
+		r.imagePuller = newImagePullJob(instance, currentCluster)
+		if err := controllerutil.SetControllerReference(instance, r.imagePuller, r.scheme); err != nil {
+			return reconcileResult, err
+		}
+		if err := r.client.Create(context.Background(), r.imagePuller); err != nil && !errors.IsAlreadyExists(err) {
+			return reconcileResult, fmt.Errorf("failed to create image puller job: %v", err)
+		}
+
+		r.recorder.Event(instance, corev1.EventTypeNormal, "PullImage", "Pulling the new container image")
+
+		// Re-queue, let the puller create and continue.
+		return reconcileResult, nil
+	}
+
+	// Update the image puller instance and check if it has completed.
+	nsdName := types.NamespacedName{
+		Name:      r.imagePuller.Name,
+		Namespace: r.imagePuller.Namespace,
+	}
+	err = r.client.Get(context.TODO(), nsdName, r.imagePuller)
+	if err != nil {
+		log.Println("error fetching image puller status:", err)
+	}
+	// Re-queue if the image pull didn't complete.
+	if !r.imagePuller.Status.Completed {
+		return reconcileResult, fmt.Errorf("image pull didn't complete")
+	}
+
+	// Find and pause the running cluster.
 	if r.currentCluster == nil {
-		if err := r.findCurrentCluster(); err != nil {
+		if err := r.findAndSetCurrentCluster(); err != nil {
 			return reconcileResult, err
 		}
 		if err := r.pauseCluster(); err != nil {
 			return reconcileResult, err
 		}
 		r.recorder.Event(instance, corev1.EventTypeNormal, "PauseClusterCtrl", "Pausing the cluster controller and enabling cluster maintenance mode")
-	}
-
-	if !r.IsCurrentUpgrade(instance) {
-		err := fmt.Errorf("can't create more than one storageos upgrade")
-		r.recorder.Event(instance, corev1.EventTypeWarning, "FailedCreation", err.Error())
-		return reconcileResult, err
 	}
 
 	// Create a ServiceAccount for the upgrader.
@@ -455,5 +540,25 @@ func newClusterRole(name string, rules []rbacv1.PolicyRule) *rbacv1.ClusterRole 
 			},
 		},
 		Rules: rules,
+	}
+}
+
+// newImagePullJob creates a jobs.storageos.com instance for pulling container
+// image and return. It uses the cluster instance to set the NodeSelectorTerm,
+// in order to pull the image only on the nodes that are part of the cluster.
+func newImagePullJob(cr *storageosv1alpha1.StorageOSUpgrade, cluster *storageosv1alpha1.StorageOSCluster) *storageosv1alpha1.Job {
+	return &storageosv1alpha1.Job{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cr.Name + "-image-puller",
+			Namespace: cr.Namespace,
+		},
+		Spec: storageosv1alpha1.JobSpec{
+			Image:             operatorImage,
+			Args:              []string{"docker-puller.sh", cr.Spec.NewImage},
+			MountPath:         "/var/run",
+			HostPath:          "/var/run",
+			CompletionWord:    "done",
+			NodeSelectorTerms: cluster.Spec.NodeSelectorTerms,
+		},
 	}
 }

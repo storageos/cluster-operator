@@ -110,6 +110,13 @@ func (in *JobSpec) DeepCopyInto(out *JobSpec) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.NodeSelectorTerms != nil {
+		in, out := &in.NodeSelectorTerms, &out.NodeSelectorTerms
+		*out = make([]v1.NodeSelectorTerm, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	return
 }
 

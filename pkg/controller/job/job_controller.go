@@ -238,7 +238,7 @@ func newDaemonSetForCR(cr *storageosv1alpha1.Job) (*appsv1.DaemonSet, error) {
 	// The label selector labels must be present in all the DaemonSet Pods.
 	mergedLabels := labels.Merge(defaultLabels, selectorMap)
 
-	return &appsv1.DaemonSet{
+	dset := &appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cr.Name + "-daemonset-job",
 			Namespace: cr.Namespace,
@@ -259,18 +259,18 @@ func newDaemonSetForCR(cr *storageosv1alpha1.Job) (*appsv1.DaemonSet, error) {
 							Args:  cr.Spec.Args,
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "basetarget",
-									MountPath: "/basetarget",
+									Name:      "target",
+									MountPath: cr.Spec.MountPath,
 								},
 							},
 						},
 					},
 					Volumes: []corev1.Volume{
 						{
-							Name: "basetarget",
+							Name: "target",
 							VolumeSource: corev1.VolumeSource{
 								HostPath: &corev1.HostPathVolumeSource{
-									Path: cr.Spec.MountPath,
+									Path: cr.Spec.HostPath,
 								},
 							},
 						},
@@ -278,5 +278,16 @@ func newDaemonSetForCR(cr *storageosv1alpha1.Job) (*appsv1.DaemonSet, error) {
 				},
 			},
 		},
-	}, nil
+	}
+
+	// Add node affinity if defined.
+	if len(cr.Spec.NodeSelectorTerms) > 0 {
+		dset.Spec.Template.Spec.Affinity = &corev1.Affinity{NodeAffinity: &corev1.NodeAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+				NodeSelectorTerms: cr.Spec.NodeSelectorTerms,
+			},
+		}}
+	}
+
+	return dset, nil
 }

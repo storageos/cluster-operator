@@ -4,6 +4,7 @@ metadata:
   name: example-job
 spec:
   image: darkowlzz/cleanup:v0.0.2
-  args: ["/basetarget/storageos"]
+  args: ["/var/lib/storageos"]
   mountPath: "/var/lib"
+  hostPath: "/var/lib"
   completionWord: "done"
