@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -30,6 +31,10 @@ type JobSpec struct {
 
 	// LabelSelector is the label selector for the job Pods.
 	LabelSelector string `json:"labelSelector"`
+
+	// NodeSelectorTerms is the set of placement of the job pods using node
+	// affinity requiredDuringSchedulingIgnoredDuringExecution.
+	NodeSelectorTerms []corev1.NodeSelectorTerm `json:"nodeSelectorTerms"`
 }
 
 // GetLabelSelector returns Job's pod label selector.
