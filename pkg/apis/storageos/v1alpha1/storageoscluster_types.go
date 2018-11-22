@@ -31,12 +31,15 @@ const (
 	DefaultCSIExternalAttacherContainerImage    = "quay.io/k8scsi/csi-attacher:v0.4.0"
 	DefaultInitContainerImage                   = "storageos/init:0.1"
 
-	DefaultCSIEndpoint           = "unix://var/lib/kubelet/plugins/storageos/csi.sock"
-	DefaultCSIRegistrarSocketDir = "/var/lib/kubelet/device-plugins/"
-	DefaultCSIKubeletDir         = "/var/lib/kubelet"
-	DefaultCSIPluginDir          = "/var/lib/kubelet/plugins/storageos/"
-	DefaultCSIDeviceDir          = "/dev"
-	DefaultCSIRegistrationDir    = "/var/lib/kubelet/plugins"
+	DefaultCSIEndpoint                 = "unix://var/lib/kubelet/plugins/storageos/csi.sock"
+	DefaultCSIRegistrarSocketDir       = "/var/lib/kubelet/device-plugins/"
+	DefaultCSIKubeletDir               = "/var/lib/kubelet"
+	DefaultCSIPluginDir                = "/var/lib/kubelet/plugins/storageos/"
+	DefaultCSIDeviceDir                = "/dev"
+	DefaultCSIRegistrationDir          = "/var/lib/kubelet/plugins"
+	DefaultCSIKubeletRegistrationPath  = "/var/lib/kubelet/plugins/storageos/csi.sock"
+	DefaultCSIDriverRegistrationMode   = "node-register"
+	DefaultCSIDriverRequiresAttachment = "true"
 )
 
 // StorageOSClusterSpec defines the desired state of StorageOSCluster
@@ -264,6 +267,30 @@ func (s StorageOSClusterSpec) GetCSIRegistrationDir() string {
 	return DefaultCSIRegistrationDir
 }
 
+// GetCSIKubeletRegistrationPath returns the CSI Kubelet Registration Path.
+func (s StorageOSClusterSpec) GetCSIKubeletRegistrationPath() string {
+	if s.CSI.KubeletRegistrationPath != "" {
+		return s.CSI.KubeletRegistrationPath
+	}
+	return DefaultCSIKubeletRegistrationPath
+}
+
+// GetCSIDriverRegistrationMode returns the CSI Driver Registration Mode.
+func (s StorageOSClusterSpec) GetCSIDriverRegistrationMode() string {
+	if s.CSI.DriverRegistrationMode != "" {
+		return s.CSI.DriverRegistrationMode
+	}
+	return DefaultCSIDriverRegistrationMode
+}
+
+// GetCSIDriverRequiresAttachment returns the CSI Driver Requires Attachment
+func (s StorageOSClusterSpec) GetCSIDriverRequiresAttachment() string {
+	if s.CSI.DriverRequiresAttachment != "" {
+		return s.CSI.DriverRequiresAttachment
+	}
+	return DefaultCSIDriverRequiresAttachment
+}
+
 // ContainerImages contains image names of all the containers used by the operator.
 type ContainerImages struct {
 	NodeContainer                   string `json:"nodeContainer"`
@@ -285,6 +312,9 @@ type StorageOSClusterCSI struct {
 	PluginDir                    string `json:"pluginDir"`
 	DeviceDir                    string `json:"deviceDir"`
 	RegistrationDir              string `json:"registrationDir"`
+	KubeletRegistrationPath      string `json:"kubeletRegistrationPath"`
+	DriverRegistrationMode       string `json:"driverRegisterationMode"`
+	DriverRequiresAttachment     string `json:"driverRequiresAttachment"`
 }
 
 // StorageOSClusterService contains Service configurations.

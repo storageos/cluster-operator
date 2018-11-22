@@ -984,10 +984,10 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 		if kubeletPluginsWatcherSupported(s.k8sVersion) {
 			driverReg.Args = append(
 				driverReg.Args,
-				"--mode=node-register",
-				"--driver-requires-attachment=true",
+				fmt.Sprintf("--mode=%s", s.stos.Spec.GetCSIDriverRegistrationMode()),
+				fmt.Sprintf("--driver-requires-attachment=%s", s.stos.Spec.GetCSIDriverRequiresAttachment()),
 				"--pod-info-mount-version=v1",
-				"--kubelet-registration-path=/var/lib/kubelet/plugins/storageos/csi.sock")
+				fmt.Sprintf("--kubelet-registration-path=%s", s.stos.Spec.GetCSIKubeletRegistrationPath()))
 		}
 		podSpec.Containers = append(podSpec.Containers, driverReg)
 	}
