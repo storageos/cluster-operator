@@ -24,6 +24,9 @@ spec:
   #   enableProvisionCreds: false
   #   enableControllerPublishCreds: false
   #   enableNodePublishCreds: false
+  #   kubeletRegistrationPath: /var/lib/kubelet/plugins/storageos/csi.sock
+  #   driverRegisterationMode: node-register
+  #   DriverRequiresAttachment: "true"
   # service:
   #   name: "storageos"
   #   type: "ClusterIP"
