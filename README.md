@@ -129,12 +129,15 @@ An existing StorageOS cluster can be upgraded to a new version of StorageOS by
 creating an Upgrade Configuration. The cluster-operator takes care of
 downloading the new container image and updating all the nodes with new version
 of StorageOS.
-An example of of `StorageOSUpgrade` resource is [storageos_v1alpha1_storageosupgrade_cr.yaml](/deploy/crds/storageos_v1alpha1_storageosupgrade_cr.yaml).
+An example of `StorageOSUpgrade` resource is [storageos_v1alpha1_storageosupgrade_cr.yaml](/deploy/crds/storageos_v1alpha1_storageosupgrade_cr.yaml).
 
 Only offline upgrade is supported for now by cluster-operator. During the
-upgrade, the applications that use StorageOS volumes are scaled down and the
-whole StorageOS cluster is restarted with a new version. Once the StorageOS
-cluster becomes usable, the applications are scaled up to their previous configuration.
+upgrade, StorageOS maintenance mode is enabled, the applications that use
+StorageOS volumes are scaled down and the whole StorageOS cluster is restarted
+with a new version. Once the StorageOS cluster becomes usable, the applications
+are scaled up to their previous configuration. Once the update is complete, make
+sure to delete the upgrade resource to put the StorageOS cluster in normal mode.
+This will disable the maintenance mode.
 
 Once an upgrade resource is created, events related to the upgrade can be
 viewed in the upgrade object description. All the status and errors, if any,
@@ -154,7 +157,10 @@ Spec:
 Events:
   Type    Reason           Age   From                Message
   ----    ------           ----  ----                -------
-  Normal  UpgradeComplete  21s   storageos-upgrader  StorageOS upgraded to storageos/node:1.0.0
+  Normal  PullImage         4m    storageos-upgrader  Pulling the new container image
+  Normal  PauseClusterCtrl  2m    storageos-upgrader  Pausing the cluster controller and enabling cluster maintenance mode
+  Normal  UpgradeInit       2m    storageos-upgrader  StorageOS upgrade of cluster example-storageos started
+  Normal  UpgradeComplete   0s    storageos-upgrader  StorageOS upgraded to storageos/node:1.0.0. Delete upgrade object to disable cluster maintenance mode
 ```
 
 ## StorageOSUpgrade Resource Configuration
@@ -165,6 +171,129 @@ StorageOSUpgrade custom resource and their default values.
 Parameter | Description | Default
 --------- | ----------- | -------
 `newImage` | StorageOS node container image to upgrade to |
+
+
+## Cleanup Old Configurations
+
+StorageOS creates and saves its files at `/var/lib/storageos` on the hosts. This
+also contains some configurations of the cluster. To do a fresh install of
+StorageOS, these files need to be deleted.
+
+__WARNING__: This will delete any existing data and won't be recoverable.
+
+__NOTE__: When using an external etcd, the data related to storageos should also
+be removed.
+```
+ETCDCTL_API=3 /usr/local/bin/etcdctl --endpoints http://storageos-etcd-server:2379 del --prefix storageos
+```
+
+The cluster-operator provides a `Job`resources, that can execute certain tasks
+on all the nodes or on some selected nodes. This can be used to easily perform
+cleanup task. An example would be to create a `Job` resource:
+```yaml
+apiVersion: storageos.com/v1alpha1
+kind: Job
+metadata:
+  name: cleanup-job
+spec:
+  image: darkowlzz/cleanup:v0.0.2
+  args: ["/var/lib/storageos"]
+  mountPath: "/var/lib"
+  hostPath: "/var/lib"
+  completionWord: "done"
+  nodeSelectorTerms:
+    - matchExpressions:
+      - key: node-role.kubernetes.io/worker
+        operator: In
+        values:
+        - "true"
+```
+When applied, this job will run `darkowlzz/cleanup` container on the nodes that
+have label `node-role.kubernetes.io/worker` with value `"true"`, mounting
+`/var/lib` and passing the argument `/var/lib/storageos`. This will run
+`rm -rf /var/lib/storageos` in the selected nodes and cleanup all the storageos
+files. To run it on all the nodes, remove the `nodeSelectorTerms` attribute.
+On completion, the resource description shows that the task is completed and
+can be deleted.
+```
+$ kubectl describe jobs.storageos.com cleanup-job
+Name:         cleanup-job
+Namespace:    default
+...
+...
+Spec:
+  Completion Word:  
+  Args:
+    /var/lib/storageos
+  Host Path:            /var/lib
+  Image:                darkowlzz/cleanup:v0.0.2
+  ...
+Status:
+  Completed:  true
+Events:
+  Type    Reason        Age   From                       Message
+  ----    ------        ----  ----                       -------
+  Normal  JobCompleted  39s   storageoscluster-operator  Job Completed. Safe to delete.
+```
+Deleting the resource, will terminate all the pods that were created to run the
+task.
+
+Internally, this `Job` is backed by a controller that creates pods using
+DaemonSet. And the job containers have to be built in a specific way, in order
+to achieve this behavior.
+
+In the above example, the cleanup container runs a shell script(`script.sh`):
+```bash
+#!/bin/ash
+
+set -euo pipefail
+
+# Gracefully handle the TERM signal sent when deleting the daemonset
+trap 'exit' TERM
+
+# This is the main command that's run by this script on
+# all the nodes.
+rm -rf $1
+
+# Let the monitoring script know we're done.
+echo "done"
+
+# this is a workaround to prevent the container from exiting
+# and k8s restarting the daemonset pod
+while true; do sleep 1; done
+```
+And the container image is made with Dockerfile:
+```
+FROM alpine:3.6
+COPY script.sh .
+RUN chmod u+x script.sh
+ENTRYPOINT ["./script.sh"]
+```
+
+The script, after running the main command, enters into a sleep state, instead
+of exiting. This is needed because we don't want the container to exit and start
+again and again. Once completed, it echos "done". This is read by the Job
+controller to figure out when the task is completed. Once all the pods have
+completed the task, the Job status is completed and it can be deleted.
+
+This can be extended to do other similar cluster management operations. This is
+also used internally in the cluster upgrade process.
+
+
+## Job(jobs.storageos.com) Resource Configuration
+
+The following table lists the configurable spec parameters of the
+Job custom resource and their default values.
+
+Parameter | Description | Default
+--------- | ----------- | -------
+`image` | Container image that the job runs |
+`args` | Any arguments to be passed when the container is run |
+`hostPath` | Path on the host that is mounted on the job container |
+`mountPath` | Path on the job container where the hostPath is mounted |
+`completionWord` | The word that job controller looks for in the pod logs to determine if the task is completed |
+`labelSelector` | Labels that are added to the job pods and are used to select them. |
+`nodeSelectorTerms` | This can be used to select the nodes where the job runs. |
 
 
 ## TLS Support

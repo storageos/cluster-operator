@@ -27,7 +27,7 @@ type JobSpec struct {
 
 	// CompletionWord is the word that's looked for in the pod logs to find out
 	// if a DaemonSet Pod has completed its task.
-	CompletionWord string `json:"CompletionWord"`
+	CompletionWord string `json:"completionWord"`
 
 	// LabelSelector is the label selector for the job Pods.
 	LabelSelector string `json:"labelSelector"`
