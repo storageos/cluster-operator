@@ -53,6 +53,7 @@ const (
 	disableTelemetryEnvVar              = "DISABLE_TELEMETRY"
 	deviceDirEnvVar                     = "DEVICE_DIR"
 	csiEndpointEnvVar                   = "CSI_ENDPOINT"
+	csiVersionEnvVar                    = "CSI_VERSION"
 	csiRequireCredsCreateEnvVar         = "CSI_REQUIRE_CREDS_CREATE_VOL"
 	csiRequireCredsDeleteEnvVar         = "CSI_REQUIRE_CREDS_DELETE_VOL"
 	csiProvisionCredsUsernameEnvVar     = "CSI_PROVISION_CREDS_USERNAME"
@@ -174,6 +175,10 @@ func (s *Deployment) Deploy() error {
 		}
 
 		if err := s.createClusterRoleBindingForDriverRegistrar(); err != nil {
+			return err
+		}
+
+		if err := s.createClusterRoleBindingForK8SDriverRegistrar(); err != nil {
 			return err
 		}
 
@@ -315,6 +320,16 @@ func (s *Deployment) createClusterRoleForDriverRegistrar() error {
 			Resources: []string{"events"},
 			Verbs:     []string{"list", "watch", "create", "update", "patch"},
 		},
+		{
+			APIGroups: []string{"apiextensions.k8s.io"},
+			Resources: []string{"customresourcedefinitions"},
+			Verbs:     []string{"create"},
+		},
+		{
+			APIGroups: []string{"csi.storage.k8s.io"},
+			Resources: []string{"csidrivers"},
+			Verbs:     []string{"create"},
+		},
 	}
 	return s.createClusterRole("driver-registrar-role", rules)
 }
@@ -446,6 +461,22 @@ func (s *Deployment) createClusterRoleBindingForDriverRegistrar() error {
 		APIGroup: "rbac.authorization.k8s.io",
 	}
 	return s.createClusterRoleBinding("driver-registrar-binding", subjects, roleRef)
+}
+
+func (s *Deployment) createClusterRoleBindingForK8SDriverRegistrar() error {
+	subjects := []rbacv1.Subject{
+		{
+			Kind:      "ServiceAccount",
+			Name:      "storageos-statefulset-sa",
+			Namespace: s.stos.Spec.GetResourceNS(),
+		},
+	}
+	roleRef := rbacv1.RoleRef{
+		Kind:     "ClusterRole",
+		Name:     "driver-registrar-role",
+		APIGroup: "rbac.authorization.k8s.io",
+	}
+	return s.createClusterRoleBinding("k8s-driver-registrar-binding", subjects, roleRef)
 }
 
 func (s *Deployment) createClusterRoleBindingForProvisioner() error {
@@ -622,6 +653,10 @@ func (s *Deployment) createDaemonSet() error {
 									Name:  disableTelemetryEnvVar,
 									Value: strconv.FormatBool(s.stos.Spec.DisableTelemetry),
 								},
+								{
+									Name:  csiVersionEnvVar,
+									Value: s.stos.Spec.GetCSIVersion(CSIV1Supported(s.k8sVersion)),
+								},
 							},
 							SecurityContext: &v1.SecurityContext{
 								Privileged: &privileged,
@@ -721,19 +756,28 @@ func (s *Deployment) addNodeContainerResources(nodeContainer *v1.Container) {
 // KubeletPluginsWatcher. This is used to change the CSI driver registry setup
 // based on the kubernetes cluster setup.
 func kubeletPluginsWatcherSupported(version string) bool {
-	supportedVersion, err := semver.Parse("1.12.0")
-	if err != nil {
-		log.Printf("failed to parse version: %v", err)
-		return false
-	}
-
-	currentVersion, err := semver.Parse(version)
-	if err != nil {
-		log.Printf("failed to parse version: %v", err)
-		return false
-	}
-
 	// Supported if v1.12.0 or above.
+	return versionSupported(version, "1.12.0")
+}
+
+// CSIV1Supported returns true for k8s versions that support CSI v1.
+func CSIV1Supported(version string) bool {
+	return versionSupported(version, "1.13.0")
+}
+
+func versionSupported(haveVersion, wantVersion string) bool {
+	supportedVersion, err := semver.Parse(wantVersion)
+	if err != nil {
+		log.Printf("failed to parse version: %v", err)
+		return false
+	}
+
+	currentVersion, err := semver.Parse(haveVersion)
+	if err != nil {
+		log.Printf("failed to parse version: %v", err)
+		return false
+	}
+
 	if currentVersion.Compare(supportedVersion) >= 0 {
 		return true
 	}
@@ -843,7 +887,7 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 				Name: "plugin-dir",
 				VolumeSource: v1.VolumeSource{
 					HostPath: &v1.HostPathVolumeSource{
-						Path: s.stos.Spec.GetCSIPluginDir(),
+						Path: s.stos.Spec.GetCSIPluginDir(CSIV1Supported(s.k8sVersion)),
 						Type: &hostpathDirOrCreate,
 					},
 				},
@@ -861,7 +905,7 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 				Name: "registration-dir",
 				VolumeSource: v1.VolumeSource{
 					HostPath: &v1.HostPathVolumeSource{
-						Path: s.stos.Spec.GetCSIRegistrationDir(),
+						Path: s.stos.Spec.GetCSIRegistrationDir(CSIV1Supported(s.k8sVersion)),
 						Type: &hostpathDir,
 					},
 				},
@@ -878,7 +922,7 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 			},
 			{
 				Name:      "plugin-dir",
-				MountPath: s.stos.Spec.GetCSIPluginDir(),
+				MountPath: s.stos.Spec.GetCSIPluginDir(CSIV1Supported(s.k8sVersion)),
 			},
 			{
 				Name:      "device-dir",
@@ -892,7 +936,7 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 		envVar := []v1.EnvVar{
 			{
 				Name:  csiEndpointEnvVar,
-				Value: s.stos.Spec.GetCSIEndpoint(),
+				Value: s.stos.Spec.GetCSIEndpoint(CSIV1Supported(s.k8sVersion)),
 			},
 		}
 
@@ -947,7 +991,7 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 		nodeContainer.Env = append(nodeContainer.Env, envVar...)
 
 		driverReg := v1.Container{
-			Image:           s.stos.Spec.GetCSIDriverRegistrarImage(),
+			Image:           s.stos.Spec.GetCSIDriverRegistrarImage(CSIV1Supported(s.k8sVersion)),
 			Name:            "csi-driver-registrar",
 			ImagePullPolicy: v1.PullIfNotPresent,
 			Args: []string{
@@ -993,7 +1037,7 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 				fmt.Sprintf("--mode=%s", s.stos.Spec.GetCSIDriverRegistrationMode()),
 				fmt.Sprintf("--driver-requires-attachment=%s", s.stos.Spec.GetCSIDriverRequiresAttachment()),
 				"--pod-info-mount-version=v1",
-				fmt.Sprintf("--kubelet-registration-path=%s", s.stos.Spec.GetCSIKubeletRegistrationPath()))
+				fmt.Sprintf("--kubelet-registration-path=%s", s.stos.Spec.GetCSIKubeletRegistrationPath(CSIV1Supported(s.k8sVersion))))
 		}
 		podSpec.Containers = append(podSpec.Containers, driverReg)
 	}
@@ -1058,7 +1102,7 @@ func (s *Deployment) createStatefulSet() error {
 					ServiceAccountName: "storageos-statefulset-sa",
 					Containers: []v1.Container{
 						{
-							Image:           s.stos.Spec.GetCSIExternalProvisionerImage(),
+							Image:           s.stos.Spec.GetCSIExternalProvisionerImage(CSIV1Supported(s.k8sVersion)),
 							Name:            "csi-external-provisioner",
 							ImagePullPolicy: v1.PullIfNotPresent,
 							Args: []string{
@@ -1080,7 +1124,7 @@ func (s *Deployment) createStatefulSet() error {
 							},
 						},
 						{
-							Image:           s.stos.Spec.GetCSIExternalAttacherImage(),
+							Image:           s.stos.Spec.GetCSIExternalAttacherImage(CSIV1Supported(s.k8sVersion)),
 							Name:            "csi-external-attacher",
 							ImagePullPolicy: v1.PullIfNotPresent,
 							Args: []string{
@@ -1106,7 +1150,7 @@ func (s *Deployment) createStatefulSet() error {
 							Name: "plugin-dir",
 							VolumeSource: v1.VolumeSource{
 								HostPath: &v1.HostPathVolumeSource{
-									Path: s.stos.Spec.GetCSIPluginDir(),
+									Path: s.stos.Spec.GetCSIPluginDir(CSIV1Supported(s.k8sVersion)),
 									Type: &hostpathDirOrCreate,
 								},
 							},
@@ -1115,6 +1159,45 @@ func (s *Deployment) createStatefulSet() error {
 				},
 			},
 		},
+	}
+
+	if CSIV1Supported(s.k8sVersion) {
+		driverReg := v1.Container{
+			Image:           s.stos.Spec.GetCSIDriverRegistrarImage(CSIV1Supported(s.k8sVersion)),
+			Name:            "csi-driver-k8s-registrar",
+			ImagePullPolicy: v1.PullIfNotPresent,
+			Args: []string{
+				"--v=5",
+				"--csi-address=$(ADDRESS)",
+				"--mode=kubernetes-register",
+				"--driver-requires-attachment=true",
+				"--pod-info-mount-version=v1",
+				"--kubelet-registration-path=/var/lib/kubelet/plugins_registry/storageos/csi.sock",
+			},
+			Env: []v1.EnvVar{
+				{
+					Name:  addressEnvVar,
+					Value: "/csi/csi.sock",
+				},
+				{
+					Name: kubeNodeNameEnvVar,
+					ValueFrom: &v1.EnvVarSource{
+						FieldRef: &v1.ObjectFieldSelector{
+							APIVersion: "v1",
+							FieldPath:  "spec.nodeName",
+						},
+					},
+				},
+			},
+			VolumeMounts: []v1.VolumeMount{
+				{
+					Name:      "plugin-dir",
+					MountPath: "/csi",
+				},
+			},
+		}
+
+		sset.Spec.Template.Spec.Containers = append(sset.Spec.Template.Spec.Containers, driverReg)
 	}
 
 	controllerutil.SetControllerReference(s.stos, sset, s.scheme)
