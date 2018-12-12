@@ -1040,6 +1040,31 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 				fmt.Sprintf("--kubelet-registration-path=%s", s.stos.Spec.GetCSIKubeletRegistrationPath(CSIV1Supported(s.k8sVersion))))
 		}
 		podSpec.Containers = append(podSpec.Containers, driverReg)
+
+		if CSIV1Supported(s.k8sVersion) {
+			livenessProbe := v1.Container{
+				Image:           s.stos.Spec.GetCSILivenessProbeImage(),
+				Name:            "csi-liveness-probe",
+				ImagePullPolicy: v1.PullIfNotPresent,
+				Args: []string{
+					"--csi-address=$(ADDRESS)",
+					"--connection-timeout=3s",
+				},
+				Env: []v1.EnvVar{
+					{
+						Name:  addressEnvVar,
+						Value: "/csi/csi.sock",
+					},
+				},
+				VolumeMounts: []v1.VolumeMount{
+					{
+						Name:      "plugin-dir",
+						MountPath: "/csi",
+					},
+				},
+			}
+			podSpec.Containers = append(podSpec.Containers, livenessProbe)
+		}
 	}
 }
 

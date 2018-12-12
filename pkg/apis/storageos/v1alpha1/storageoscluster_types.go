@@ -33,6 +33,7 @@ const (
 	CSIv1DriverRegistrarContainerImage     = "quay.io/k8scsi/driver-registrar:v1.0-canary"
 	CSIv1ExternalProvisionerContainerImage = "quay.io/k8scsi/csi-provisioner:v1.0.0"
 	CSIv1ExternalAttacherContainerImage    = "quay.io/k8scsi/csi-attacher:v1.0.0"
+	CSIv1LivenessProbeContainerImage       = "quay.io/k8scsi/livenessprobe:v1.0-canary"
 	CSIv0DriverRegistrarContainerImage     = "quay.io/k8scsi/driver-registrar:v0.4.1"
 	CSIv0ExternalProvisionerContainerImage = "quay.io/k8scsi/csi-provisioner:v0.4.0"
 	CSIv0ExternalAttacherContainerImage    = "quay.io/k8scsi/csi-attacher:v0.4.0"
@@ -212,6 +213,14 @@ func (s StorageOSClusterSpec) GetCSIExternalAttacherImage(csiv1 bool) string {
 	return CSIv0ExternalAttacherContainerImage
 }
 
+// GetCSILivenessProbeImage returns CSI liveness probe container image.
+func (s StorageOSClusterSpec) GetCSILivenessProbeImage() string {
+	if s.Images.CSILivenessProbeContainer != "" {
+		return s.Images.CSILivenessProbeContainer
+	}
+	return CSIv1LivenessProbeContainerImage
+}
+
 // GetServiceName returns the service name.
 func (s StorageOSClusterSpec) GetServiceName() string {
 	if s.Service.Name != "" {
@@ -355,6 +364,7 @@ type ContainerImages struct {
 	CSIDriverRegistrarContainer     string `json:"csiDriverRegistrarContainer"`
 	CSIExternalProvisionerContainer string `json:"csiExternalProvisionerContainer"`
 	CSIExternalAttacherContainer    string `json:"csiExternalAttacherContainer"`
+	CSILivenessProbeContainer       string `json:"csiLivenessProbeContainer"`
 }
 
 // StorageOSClusterCSI contains CSI configurations.
