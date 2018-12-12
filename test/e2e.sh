@@ -81,6 +81,7 @@ run_openshift() {
     # This is openshift specific permission which is required for the operator
     # to work.
     oc adm policy add-scc-to-user privileged system:serviceaccount:storageos:storageos-daemonset-sa
+    oc adm policy add-scc-to-user privileged system:serviceaccount:storageos:storageos-statefulset-sa
     echo
 }
 
