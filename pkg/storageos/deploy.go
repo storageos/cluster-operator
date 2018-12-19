@@ -74,25 +74,35 @@ const (
 	sysAdminCap = "SYS_ADMIN"
 	debugVal    = "xdebug"
 
-	secretNamespaceKey                     = "adminSecretNamespace"
-	secretNameKey                          = "adminSecretName"
-	apiAddressKey                          = "apiAddress"
-	apiUsernameKey                         = "apiUsername"
-	apiPasswordKey                         = "apiPassword"
-	csiProvisionUsernameKey                = "csiProvisionUsername"
-	csiProvisionPasswordKey                = "csiProvisionPassword"
-	csiControllerPublishUsernameKey        = "csiControllerPublishUsername"
-	csiControllerPublishPasswordKey        = "csiControllerPublishPassword"
-	csiNodePublishUsernameKey              = "csiNodePublishUsername"
-	csiNodePublishPasswordKey              = "csiNodePublishPassword"
-	csiProvisionerSecretNameKey            = "csiProvisionerSecretName"
-	csiProvisionerSecretNamespaceKey       = "csiProvisionerSecretNamespace"
-	csiControllerPublishSecretNameKey      = "csiControllerPublishSecretName"
-	csiControllerPublishSecretNamespaceKey = "csiControllerPublishSecretNamespace"
-	csiNodePublishSecretNameKey            = "csiNodePublishSecretName"
-	csiNodePublishSecretNamespaceKey       = "csiNodePublishSecretNamespace"
-	tlsCertKey                             = "tls.crt"
-	tlsKeyKey                              = "tls.key"
+	defaultFSType                            = "ext4"
+	secretNamespaceKey                       = "adminSecretNamespace"
+	secretNameKey                            = "adminSecretName"
+	apiAddressKey                            = "apiAddress"
+	apiUsernameKey                           = "apiUsername"
+	apiPasswordKey                           = "apiPassword"
+	csiParameterPrefix                       = "csi.storage.k8s.io/"
+	csiProvisionUsernameKey                  = "csiProvisionUsername"
+	csiProvisionPasswordKey                  = "csiProvisionPassword"
+	csiControllerPublishUsernameKey          = "csiControllerPublishUsername"
+	csiControllerPublishPasswordKey          = "csiControllerPublishPassword"
+	csiNodePublishUsernameKey                = "csiNodePublishUsername"
+	csiNodePublishPasswordKey                = "csiNodePublishPassword"
+	fsType                                   = "fsType"
+	csiV0ProvisionerSecretNameKey            = "csiProvisionerSecretName"
+	csiV0ProvisionerSecretNamespaceKey       = "csiProvisionerSecretNamespace"
+	csiV0ControllerPublishSecretNameKey      = "csiControllerPublishSecretName"
+	csiV0ControllerPublishSecretNamespaceKey = "csiControllerPublishSecretNamespace"
+	csiV0NodePublishSecretNameKey            = "csiNodePublishSecretName"
+	csiV0NodePublishSecretNamespaceKey       = "csiNodePublishSecretNamespace"
+	csiV1FSType                              = csiParameterPrefix + "fstype"
+	csiV1ProvisionerSecretNameKey            = csiParameterPrefix + "provisioner-secret-name"
+	csiV1ProvisionerSecretNamespaceKey       = csiParameterPrefix + "provisioner-secret-namespace"
+	csiV1ControllerPublishSecretNameKey      = csiParameterPrefix + "controller-publish-secret-name"
+	csiV1ControllerPublishSecretNamespaceKey = csiParameterPrefix + "controller-publish-secret-namespace"
+	csiV1NodePublishSecretNameKey            = csiParameterPrefix + "node-publish-secret-name"
+	csiV1NodePublishSecretNamespaceKey       = csiParameterPrefix + "node-publish-secret-namespace"
+	tlsCertKey                               = "tls.crt"
+	tlsKeyKey                                = "tls.key"
 
 	defaultUsername = "storageos"
 	defaultPassword = "storageos"
@@ -1557,26 +1567,44 @@ func (s *Deployment) createStorageClass() error {
 		},
 		Provisioner: provisioner,
 		Parameters: map[string]string{
-			"pool":   "default",
-			"fsType": "ext4",
+			"pool": "default",
 		},
 	}
 
 	if s.stos.Spec.CSI.Enable {
 		// Add CSI creds secrets in parameters.
-		if s.stos.Spec.CSI.EnableProvisionCreds {
-			sc.Parameters[csiProvisionerSecretNameKey] = csiProvisionerSecretName
-			sc.Parameters[csiProvisionerSecretNamespaceKey] = s.stos.Spec.GetResourceNS()
-		}
-		if s.stos.Spec.CSI.EnableControllerPublishCreds {
-			sc.Parameters[csiControllerPublishSecretNameKey] = csiControllerPublishSecretName
-			sc.Parameters[csiControllerPublishSecretNamespaceKey] = s.stos.Spec.GetResourceNS()
-		}
-		if s.stos.Spec.CSI.EnableNodePublishCreds {
-			sc.Parameters[csiNodePublishSecretNameKey] = csiNodePublishSecretName
-			sc.Parameters[csiNodePublishSecretNamespaceKey] = s.stos.Spec.GetResourceNS()
+		if CSIV1Supported(s.k8sVersion) {
+			// New CSI secret parameter keys were introduced in CSI v1.
+			sc.Parameters[csiV1FSType] = defaultFSType
+			if s.stos.Spec.CSI.EnableProvisionCreds {
+				sc.Parameters[csiV1ProvisionerSecretNameKey] = csiProvisionerSecretName
+				sc.Parameters[csiV1ProvisionerSecretNamespaceKey] = s.stos.Spec.GetResourceNS()
+			}
+			if s.stos.Spec.CSI.EnableControllerPublishCreds {
+				sc.Parameters[csiV1ControllerPublishSecretNameKey] = csiControllerPublishSecretName
+				sc.Parameters[csiV1ControllerPublishSecretNamespaceKey] = s.stos.Spec.GetResourceNS()
+			}
+			if s.stos.Spec.CSI.EnableNodePublishCreds {
+				sc.Parameters[csiV1NodePublishSecretNameKey] = csiNodePublishSecretName
+				sc.Parameters[csiV1NodePublishSecretNamespaceKey] = s.stos.Spec.GetResourceNS()
+			}
+		} else {
+			sc.Parameters[fsType] = defaultFSType
+			if s.stos.Spec.CSI.EnableProvisionCreds {
+				sc.Parameters[csiV0ProvisionerSecretNameKey] = csiProvisionerSecretName
+				sc.Parameters[csiV0ProvisionerSecretNamespaceKey] = s.stos.Spec.GetResourceNS()
+			}
+			if s.stos.Spec.CSI.EnableControllerPublishCreds {
+				sc.Parameters[csiV0ControllerPublishSecretNameKey] = csiControllerPublishSecretName
+				sc.Parameters[csiV0ControllerPublishSecretNamespaceKey] = s.stos.Spec.GetResourceNS()
+			}
+			if s.stos.Spec.CSI.EnableNodePublishCreds {
+				sc.Parameters[csiV0NodePublishSecretNameKey] = csiNodePublishSecretName
+				sc.Parameters[csiV0NodePublishSecretNamespaceKey] = s.stos.Spec.GetResourceNS()
+			}
 		}
 	} else {
+		sc.Parameters[fsType] = defaultFSType
 		// Add StorageOS admin secrets name and namespace.
 		sc.Parameters[secretNamespaceKey] = s.stos.Spec.SecretRefNamespace
 		sc.Parameters[secretNameKey] = s.stos.Spec.SecretRefName
