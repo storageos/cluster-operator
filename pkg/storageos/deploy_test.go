@@ -3,6 +3,7 @@ package storageos
 import (
 	"context"
 	"reflect"
+	"strconv"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -291,10 +292,11 @@ func TestCreateDaemonSet(t *testing.T) {
 	}
 
 	testcases := []struct {
-		name      string
-		spec      api.StorageOSClusterSpec
-		enableCSI bool
-		sharedDir string
+		name             string
+		spec             api.StorageOSClusterSpec
+		enableCSI        bool
+		sharedDir        string
+		disableTelemetry bool
 	}{
 		{
 			name: "legacy-daemonset",
@@ -320,6 +322,13 @@ func TestCreateDaemonSet(t *testing.T) {
 				SharedDir: "some-dir-path",
 			},
 			sharedDir: "some-dir-path",
+		},
+		{
+			name: "disable telemetry",
+			spec: api.StorageOSClusterSpec{
+				DisableTelemetry: true,
+			},
+			disableTelemetry: true,
 		},
 	}
 
@@ -375,6 +384,23 @@ func TestCreateDaemonSet(t *testing.T) {
 			if !sharedDirVolFound {
 				t.Errorf("expected shared volume, but not found")
 			}
+		}
+
+		// Check telemetry option.
+		telemetryEnvVarFound := false
+		wantDisableTelemetry := strconv.FormatBool(tc.disableTelemetry)
+		for _, env := range createdDaemonset.Spec.Template.Spec.Containers[0].Env {
+			if env.Name == disableTelemetryEnvVar {
+				telemetryEnvVarFound = true
+				if env.Value != wantDisableTelemetry {
+					t.Errorf("unexpected disableTelemetry value:\n\t(WNT) %s\n\t(GOT) %s", wantDisableTelemetry, env.Value)
+				}
+			}
+		}
+
+		// Telemetry must be set.
+		if !telemetryEnvVarFound {
+			t.Errorf("disableTelemetry env var not set, expected to be set")
 		}
 
 		stosCluster.Spec = api.StorageOSClusterSpec{}
