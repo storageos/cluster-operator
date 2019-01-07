@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 
 	"github.com/blang/semver"
 	api "github.com/storageos/cluster-operator/pkg/apis/storageos/v1alpha1"
@@ -49,6 +50,7 @@ const (
 	joinEnvVar                          = "JOIN"
 	advertiseIPEnvVar                   = "ADVERTISE_IP"
 	namespaceEnvVar                     = "NAMESPACE"
+	disableTelemetryEnvVar              = "DISABLE_TELEMETRY"
 	deviceDirEnvVar                     = "DEVICE_DIR"
 	csiEndpointEnvVar                   = "CSI_ENDPOINT"
 	csiRequireCredsCreateEnvVar         = "CSI_REQUIRE_CREDS_CREATE_VOL"
@@ -615,6 +617,10 @@ func (s *Deployment) createDaemonSet() error {
 								{
 									Name:  namespaceEnvVar,
 									Value: s.stos.Spec.GetResourceNS(),
+								},
+								{
+									Name:  disableTelemetryEnvVar,
+									Value: strconv.FormatBool(s.stos.Spec.DisableTelemetry),
 								},
 							},
 							SecurityContext: &v1.SecurityContext{

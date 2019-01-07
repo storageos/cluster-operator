@@ -7,6 +7,7 @@ spec:
   secretRefName: "storageos-api"
   secretRefNamespace: "default"
   namespace: "storageos"
+  # disableTelemetry: true
   # images:
   #   nodeContainer:
   #   initContainer:
