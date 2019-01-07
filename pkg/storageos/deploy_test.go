@@ -3,6 +3,7 @@ package storageos
 import (
 	"context"
 	"reflect"
+	"strconv"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -291,10 +292,11 @@ func TestCreateDaemonSet(t *testing.T) {
 	}
 
 	testcases := []struct {
-		name      string
-		spec      api.StorageOSClusterSpec
-		enableCSI bool
-		sharedDir string
+		name                 string
+		spec                 api.StorageOSClusterSpec
+		wantEnableCSI        bool
+		wantSharedDir        string
+		wantDisableTelemetry bool
 	}{
 		{
 			name: "legacy-daemonset",
@@ -312,14 +314,21 @@ func TestCreateDaemonSet(t *testing.T) {
 					Enable: true,
 				},
 			},
-			enableCSI: true,
+			wantEnableCSI: true,
 		},
 		{
 			name: "shared-dir",
 			spec: api.StorageOSClusterSpec{
 				SharedDir: "some-dir-path",
 			},
-			sharedDir: "some-dir-path",
+			wantSharedDir: "some-dir-path",
+		},
+		{
+			name: "disable telemetry",
+			spec: api.StorageOSClusterSpec{
+				DisableTelemetry: true,
+			},
+			wantDisableTelemetry: true,
 		},
 	}
 
@@ -351,7 +360,7 @@ func TestCreateDaemonSet(t *testing.T) {
 		// owner := createdDaemonset.GetOwnerReferences()[0]
 		// checkObjectOwner(t, owner, gvk)
 
-		if tc.enableCSI {
+		if tc.wantEnableCSI {
 			if len(createdDaemonset.Spec.Template.Spec.Containers) != 2 {
 				t.Errorf("unexpected number of containers in daemonset:\n\t(WNT) %d\n\t(GOT): %d", len(createdDaemonset.Spec.Template.Spec.Containers), 2)
 			}
@@ -361,13 +370,13 @@ func TestCreateDaemonSet(t *testing.T) {
 			}
 		}
 
-		if tc.sharedDir != "" {
+		if tc.wantSharedDir != "" {
 			sharedDirVolFound := false
 			for _, vol := range createdDaemonset.Spec.Template.Spec.Volumes {
 				if vol.Name == "shared" {
 					sharedDirVolFound = true
-					if vol.HostPath.Path != tc.sharedDir {
-						t.Errorf("unexpected sharedDir path:\n\t(WNT) %s\n\t(GOT) %s", tc.sharedDir, vol.HostPath.Path)
+					if vol.HostPath.Path != tc.wantSharedDir {
+						t.Errorf("unexpected sharedDir path:\n\t(WNT) %s\n\t(GOT) %s", tc.wantSharedDir, vol.HostPath.Path)
 					}
 					break
 				}
@@ -375,6 +384,23 @@ func TestCreateDaemonSet(t *testing.T) {
 			if !sharedDirVolFound {
 				t.Errorf("expected shared volume, but not found")
 			}
+		}
+
+		// Check telemetry option.
+		telemetryEnvVarFound := false
+		wantDisableTelemetry := strconv.FormatBool(tc.wantDisableTelemetry)
+		for _, env := range createdDaemonset.Spec.Template.Spec.Containers[0].Env {
+			if env.Name == disableTelemetryEnvVar {
+				telemetryEnvVarFound = true
+				if env.Value != wantDisableTelemetry {
+					t.Errorf("unexpected disableTelemetry value:\n\t(WNT) %s\n\t(GOT) %s", wantDisableTelemetry, env.Value)
+				}
+			}
+		}
+
+		// Telemetry must be set.
+		if !telemetryEnvVarFound {
+			t.Errorf("disableTelemetry env var not set, expected to be set")
 		}
 
 		stosCluster.Spec = api.StorageOSClusterSpec{}

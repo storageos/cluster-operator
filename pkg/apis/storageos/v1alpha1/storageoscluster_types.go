@@ -93,6 +93,9 @@ type StorageOSClusterSpec struct {
 	NodeSelectorTerms []corev1.NodeSelectorTerm `json:"nodeSelectorTerms"`
 	// Resources is to set the resource requirements of the storageos containers.
 	Resources corev1.ResourceRequirements `json:"resources"`
+
+	// Disable Telemetry.
+	DisableTelemetry bool `json:"disableTelemetry"`
 }
 
 // StorageOSClusterStatus defines the observed state of StorageOSCluster

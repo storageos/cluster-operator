@@ -39,6 +39,8 @@ spec:
               type: string
             namespace:
               type: string
+            disableTelemetry:
+              type: boolean
             images:
               properties:
                 nodeContainer:
