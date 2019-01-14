@@ -205,6 +205,8 @@ main() {
     # which is used in the e2e test setup below.
     make image/cluster-operator
 
+    # Move the operator container inside Kind container so that the image is
+    # available to the docker in docker environment.
     if [ "$1" = "kind" ]; then
         x=$(docker ps -f name=kind-1-control-plane -q)
         docker save storageos/cluster-operator:test > cluster-operator.tar
@@ -231,8 +233,8 @@ main() {
     # echo "**** Resource details for storageos-operator namespace ****"
     # print_pod_details_and_logs storageos-operator
 
-    # echo "**** Resource details for storageos namespace ****"
-    # print_pod_details_and_logs storageos
+    echo "**** Resource details for storageos namespace ****"
+    print_pod_details_and_logs storageos
 
     echo "Done Testing!"
 }
