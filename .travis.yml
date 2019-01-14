@@ -34,8 +34,8 @@ matrix:
       sudo: required
       env:
         - "TEST_SUITE=csi"
-        - "TEST_CLUSTER=minikube"
-      name: CSI setup on Minikube
+        - "TEST_CLUSTER=kind"
+      name: CSI setup on Kind 
     - go: "1.11"
       sudo: required
       env:
@@ -46,8 +46,8 @@ matrix:
       sudo: required
       env:
         - "TEST_SUITE=intree"
-        - "TEST_CLUSTER=minikube"
-      name: In-tree plugin setup on Minikube
+        - "TEST_CLUSTER=kind"
+      name: In-tree plugin setup on Kind
 
 
 script:
