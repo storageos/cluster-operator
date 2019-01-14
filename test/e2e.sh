@@ -205,6 +205,13 @@ main() {
     # which is used in the e2e test setup below.
     make image/cluster-operator
 
+    if [ "$1" = "kind" ]; then
+        x=$(docker ps -f name=kind-1-control-plane -q)
+        docker save storageos/cluster-operator:test > cluster-operator.tar
+        docker cp cluster-operator.tar $x:/cluster-operator.tar
+        docker exec $x bash -c "docker load < /cluster-operator.tar"
+    fi
+
     # Run the e2e test in the created namespace.
     #
     # Tags are passed to test local command to run e2e test packages only with

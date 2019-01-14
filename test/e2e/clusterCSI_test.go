@@ -54,7 +54,7 @@ func TestClusterCSI(t *testing.T) {
 	}
 
 	// Check the number of containers in daemonset pod spec.
-	if len(daemonset.Spec.Template.Spec.Containers) != 2 {
+	if len(daemonset.Spec.Template.Spec.Containers) != 3 {
 		t.Errorf("unexpected number of daemonset pod containers:\n\t(GOT) %d\n\t(WNT) %d", len(daemonset.Spec.Template.Spec.Containers), 2)
 	}
 }
