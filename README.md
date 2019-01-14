@@ -96,11 +96,12 @@ Parameter | Description | Default
 `secretRefName` | Reference name of storageos secret |
 `secretRefNamespace` | Namespace of storageos secret |
 `namespace` | Namespace where storageos cluster resources are created | `storageos`
-`images.nodeContainer` | StorageOS node container image | `storageos/node:1.0.0-rc4`
+`images.nodeContainer` | StorageOS node container image | `storageos/node:1.1.0`
 `images.initContainer` | StorageOS init container image | `storageos/init:0.1`
-`images.csiDriverRegistrarContainer` | CSI Driver Registrar Container image | `quay.io/k8scsi/driver-registrar:v0.2.0`
-`images.csiExternalProvisionerContainer` | CSI External Provisioner Container image | `quay.io/k8scsi/csi-provisioner:v0.3.0`
-`images.csiExternalAttacherContainer` | CSI External Attacher Container image | `quay.io/k8scsi/csi-attacher:v0.3.0`
+`images.csiNodeDriverRegistrarContainer` | CSI Node Driver Registrar Container image | `quay.io/k8scsi/csi-node-driver-registrar:v1.0.1`
+`images.csiClusterDriverRegistrarContainer` | CSI Cluster Driver Registrar Container image | `quay.io/k8scsi/csi-cluster-driver-registrar:v1.0.1`
+`images.csiExternalProvisionerContainer` | CSI External Provisioner Container image | `quay.io/k8scsi/csi-provisioner:v1.0.1`
+`images.csiExternalAttacherContainer` | CSI External Attacher Container image | `quay.io/k8scsi/csi-attacher:v1.0.1`
 `csi.enable` | Enable CSI setup | `false`
 `csi.enableProvisionCreds` | Enable CSI provision credentials | `false`
 `csi.enableControllerPublishCreds` | Enable CSI controller publish credentials | `false`

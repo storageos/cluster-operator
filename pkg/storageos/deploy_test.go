@@ -520,7 +520,7 @@ func TestDeployLegacy(t *testing.T) {
 
 func TestDeployCSI(t *testing.T) {
 	const (
-		kubeletPluginsWatcherDriverRegArgsCount = 6
+		kubeletPluginsWatcherDriverRegArgsCount = 3
 		containersCount                         = 2
 		volumesCount                            = 9
 	)

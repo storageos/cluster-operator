@@ -1001,7 +1001,7 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 		nodeContainer.Env = append(nodeContainer.Env, envVar...)
 
 		driverReg := v1.Container{
-			Image:           s.stos.Spec.GetCSIDriverRegistrarImage(CSIV1Supported(s.k8sVersion)),
+			Image:           s.stos.Spec.GetCSINodeDriverRegistrarImage(CSIV1Supported(s.k8sVersion)),
 			Name:            "csi-driver-registrar",
 			ImagePullPolicy: v1.PullIfNotPresent,
 			Args: []string{
@@ -1044,9 +1044,6 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 		if kubeletPluginsWatcherSupported(s.k8sVersion) {
 			driverReg.Args = append(
 				driverReg.Args,
-				fmt.Sprintf("--mode=%s", s.stos.Spec.GetCSIDriverRegistrationMode()),
-				fmt.Sprintf("--driver-requires-attachment=%s", s.stos.Spec.GetCSIDriverRequiresAttachment()),
-				"--pod-info-mount-version=v1",
 				fmt.Sprintf("--kubelet-registration-path=%s", s.stos.Spec.GetCSIKubeletRegistrationPath(CSIV1Supported(s.k8sVersion))))
 		}
 		podSpec.Containers = append(podSpec.Containers, driverReg)
@@ -1198,16 +1195,13 @@ func (s *Deployment) createStatefulSet() error {
 
 	if CSIV1Supported(s.k8sVersion) {
 		driverReg := v1.Container{
-			Image:           s.stos.Spec.GetCSIDriverRegistrarImage(CSIV1Supported(s.k8sVersion)),
+			Image:           s.stos.Spec.GetCSIClusterDriverRegistrarImage(),
 			Name:            "csi-driver-k8s-registrar",
 			ImagePullPolicy: v1.PullIfNotPresent,
 			Args: []string{
 				"--v=5",
 				"--csi-address=$(ADDRESS)",
-				"--mode=kubernetes-register",
-				"--driver-requires-attachment=true",
 				"--pod-info-mount-version=v1",
-				"--kubelet-registration-path=/var/lib/kubelet/plugins_registry/storageos/csi.sock",
 			},
 			Env: []v1.EnvVar{
 				{

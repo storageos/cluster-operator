@@ -28,15 +28,16 @@ const (
 
 	DefaultIngressHostname = "storageos.local"
 
-	DefaultNodeContainerImage              = "storageos/node:1.0.1"
-	DefaultInitContainerImage              = "storageos/init:0.1"
-	CSIv1DriverRegistrarContainerImage     = "quay.io/k8scsi/driver-registrar:v1.0-canary"
-	CSIv1ExternalProvisionerContainerImage = "quay.io/k8scsi/csi-provisioner:v1.0.1"
-	CSIv1ExternalAttacherContainerImage    = "quay.io/k8scsi/csi-attacher:v1.0.1"
-	CSIv1LivenessProbeContainerImage       = "quay.io/k8scsi/livenessprobe:v1.0.1"
-	CSIv0DriverRegistrarContainerImage     = "quay.io/k8scsi/driver-registrar:v0.4.1"
-	CSIv0ExternalProvisionerContainerImage = "quay.io/k8scsi/csi-provisioner:v0.4.0"
-	CSIv0ExternalAttacherContainerImage    = "quay.io/k8scsi/csi-attacher:v0.4.0"
+	DefaultNodeContainerImage                 = "storageos/node:1.1.0"
+	DefaultInitContainerImage                 = "storageos/init:0.1"
+	CSIv1ClusterDriverRegistrarContainerImage = "quay.io/k8scsi/csi-cluster-driver-registrar:v1.0.1"
+	CSIv1NodeDriverRegistrarContainerImage    = "quay.io/k8scsi/csi-node-driver-registrar:v1.0.1"
+	CSIv1ExternalProvisionerContainerImage    = "quay.io/k8scsi/csi-provisioner:v1.0.1"
+	CSIv1ExternalAttacherContainerImage       = "quay.io/k8scsi/csi-attacher:v1.0.1"
+	CSIv1LivenessProbeContainerImage          = "quay.io/k8scsi/livenessprobe:v1.0.1"
+	CSIv0DriverRegistrarContainerImage        = "quay.io/k8scsi/driver-registrar:v0.4.1"
+	CSIv0ExternalProvisionerContainerImage    = "quay.io/k8scsi/csi-provisioner:v0.4.0"
+	CSIv0ExternalAttacherContainerImage       = "quay.io/k8scsi/csi-attacher:v0.4.0"
 
 	DefaultPluginRegistrationPath = "/var/lib/kubelet/plugins_registry"
 	OldPluginRegistrationPath     = "/var/lib/kubelet/plugins"
@@ -180,15 +181,24 @@ func (s StorageOSClusterSpec) GetInitContainerImage() string {
 	return DefaultInitContainerImage
 }
 
-// GetCSIDriverRegistrarImage returns CSI driver registrar container image.
-func (s StorageOSClusterSpec) GetCSIDriverRegistrarImage(csiv1 bool) string {
-	if s.Images.CSIDriverRegistrarContainer != "" {
-		return s.Images.CSIDriverRegistrarContainer
+// GetCSINodeDriverRegistrarImage returns CSI node driver registrar container image.
+func (s StorageOSClusterSpec) GetCSINodeDriverRegistrarImage(csiv1 bool) string {
+	if s.Images.CSINodeDriverRegistrarContainer != "" {
+		return s.Images.CSINodeDriverRegistrarContainer
 	}
 	if csiv1 {
-		return CSIv1DriverRegistrarContainerImage
+		return CSIv1NodeDriverRegistrarContainerImage
 	}
 	return CSIv0DriverRegistrarContainerImage
+}
+
+// GetCSIClusterDriverRegistrarImage returns CSI cluster driver registrar
+// container image.
+func (s StorageOSClusterSpec) GetCSIClusterDriverRegistrarImage() string {
+	if s.Images.CSIClusterDriverRegistrarContainer != "" {
+		return s.Images.CSIClusterDriverRegistrarContainer
+	}
+	return CSIv1ClusterDriverRegistrarContainerImage
 }
 
 // GetCSIExternalProvisionerImage returns CSI external provisioner container image.
@@ -359,12 +369,13 @@ func (s StorageOSClusterSpec) GetCSIVersion(csiv1 bool) string {
 
 // ContainerImages contains image names of all the containers used by the operator.
 type ContainerImages struct {
-	NodeContainer                   string `json:"nodeContainer"`
-	InitContainer                   string `json:"initContainer"`
-	CSIDriverRegistrarContainer     string `json:"csiDriverRegistrarContainer"`
-	CSIExternalProvisionerContainer string `json:"csiExternalProvisionerContainer"`
-	CSIExternalAttacherContainer    string `json:"csiExternalAttacherContainer"`
-	CSILivenessProbeContainer       string `json:"csiLivenessProbeContainer"`
+	NodeContainer                      string `json:"nodeContainer"`
+	InitContainer                      string `json:"initContainer"`
+	CSINodeDriverRegistrarContainer    string `json:"csiNodeDriverRegistrarContainer"`
+	CSIClusterDriverRegistrarContainer string `json:"csiClusterDriverRegistrarContainer"`
+	CSIExternalProvisionerContainer    string `json:"csiExternalProvisionerContainer"`
+	CSIExternalAttacherContainer       string `json:"csiExternalAttacherContainer"`
+	CSILivenessProbeContainer          string `json:"csiLivenessProbeContainer"`
 }
 
 // StorageOSClusterCSI contains CSI configurations.

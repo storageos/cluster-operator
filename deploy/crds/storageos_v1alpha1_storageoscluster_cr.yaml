@@ -11,7 +11,8 @@ spec:
   # images:
   #   nodeContainer:
   #   initContainer:
-  #   csiDriverRegistrarContainer:
+  #   csiNodeDriverRegistrarContainer:
+  #   csiClusterDriverRegistrarContainer:
   #   csiExternalProvisionerContainer:
   #   csiExternalAttacherContainer:
   csi:
