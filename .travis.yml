@@ -28,26 +28,38 @@ matrix:
       sudo: required
       env:
         - "TEST_SUITE=csi"
+        - "TEST_CLUSTER=minikube"
+      name: CSI setup on Minikube (k8s-1.10)
+    - go: "1.11"
+      sudo: required
+      env:
+        - "TEST_SUITE=csi"
         - "TEST_CLUSTER=openshift"
-      name: CSI setup on OpenShift
+      name: CSI setup on OpenShift-3.11 (k8s-1.11)
     - go: "1.11"
       sudo: required
       env:
         - "TEST_SUITE=csi"
         - "TEST_CLUSTER=kind"
-      name: CSI setup on Kind 
+      name: CSI setup on Kind (k8s-1.13)
+    - go: "1.11"
+      sudo: required
+      env:
+        - "TEST_SUITE=intree"
+        - "TEST_CLUSTER=minikube"
+      name: In-tree plugin setup on Minikube (k8s-1.10)
     - go: "1.11"
       sudo: required
       env:
         - "TEST_SUITE=intree"
         - "TEST_CLUSTER=openshift"
-      name: In-tree plugin setup on OpenShift
+      name: In-tree plugin setup on OpenShift-3.11 (k8s-1.11)
     - go: "1.11"
       sudo: required
       env:
         - "TEST_SUITE=intree"
         - "TEST_CLUSTER=kind"
-      name: In-tree plugin setup on Kind
+      name: In-tree plugin setup on Kind (k8s-1.13)
 
 
 script:
