@@ -4,10 +4,12 @@ package e2e
 
 import (
 	goctx "context"
+	"strings"
 	"testing"
 
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	storageos "github.com/storageos/cluster-operator/pkg/apis/storageos/v1alpha1"
+	deploy "github.com/storageos/cluster-operator/pkg/storageos"
 	testutil "github.com/storageos/cluster-operator/test/e2e/util"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -53,8 +55,21 @@ func TestClusterCSI(t *testing.T) {
 		t.Fatalf("failed to get storageos-daemonset: %v", err)
 	}
 
-	// Check the number of containers in daemonset pod spec.
-	if len(daemonset.Spec.Template.Spec.Containers) != 2 {
-		t.Errorf("unexpected number of daemonset pod containers:\n\t(GOT) %d\n\t(WNT) %d", len(daemonset.Spec.Template.Spec.Containers), 2)
+	info, err := f.KubeClient.Discovery().ServerVersion()
+	if err != nil {
+		t.Fatalf("failed to get version info: %v", err)
+	}
+
+	version := strings.TrimLeft(info.String(), "v")
+
+	//Check the number of containers in daemonset pod spec.
+	if deploy.CSIV1Supported(version) {
+		if len(daemonset.Spec.Template.Spec.Containers) != 3 {
+			t.Errorf("unexpected number of daemonset pod containers:\n\t(GOT) %d\n\t(WNT) %d", len(daemonset.Spec.Template.Spec.Containers), 2)
+		}
+	} else {
+		if len(daemonset.Spec.Template.Spec.Containers) != 2 {
+			t.Errorf("unexpected number of daemonset pod containers:\n\t(GOT) %d\n\t(WNT) %d", len(daemonset.Spec.Template.Spec.Containers), 2)
+		}
 	}
 }

@@ -182,9 +182,12 @@ func (r *ReconcileStorageOSCluster) reconcile(m *storageosv1alpha1.StorageOSClus
 	m.Spec.Images.InitContainer = m.Spec.GetInitContainerImage()
 
 	if m.Spec.CSI.Enable {
-		m.Spec.Images.CSIDriverRegistrarContainer = m.Spec.GetCSIDriverRegistrarImage()
-		m.Spec.Images.CSIExternalProvisionerContainer = m.Spec.GetCSIExternalProvisionerImage()
-		m.Spec.Images.CSIExternalAttacherContainer = m.Spec.GetCSIExternalAttacherImage()
+		m.Spec.Images.CSINodeDriverRegistrarContainer = m.Spec.GetCSINodeDriverRegistrarImage(storageos.CSIV1Supported(r.k8sVersion))
+		if storageos.CSIV1Supported((r.k8sVersion)) {
+			m.Spec.Images.CSIClusterDriverRegistrarContainer = m.Spec.GetCSIClusterDriverRegistrarImage()
+		}
+		m.Spec.Images.CSIExternalProvisionerContainer = m.Spec.GetCSIExternalProvisionerImage(storageos.CSIV1Supported(r.k8sVersion))
+		m.Spec.Images.CSIExternalAttacherContainer = m.Spec.GetCSIExternalAttacherImage(storageos.CSIV1Supported(r.k8sVersion))
 	}
 
 	if m.Spec.Ingress.Enable {

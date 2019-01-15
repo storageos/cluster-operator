@@ -1,6 +1,9 @@
 package v1alpha1
 
 import (
+	"fmt"
+	"path"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -25,22 +28,42 @@ const (
 
 	DefaultIngressHostname = "storageos.local"
 
-	DefaultNodeContainerImage                   = "storageos/node:1.0.0"
-	DefaultCSIDriverRegistrarContainerImage     = "quay.io/k8scsi/driver-registrar:v0.4.1"
-	DefaultCSIExternalProvisionerContainerImage = "quay.io/k8scsi/csi-provisioner:v0.4.0"
-	DefaultCSIExternalAttacherContainerImage    = "quay.io/k8scsi/csi-attacher:v0.4.0"
-	DefaultInitContainerImage                   = "storageos/init:0.1"
+	DefaultNodeContainerImage                 = "storageos/node:1.1.0"
+	DefaultInitContainerImage                 = "storageos/init:0.1"
+	CSIv1ClusterDriverRegistrarContainerImage = "quay.io/k8scsi/csi-cluster-driver-registrar:v1.0.1"
+	CSIv1NodeDriverRegistrarContainerImage    = "quay.io/k8scsi/csi-node-driver-registrar:v1.0.1"
+	CSIv1ExternalProvisionerContainerImage    = "quay.io/k8scsi/csi-provisioner:v1.0.1"
+	CSIv1ExternalAttacherContainerImage       = "quay.io/k8scsi/csi-attacher:v1.0.1"
+	CSIv1LivenessProbeContainerImage          = "quay.io/k8scsi/livenessprobe:v1.0.1"
+	CSIv0DriverRegistrarContainerImage        = "quay.io/k8scsi/driver-registrar:v0.4.1"
+	CSIv0ExternalProvisionerContainerImage    = "quay.io/k8scsi/csi-provisioner:v0.4.0"
+	CSIv0ExternalAttacherContainerImage       = "quay.io/k8scsi/csi-attacher:v0.4.0"
 
-	DefaultCSIEndpoint                 = "unix://var/lib/kubelet/plugins/storageos/csi.sock"
+	DefaultPluginRegistrationPath = "/var/lib/kubelet/plugins_registry"
+	OldPluginRegistrationPath     = "/var/lib/kubelet/plugins"
+
+	DefaultCSIEndpoint                 = "/storageos/csi.sock"
 	DefaultCSIRegistrarSocketDir       = "/var/lib/kubelet/device-plugins/"
 	DefaultCSIKubeletDir               = "/var/lib/kubelet"
-	DefaultCSIPluginDir                = "/var/lib/kubelet/plugins/storageos/"
+	DefaultCSIPluginDir                = "/storageos/"
 	DefaultCSIDeviceDir                = "/dev"
-	DefaultCSIRegistrationDir          = "/var/lib/kubelet/plugins"
-	DefaultCSIKubeletRegistrationPath  = "/var/lib/kubelet/plugins/storageos/csi.sock"
+	DefaultCSIRegistrationDir          = DefaultPluginRegistrationPath
+	DefaultCSIKubeletRegistrationPath  = "/storageos/csi.sock"
 	DefaultCSIDriverRegistrationMode   = "node-register"
 	DefaultCSIDriverRequiresAttachment = "true"
 )
+
+func getDefaultCSIEndpoint(pluginRegistrationPath string) string {
+	return fmt.Sprintf("%s%s%s", "unix:/", pluginRegistrationPath, DefaultCSIEndpoint)
+}
+
+func getDefaultCSIPluginDir(pluginRegistrationPath string) string {
+	return path.Join(pluginRegistrationPath, DefaultCSIPluginDir)
+}
+
+func getDefaultCSIKubeletRegistrationPath(pluginRegistrationPath string) string {
+	return path.Join(pluginRegistrationPath, DefaultCSIKubeletRegistrationPath)
+}
 
 // StorageOSClusterSpec defines the desired state of StorageOSCluster
 type StorageOSClusterSpec struct {
@@ -158,28 +181,54 @@ func (s StorageOSClusterSpec) GetInitContainerImage() string {
 	return DefaultInitContainerImage
 }
 
-// GetCSIDriverRegistrarImage returns CSI driver registrar container image.
-func (s StorageOSClusterSpec) GetCSIDriverRegistrarImage() string {
-	if s.Images.CSIDriverRegistrarContainer != "" {
-		return s.Images.CSIDriverRegistrarContainer
+// GetCSINodeDriverRegistrarImage returns CSI node driver registrar container image.
+func (s StorageOSClusterSpec) GetCSINodeDriverRegistrarImage(csiv1 bool) string {
+	if s.Images.CSINodeDriverRegistrarContainer != "" {
+		return s.Images.CSINodeDriverRegistrarContainer
 	}
-	return DefaultCSIDriverRegistrarContainerImage
+	if csiv1 {
+		return CSIv1NodeDriverRegistrarContainerImage
+	}
+	return CSIv0DriverRegistrarContainerImage
+}
+
+// GetCSIClusterDriverRegistrarImage returns CSI cluster driver registrar
+// container image.
+func (s StorageOSClusterSpec) GetCSIClusterDriverRegistrarImage() string {
+	if s.Images.CSIClusterDriverRegistrarContainer != "" {
+		return s.Images.CSIClusterDriverRegistrarContainer
+	}
+	return CSIv1ClusterDriverRegistrarContainerImage
 }
 
 // GetCSIExternalProvisionerImage returns CSI external provisioner container image.
-func (s StorageOSClusterSpec) GetCSIExternalProvisionerImage() string {
+func (s StorageOSClusterSpec) GetCSIExternalProvisionerImage(csiv1 bool) string {
 	if s.Images.CSIExternalProvisionerContainer != "" {
 		return s.Images.CSIExternalProvisionerContainer
 	}
-	return DefaultCSIExternalProvisionerContainerImage
+	if csiv1 {
+		return CSIv1ExternalProvisionerContainerImage
+	}
+	return CSIv0ExternalProvisionerContainerImage
 }
 
 // GetCSIExternalAttacherImage returns CSI external attacher container image.
-func (s StorageOSClusterSpec) GetCSIExternalAttacherImage() string {
+func (s StorageOSClusterSpec) GetCSIExternalAttacherImage(csiv1 bool) string {
 	if s.Images.CSIExternalAttacherContainer != "" {
 		return s.Images.CSIExternalAttacherContainer
 	}
-	return DefaultCSIExternalAttacherContainerImage
+	if csiv1 {
+		return CSIv1ExternalAttacherContainerImage
+	}
+	return CSIv0ExternalAttacherContainerImage
+}
+
+// GetCSILivenessProbeImage returns CSI liveness probe container image.
+func (s StorageOSClusterSpec) GetCSILivenessProbeImage() string {
+	if s.Images.CSILivenessProbeContainer != "" {
+		return s.Images.CSILivenessProbeContainer
+	}
+	return CSIv1LivenessProbeContainerImage
 }
 
 // GetServiceName returns the service name.
@@ -223,11 +272,14 @@ func (s StorageOSClusterSpec) GetIngressHostname() string {
 }
 
 // GetCSIEndpoint returns the CSI unix socket endpoint path.
-func (s StorageOSClusterSpec) GetCSIEndpoint() string {
+func (s StorageOSClusterSpec) GetCSIEndpoint(csiv1 bool) string {
 	if s.CSI.Endpoint != "" {
 		return s.CSI.Endpoint
 	}
-	return DefaultCSIEndpoint
+	if csiv1 {
+		return getDefaultCSIEndpoint(DefaultPluginRegistrationPath)
+	}
+	return getDefaultCSIEndpoint(OldPluginRegistrationPath)
 }
 
 // GetCSIRegistrarSocketDir returns the CSI registrar socket dir.
@@ -247,11 +299,14 @@ func (s StorageOSClusterSpec) GetCSIKubeletDir() string {
 }
 
 // GetCSIPluginDir returns the CSI plugin dir.
-func (s StorageOSClusterSpec) GetCSIPluginDir() string {
+func (s StorageOSClusterSpec) GetCSIPluginDir(csiv1 bool) string {
 	if s.CSI.PluginDir != "" {
 		return s.CSI.PluginDir
 	}
-	return DefaultCSIPluginDir
+	if csiv1 {
+		return getDefaultCSIPluginDir(DefaultPluginRegistrationPath)
+	}
+	return getDefaultCSIPluginDir(OldPluginRegistrationPath)
 }
 
 // GetCSIDeviceDir returns the CSI device dir.
@@ -263,19 +318,26 @@ func (s StorageOSClusterSpec) GetCSIDeviceDir() string {
 }
 
 // GetCSIRegistrationDir returns the CSI registration dir.
-func (s StorageOSClusterSpec) GetCSIRegistrationDir() string {
+func (s StorageOSClusterSpec) GetCSIRegistrationDir(csiv1 bool) string {
 	if s.CSI.RegistrationDir != "" {
 		return s.CSI.RegistrationDir
 	}
-	return DefaultCSIRegistrationDir
+	if csiv1 {
+		return DefaultCSIRegistrationDir
+	}
+	// CSI Registration Dir and Plugin Registration Path are the same.
+	return OldPluginRegistrationPath
 }
 
 // GetCSIKubeletRegistrationPath returns the CSI Kubelet Registration Path.
-func (s StorageOSClusterSpec) GetCSIKubeletRegistrationPath() string {
+func (s StorageOSClusterSpec) GetCSIKubeletRegistrationPath(csiv1 bool) string {
 	if s.CSI.KubeletRegistrationPath != "" {
 		return s.CSI.KubeletRegistrationPath
 	}
-	return DefaultCSIKubeletRegistrationPath
+	if csiv1 {
+		return getDefaultCSIKubeletRegistrationPath(DefaultPluginRegistrationPath)
+	}
+	return getDefaultCSIKubeletRegistrationPath(OldPluginRegistrationPath)
 }
 
 // GetCSIDriverRegistrationMode returns the CSI Driver Registration Mode.
@@ -294,18 +356,32 @@ func (s StorageOSClusterSpec) GetCSIDriverRequiresAttachment() string {
 	return DefaultCSIDriverRequiresAttachment
 }
 
+// GetCSIVersion returns the CSI Driver version.
+func (s StorageOSClusterSpec) GetCSIVersion(csiv1 bool) string {
+	if s.CSI.Version != "" {
+		return s.CSI.Version
+	}
+	if csiv1 {
+		return "v1"
+	}
+	return "v0"
+}
+
 // ContainerImages contains image names of all the containers used by the operator.
 type ContainerImages struct {
-	NodeContainer                   string `json:"nodeContainer"`
-	InitContainer                   string `json:"initContainer"`
-	CSIDriverRegistrarContainer     string `json:"csiDriverRegistrarContainer"`
-	CSIExternalProvisionerContainer string `json:"csiExternalProvisionerContainer"`
-	CSIExternalAttacherContainer    string `json:"csiExternalAttacherContainer"`
+	NodeContainer                      string `json:"nodeContainer"`
+	InitContainer                      string `json:"initContainer"`
+	CSINodeDriverRegistrarContainer    string `json:"csiNodeDriverRegistrarContainer"`
+	CSIClusterDriverRegistrarContainer string `json:"csiClusterDriverRegistrarContainer"`
+	CSIExternalProvisionerContainer    string `json:"csiExternalProvisionerContainer"`
+	CSIExternalAttacherContainer       string `json:"csiExternalAttacherContainer"`
+	CSILivenessProbeContainer          string `json:"csiLivenessProbeContainer"`
 }
 
 // StorageOSClusterCSI contains CSI configurations.
 type StorageOSClusterCSI struct {
 	Enable                       bool   `json:"enable"`
+	Version                      string `json:"version"`
 	Endpoint                     string `json:"endpoint"`
 	EnableProvisionCreds         bool   `json:"enableProvisionCreds"`
 	EnableControllerPublishCreds bool   `json:"enableControllerPublishCreds"`

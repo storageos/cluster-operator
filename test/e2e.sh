@@ -15,6 +15,36 @@ enable_lio() {
     echo
 }
 
+run_kind() {
+    echo "Download kind binary..."
+    # docker run --rm -it -v "$(pwd)":/go/bin golang go get sigs.k8s.io/kind && sudo mv kind /usr/local/bin/
+    wget -O kind 'https://docs.google.com/uc?export=download&id=1C_Jrj68Y685N5KcOqDQtfjeAZNW2UvNB' --no-check-certificate && chmod +x kind && sudo mv kind /usr/local/bin/
+
+    echo "Download kubectl..."
+    curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/"${K8S_VERSION}"/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+    echo
+
+    echo "Create Kubernetes cluster with kind..."
+    # kind create cluster --image=kindest/node:"$K8S_VERSION"
+    kind create cluster --image storageos/kind-node:v1.13.2
+
+    echo "Export kubeconfig..."
+    # shellcheck disable=SC2155
+    export KUBECONFIG="$(kind get kubeconfig-path)"
+    cp $(kind get kubeconfig-path) ~/.kube/config
+    echo
+
+    echo "Get cluster info..."
+    kubectl cluster-info
+    echo
+
+    echo "Wait for kubernetes to be ready"
+    JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until kubectl get nodes -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1; done
+    echo
+
+    kubectl get all --all-namespaces
+}
+
 run_minikube() {
     echo "Install socat and util-linux"
     sudo apt-get install -y socat util-linux
@@ -156,6 +186,8 @@ main() {
         run_minikube
     elif [ "$1" = "openshift" ]; then
         run_openshift
+    elif [ "$1" = "kind" ]; then
+        run_kind
     fi
 
     install_operatorsdk
@@ -172,6 +204,15 @@ main() {
     # This would build a container with tag storageos/cluster-operator:test,
     # which is used in the e2e test setup below.
     make image/cluster-operator
+
+    # Move the operator container inside Kind container so that the image is
+    # available to the docker in docker environment.
+    if [ "$1" = "kind" ]; then
+        x=$(docker ps -f name=kind-1-control-plane -q)
+        docker save storageos/cluster-operator:test > cluster-operator.tar
+        docker cp cluster-operator.tar $x:/cluster-operator.tar
+        docker exec $x bash -c "docker load < /cluster-operator.tar"
+    fi
 
     # Run the e2e test in the created namespace.
     #
@@ -192,8 +233,8 @@ main() {
     # echo "**** Resource details for storageos-operator namespace ****"
     # print_pod_details_and_logs storageos-operator
 
-    # echo "**** Resource details for storageos namespace ****"
-    # print_pod_details_and_logs storageos
+    echo "**** Resource details for storageos namespace ****"
+    print_pod_details_and_logs storageos
 
     echo "Done Testing!"
 }
