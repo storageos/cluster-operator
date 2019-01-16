@@ -27,56 +27,57 @@ before_install:
 # Skip downloading deps.
 install: true
 
-matrix:
+jobs:
   include:
-    - go: "1.11"
+    - &base-test
+      go: "1.11"
       sudo: required
       env:
         - "TEST_SUITE=csi"
         - "TEST_CLUSTER=minikube"
       name: CSI setup on Minikube (k8s-1.10)
-    - go: "1.11"
-      sudo: required
+      script: ./test/e2e.sh $TEST_CLUSTER $TEST_SUITE
+    - <<: *base-test
       env:
         - "TEST_SUITE=csi"
         - "TEST_CLUSTER=openshift"
       name: CSI setup on OpenShift-3.11 (k8s-1.11)
-    - go: "1.11"
-      sudo: required
+    - <<: *base-test
       env:
         - "TEST_SUITE=csi"
         - "TEST_CLUSTER=kind"
       name: CSI setup on Kind (k8s-1.13)
-    - go: "1.11"
-      sudo: required
+    - <<: *base-test
       env:
         - "TEST_SUITE=intree"
         - "TEST_CLUSTER=minikube"
       name: In-tree plugin setup on Minikube (k8s-1.10)
-    - go: "1.11"
-      sudo: required
+    - <<: *base-test
       env:
         - "TEST_SUITE=intree"
         - "TEST_CLUSTER=openshift"
       name: In-tree plugin setup on OpenShift-3.11 (k8s-1.11)
-    - go: "1.11"
-      sudo: required
+    - <<: *base-test
       env:
         - "TEST_SUITE=intree"
         - "TEST_CLUSTER=kind"
       name: In-tree plugin setup on Kind (k8s-1.13)
-
-
-script:
-  - ./test/e2e.sh $TEST_CLUSTER $TEST_SUITE
-
-before_deploy:
-  - docker login -u "$REGISTRY_USER" - p "$REGISTRY_PASS"
-  - docker tag "${IMAGE_NAME}:${IMAGE_TAG}" "${IMAGE_NAME}:latest"
-  - docker tag "${IMAGE_NAME}:${IMAGE_TAG}" "${IMAGE_NAME}:${TRAVIS_TAG}"
-
-deploy:
-  provider: script
-  script: docker push "${IMAGE_NAME}:latest" && docker push "${IMAGE_NAME}:${TRAVIS_TAG}"
-  on:
-    tags: true
+    - stage: deploy
+      go: "1.11"
+      sudo: required
+      env:
+        - "TEST_SUITE=csi"
+        - "TEST_CLUSTER=kind"
+      name: Publish Container Image
+      script:
+        - curl -Lo operator-sdk https://github.com/operator-framework/operator-sdk/releases/download/v0.1.0/operator-sdk-v0.1.0-x86_64-linux-gnu && chmod +x operator-sdk && sudo mv operator-sdk /usr/local/bin/
+        - make image/cluster-operator
+      before_deploy:
+        - docker login -u "$REGISTRY_USER" - p "$REGISTRY_PASS"
+        - docker tag "${IMAGE_NAME}:${IMAGE_TAG}" "${IMAGE_NAME}:latest"
+        - docker tag "${IMAGE_NAME}:${IMAGE_TAG}" "${IMAGE_NAME}:${TRAVIS_TAG}"
+      deploy:
+        provider: script
+        script: docker push "${IMAGE_NAME}:latest" && docker push "${IMAGE_NAME}:${TRAVIS_TAG}"
+        on:
+          tags: true
