@@ -10,6 +10,8 @@ env:
     - CHANGE_MINIKUBE_NONE_USER=true
     - K8S_VERSION="v1.10.0"
     - MINIKUBE_VERSION="v0.28.2"
+    - IMAGE_NAME=storageos/cluster-operator
+    - IMAGE_TAG=test
 
 before_install:
   - |
@@ -64,3 +66,14 @@ matrix:
 
 script:
   - ./test/e2e.sh $TEST_CLUSTER $TEST_SUITE
+
+before_deploy:
+  - docker login -u "$REGISTRY_USER" - p "$REGISTRY_PASS"
+  - docker tag "${IMAGE_NAME}:${IMAGE_TAG}" "${IMAGE_NAME}:latest"
+  - docker tag "${IMAGE_NAME}:${IMAGE_TAG}" "${IMAGE_NAME}:${TRAVIS_TAG}"
+
+deploy:
+  provider: script
+  script: docker push "${IMAGE_NAME}:latest" && docker push "${IMAGE_NAME}:${TRAVIS_TAG}"
+  on:
+    tags: true
