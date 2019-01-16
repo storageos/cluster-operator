@@ -35,9 +35,9 @@ const (
 	CSIv1ExternalProvisionerContainerImage    = "quay.io/k8scsi/csi-provisioner:v1.0.1"
 	CSIv1ExternalAttacherContainerImage       = "quay.io/k8scsi/csi-attacher:v1.0.1"
 	CSIv1LivenessProbeContainerImage          = "quay.io/k8scsi/livenessprobe:v1.0.1"
-	CSIv0DriverRegistrarContainerImage        = "quay.io/k8scsi/driver-registrar:v0.4.1"
-	CSIv0ExternalProvisionerContainerImage    = "quay.io/k8scsi/csi-provisioner:v0.4.0"
-	CSIv0ExternalAttacherContainerImage       = "quay.io/k8scsi/csi-attacher:v0.4.0"
+	CSIv0DriverRegistrarContainerImage        = "quay.io/k8scsi/driver-registrar:v0.4.2"
+	CSIv0ExternalProvisionerContainerImage    = "quay.io/k8scsi/csi-provisioner:v0.4.2"
+	CSIv0ExternalAttacherContainerImage       = "quay.io/k8scsi/csi-attacher:v0.4.2"
 
 	DefaultPluginRegistrationPath = "/var/lib/kubelet/plugins_registry"
 	OldPluginRegistrationPath     = "/var/lib/kubelet/plugins"
