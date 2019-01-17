@@ -1,6 +1,8 @@
 OPERATOR_IMAGE ?= storageos/cluster-operator:test
 GO_BUILD_CMD = go build -v
 GO_ENV = GOOS=linux CGO_ENABLED=0
+SDK_VERSION = v0.3.0
+MACHINE = $(shell uname -m)
 
 LDFLAGS += -X github.com/storageos/cluster-operator/pkg/controller/storageosupgrade.operatorImage=$(OPERATOR_IMAGE)
 
@@ -37,3 +39,7 @@ lint:
 
 unittest:
 	go test -v `go list -v ./... | grep -v test/e2e`
+
+# Install operator-sdk. To be used in e2e test and deployment stage.
+operator-sdk:
+	curl -Lo operator-sdk https://github.com/operator-framework/operator-sdk/releases/download/$(SDK_VERSION)/operator-sdk-$(SDK_VERSION)-$(MACHINE)-linux-gnu && chmod +x operator-sdk && sudo mv operator-sdk /usr/local/bin/

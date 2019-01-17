@@ -70,7 +70,7 @@ jobs:
         - "TEST_CLUSTER=kind"
       name: Publish Container Image
       script:
-        - curl -Lo operator-sdk https://github.com/operator-framework/operator-sdk/releases/download/v0.1.0/operator-sdk-v0.1.0-x86_64-linux-gnu && chmod +x operator-sdk && sudo mv operator-sdk /usr/local/bin/
+        - make operator-sdk
         - make image/cluster-operator
       before_deploy:
         - docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS"
