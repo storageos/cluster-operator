@@ -12,33 +12,33 @@ required = [
 
 [[override]]
   name = "k8s.io/code-generator"
-  version = "kubernetes-1.11.4"
+  version = "kubernetes-1.12.3"
 
 [[override]]
   name = "k8s.io/api"
-  version = "kubernetes-1.11.4"
+  version = "kubernetes-1.12.3"
 
 [[override]]
   name = "k8s.io/apiextensions-apiserver"
-  version = "kubernetes-1.11.4"
+  version = "kubernetes-1.12.3"
 
 [[override]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.11.4"
+  version = "kubernetes-1.12.3"
 
 [[override]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.11.4"
+  version = "kubernetes-1.12.3"
 
 [[override]]
   name = "sigs.k8s.io/controller-runtime"
-  version = "v0.1.4"
+  version = "v0.1.8"
 
 [[constraint]]
   name = "github.com/operator-framework/operator-sdk"
   # The version rule is used for a specific release and the master branch for in between releases.
   # branch = "master" #osdk_branch_annotation
-  version = "=v0.1.0" #osdk_version_annotation
+  version = "=v0.3.0" #osdk_version_annotation
 
 [[constraint]]
   name = "github.com/storageos/go-api"

@@ -228,7 +228,7 @@ main() {
     # NOTE: Append this test command with `|| true` to debug by inspecting the
     # resource details. Also comment `defer ctx.Cleanup()` in the cluster to
     # avoid resouce cleanup.
-    operator-sdk test local ./test/e2e --go-test-flags "-v -tags $2" --namespace storageos-operator --kubeconfig ~/.kube/config
+    operator-sdk test local ./test/e2e --go-test-flags "-v -tags $2" --namespace storageos-operator
 
     # echo "**** Resource details for storageos-operator namespace ****"
     # print_pod_details_and_logs storageos-operator
