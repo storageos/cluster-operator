@@ -125,16 +125,23 @@ func DeployCluster(t *testing.T, ctx *framework.TestCtx, cluster *storageos.Stor
 		return err
 	}
 
-	err = WaitForDaemonset(t, f.KubeClient, "storageos", "storageos-daemonset", RetryInterval, Timeout*2)
+	err = WaitForDaemonSet(t, f.KubeClient, "storageos", "storageos-daemonset", RetryInterval, Timeout*2)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	if cluster.Spec.CSI.Enable {
+		err = WaitForStatefulSet(t, f.KubeClient, "storageos", "storageos-statefulset", RetryInterval, Timeout*2)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	return nil
 }
 
-// WaitForDaemonset checks and waits for a given daemonset to be in ready.
-func WaitForDaemonset(t *testing.T, kubeclient kubernetes.Interface, namespace, name string, retryInterval, timeout time.Duration) error {
+// WaitForDaemonSet checks and waits for a given daemonset to be in ready.
+func WaitForDaemonSet(t *testing.T, kubeclient kubernetes.Interface, namespace, name string, retryInterval, timeout time.Duration) error {
 	err := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
 		daemonset, err := kubeclient.AppsV1().DaemonSets(namespace).Get(name, metav1.GetOptions{IncludeUninitialized: true})
 		if err != nil {
@@ -155,6 +162,32 @@ func WaitForDaemonset(t *testing.T, kubeclient kubernetes.Interface, namespace, 
 	if err != nil {
 		return err
 	}
-	t.Logf("Daemonset Ready!\n")
+	t.Logf("DaemonSet Ready!\n")
+	return nil
+}
+
+// WaitForStatefulSet checks and waits for a given statefulset to be in ready.
+func WaitForStatefulSet(t *testing.T, kubeclient kubernetes.Interface, namespace, name string, retryInterval, timeout time.Duration) error {
+	err := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
+		statefulset, err := kubeclient.AppsV1().StatefulSets(namespace).Get(name, metav1.GetOptions{IncludeUninitialized: true})
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				t.Logf("Waiting for availability of %s statefulset\n", name)
+				return false, nil
+			}
+			return false, err
+		}
+
+		if int(statefulset.Status.ReadyReplicas) == 1 {
+			return true, nil
+		}
+
+		t.Logf("Waiting for ready status of %s statefulset (%d)\n", name, statefulset.Status.ReadyReplicas)
+		return false, nil
+	})
+	if err != nil {
+		return err
+	}
+	t.Logf("StatefulSet Ready!\n")
 	return nil
 }
