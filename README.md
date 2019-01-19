@@ -100,7 +100,7 @@ Parameter | Description | Default
 `images.initContainer` | StorageOS init container image | `storageos/init:0.1`
 `images.csiNodeDriverRegistrarContainer` | CSI Node Driver Registrar Container image | `quay.io/k8scsi/csi-node-driver-registrar:v1.0.1`
 `images.csiClusterDriverRegistrarContainer` | CSI Cluster Driver Registrar Container image | `quay.io/k8scsi/csi-cluster-driver-registrar:v1.0.1`
-`images.csiExternalProvisionerContainer` | CSI External Provisioner Container image | `quay.io/k8scsi/csi-provisioner:v1.0.1`
+`images.csiExternalProvisionerContainer` | CSI External Provisioner Container image | `storageos/csi-provisioner:v1.0.1`
 `images.csiExternalAttacherContainer` | CSI External Attacher Container image | `quay.io/k8scsi/csi-attacher:v1.0.1`
 `csi.enable` | Enable CSI setup | `false`
 `csi.enableProvisionCreds` | Enable CSI provision credentials | `false`
