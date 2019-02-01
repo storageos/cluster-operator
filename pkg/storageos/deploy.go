@@ -8,9 +8,11 @@ import (
 
 	"github.com/blang/semver"
 	api "github.com/storageos/cluster-operator/pkg/apis/storageos/v1alpha1"
+	"github.com/storageos/cluster-operator/pkg/util/k8sutil"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
+	policy "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -138,6 +140,19 @@ func (s *Deployment) Deploy() error {
 		return err
 	}
 
+	if k8sutil.PodSecurityPolicyEnabled() {
+		// Create Pod Security Policy and ClusterRole at the very beginning.
+		// Associate the appropriate service accounts with this policy after
+		// creating the service accounts.
+		if err := s.createPodSecurityPolicy(); err != nil {
+			return err
+		}
+
+		if err := s.createClusterRoleForPodSecurityPolicy(); err != nil {
+			return err
+		}
+	}
+
 	if err := s.createServiceAccountForDaemonSet(); err != nil {
 		return err
 	}
@@ -215,6 +230,10 @@ func (s *Deployment) Deploy() error {
 		if err := s.createStatefulSet(); err != nil {
 			return err
 		}
+	}
+
+	if err := s.createClusterRoleBindingForPodSecurityPolicy(); err != nil {
+		return err
 	}
 
 	if err := s.createStorageClass(); err != nil {
@@ -406,6 +425,18 @@ func (s *Deployment) createClusterRoleForAttacher() error {
 	return s.createClusterRole("csi-attacher-role", rules)
 }
 
+func (s *Deployment) createClusterRoleForPodSecurityPolicy() error {
+	rules := []rbacv1.PolicyRule{
+		{
+			APIGroups:     []string{"extensions"},
+			Resources:     []string{"podsecuritypolicies"},
+			Verbs:         []string{"use"},
+			ResourceNames: []string{"storageos-podsecuritypolicy"},
+		},
+	}
+	return s.createClusterRole("storageos-psp-user", rules)
+}
+
 func (s *Deployment) createRoleBindingForKeyMgmt() error {
 	roleBinding := &rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
@@ -455,6 +486,31 @@ func (s *Deployment) createClusterRoleBinding(name string, subjects []rbacv1.Sub
 
 	controllerutil.SetControllerReference(s.stos, roleBinding, s.scheme)
 	return s.createOrUpdateObject(roleBinding)
+}
+
+func (s *Deployment) createClusterRoleBindingForPodSecurityPolicy() error {
+	subjects := []rbacv1.Subject{
+		{
+			Kind:      "ServiceAccount",
+			Name:      "storageos-daemonset-sa",
+			Namespace: s.stos.Spec.GetResourceNS(),
+		},
+	}
+
+	if s.stos.Spec.CSI.Enable {
+		subjects = append(subjects, rbacv1.Subject{
+			Kind:      "ServiceAccount",
+			Name:      "storageos-statefulset-sa",
+			Namespace: s.stos.Spec.GetResourceNS(),
+		})
+	}
+
+	roleRef := rbacv1.RoleRef{
+		Kind:     "ClusterRole",
+		Name:     "storageos-psp-user",
+		APIGroup: "rbac.authorization.k8s.io",
+	}
+	return s.createClusterRoleBinding("psp-binding", subjects, roleRef)
 }
 
 func (s *Deployment) createClusterRoleBindingForDriverRegistrar() error {
@@ -519,6 +575,59 @@ func (s *Deployment) createClusterRoleBindingForAttacher() error {
 		APIGroup: "rbac.authorization.k8s.io",
 	}
 	return s.createClusterRoleBinding("csi-attacher-binding", subjects, roleRef)
+}
+
+func (s *Deployment) createPodSecurityPolicy() error {
+	privileged := true
+
+	psp := &policy.PodSecurityPolicy{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "policy/v1beta1",
+			Kind:       "PodSecurityPolicy",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "storageos-podsecuritypolicy",
+			Labels: map[string]string{
+				"app": appName,
+			},
+			// TODO: configurable PSP annotations.
+			Annotations: map[string]string{},
+		},
+		Spec: policy.PodSecurityPolicySpec{
+			Privileged:               true,
+			AllowPrivilegeEscalation: &privileged,
+			AllowedCapabilities: []v1.Capability{
+				sysAdminCap,
+			},
+			Volumes: []policy.FSType{
+				"*",
+			},
+			HostNetwork: true,
+			HostPorts: []policy.HostPortRange{
+				{
+					Min: int32(5700),
+					Max: int32(5800),
+				},
+			},
+			HostIPC: true,
+			HostPID: true,
+			RunAsUser: policy.RunAsUserStrategyOptions{
+				Rule: policy.RunAsUserStrategyRunAsAny,
+			},
+			SELinux: policy.SELinuxStrategyOptions{
+				Rule: policy.SELinuxStrategyRunAsAny,
+			},
+			SupplementalGroups: policy.SupplementalGroupsStrategyOptions{
+				Rule: policy.SupplementalGroupsStrategyRunAsAny,
+			},
+			FSGroup: policy.FSGroupStrategyOptions{
+				Rule: policy.FSGroupStrategyRunAsAny,
+			},
+		},
+	}
+
+	controllerutil.SetControllerReference(s.stos, psp, s.scheme)
+	return s.createOrUpdateObject(psp)
 }
 
 func (s *Deployment) createDaemonSet() error {

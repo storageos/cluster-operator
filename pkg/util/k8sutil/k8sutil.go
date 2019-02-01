@@ -3,6 +3,7 @@ package k8sutil
 import (
 	"fmt"
 	"log"
+	"os"
 	"strconv"
 	"time"
 
@@ -536,3 +537,15 @@ func (k K8SOps) GetPodsByOwner(ownerUID types.UID, namespace string) (*corev1.Po
 }
 
 func int32Ptr(i int32) *int32 { return &i }
+
+// PodSecurityPolicyEnabled parses PSP_ENABLED env variable to check if Pod
+// Security Policy is enabled.
+func PodSecurityPolicyEnabled() bool {
+	pspEnabled, err := strconv.ParseBool(os.Getenv("PSP_ENABLED"))
+	if err != nil {
+		log.Println("failed to parse PSP_ENABLE env var:", err)
+		log.Println("[WARNING] continuing with no pod security policy")
+		return false
+	}
+	return pspEnabled
+}
