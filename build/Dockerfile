@@ -1,12 +1,16 @@
-ARG BUILD_IMAGE
-ARG BASE_IMAGE
+ARG BUILD_IMAGE=golang:1.11.5
+ARG BASE_IMAGE=alpine:3.9
+ARG OPERATOR_IMAGE=storageos/cluster-operator:test
 
 FROM ${BUILD_IMAGE} AS build
+# OPERATOR_IMAGE needs to be passed to build/cluster-operator for constructing
+# the ldflags.
+ARG OPERATOR_IMAGE
 WORKDIR /go/src/github.com/storageos/cluster-operator/
 COPY . /go/src/github.com/storageos/cluster-operator/
 RUN cp build/operator-sdk /usr/local/bin/
 RUN make generate
-RUN make build/cluster-operator
+RUN make build/cluster-operator OPERATOR_IMAGE=$OPERATOR_IMAGE
 RUN make build/upgrader
 
 FROM ${BASE_IMAGE}
