@@ -70,7 +70,6 @@ jobs:
         - "TEST_CLUSTER=kind"
       name: Publish Container Image
       script:
-        - make operator-sdk
         - make image/cluster-operator
       before_deploy:
         - docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS"

@@ -3,6 +3,8 @@ GO_BUILD_CMD = go build -v
 GO_ENV = GOOS=linux CGO_ENABLED=0
 SDK_VERSION = v0.3.0
 MACHINE = $(shell uname -m)
+BUILD_IMAGE = golang:1.11.5
+BASE_IMAGE = alpine:3.9
 
 LDFLAGS += -X github.com/storageos/cluster-operator/pkg/controller/storageosupgrade.operatorImage=$(OPERATOR_IMAGE)
 
@@ -23,8 +25,11 @@ build/cluster-operator:
 generate:
 	operator-sdk generate k8s
 
-image/cluster-operator: generate build/upgrader build/cluster-operator
-	docker build . -f build/Dockerfile -t $(OPERATOR_IMAGE)
+image/cluster-operator: operator-sdk
+	docker build \
+		--build-arg BUILD_IMAGE=$(BUILD_IMAGE) \
+		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
+		. -f build/Dockerfile -t $(OPERATOR_IMAGE)
 
 local-run: build/upgrader
 	OPERATOR_NAME=cluster-operator operator-sdk up local
@@ -40,6 +45,13 @@ lint:
 unittest:
 	go test -v `go list -v ./... | grep -v test/e2e`
 
-# Install operator-sdk. To be used in e2e test and deployment stage.
 operator-sdk:
-	curl -Lo operator-sdk https://github.com/operator-framework/operator-sdk/releases/download/$(SDK_VERSION)/operator-sdk-$(SDK_VERSION)-$(MACHINE)-linux-gnu && chmod +x operator-sdk && sudo mv operator-sdk /usr/local/bin/
+	# Download sdk only if it's not available.
+	@if [ ! -f build/operator-sdk ]; then \
+		curl -Lo build/operator-sdk https://github.com/operator-framework/operator-sdk/releases/download/$(SDK_VERSION)/operator-sdk-$(SDK_VERSION)-$(MACHINE)-linux-gnu && \
+		chmod +x build/operator-sdk; \
+	fi
+
+# Install operator on a host. Might fail on containers that don't have sudo.
+install-operator-sdk: operator-sdk
+	sudo cp build/operator-sdk /usr/local/bin/
