@@ -117,7 +117,7 @@ run_openshift() {
 
 install_operatorsdk() {
     echo "Install operator-sdk"
-    make operator-sdk
+    make install-operator-sdk
     echo
 }
 
