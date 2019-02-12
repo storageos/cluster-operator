@@ -29,6 +29,7 @@ image/cluster-operator: operator-sdk
 	docker build \
 		--build-arg BUILD_IMAGE=$(BUILD_IMAGE) \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
+		--build-arg OPERATOR_IMAGE=$(OPERATOR_IMAGE) \
 		. -f build/Dockerfile -t $(OPERATOR_IMAGE)
 
 local-run: build/upgrader
