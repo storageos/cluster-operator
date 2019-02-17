@@ -34,3 +34,8 @@ spec:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "cluster-operator"
+      tolerations:
+      - key: "key"
+        operator: "Equal"
+        value: "value"
+        effect: "NoSchedule" 

@@ -35,6 +35,10 @@ type JobSpec struct {
 	// NodeSelectorTerms is the set of placement of the job pods using node
 	// affinity requiredDuringSchedulingIgnoredDuringExecution.
 	NodeSelectorTerms []corev1.NodeSelectorTerm `json:"nodeSelectorTerms"`
+
+	// Tolerations is to set the placement of storageos pods using
+	// pod toleration.
+	Tolerations []corev1.Toleration `json:"tolerations"`
 }
 
 // GetLabelSelector returns Job's pod label selector.

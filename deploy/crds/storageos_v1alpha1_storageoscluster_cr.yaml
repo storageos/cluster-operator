@@ -58,6 +58,11 @@ spec:
   #       operator: In
   #       values:
   #       - nodefoo
+  # tolerations:
+  #   - key: somekey 
+  #     operator: "Equal"
+  #     value: nodefoo
+  #     effect: "NoSchedule"
   # resources:
   #   limits:
   #     memory: "1Gi"

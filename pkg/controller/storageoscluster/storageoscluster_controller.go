@@ -254,16 +254,20 @@ func (r *ReconcileStorageOSCluster) generateJoinToken(m *storageosv1alpha1.Stora
 		return "", fmt.Errorf("failed to list nodes: %v", err)
 	}
 
+	toleratedNodes := []corev1.Node{}
+	for _, node := range nodeList.Items {
+		// Skip nodes which have taints not tolerated by storageos.
+		ok, _ := getMatchingTolerations(node.Spec.Taints, m.Spec.Tolerations)
+		if ok {
+			toleratedNodes = append(toleratedNodes, node)
+		}
+	}
+
 	selectedNodes := []corev1.Node{}
 
 	// Filter the node list when a node selector is applied.
 	if len(m.Spec.NodeSelectorTerms) > 0 {
-		for _, node := range nodeList.Items {
-			// Skip a node with any taints. StorageOS pods don't support any
-			// toleration.
-			if len(node.Spec.Taints) > 0 {
-				continue
-			}
+		for _, node := range toleratedNodes {
 			for _, term := range m.Spec.NodeSelectorTerms {
 				for _, exp := range term.MatchExpressions {
 					var ex selection.Operator
@@ -290,9 +294,35 @@ func (r *ReconcileStorageOSCluster) generateJoinToken(m *storageosv1alpha1.Stora
 			}
 		}
 	} else {
-		selectedNodes = nodeList.Items
+		selectedNodes = toleratedNodes
 	}
 
 	nodeIPs := storageos.GetNodeIPs(selectedNodes)
 	return strings.Join(nodeIPs, ","), nil
+}
+
+// Returns true and list of Tolerations matching all Taints if all are tolerated, or false otherwise.
+// Taken from: https://github.com/kubernetes/kubernetes/blob/07a5488b2a8f67add543da72e8819407d8314204/pkg/apis/core/v1/helper/helpers.go#L426-L449
+func getMatchingTolerations(taints []corev1.Taint, tolerations []corev1.Toleration) (bool, []corev1.Toleration) {
+	if len(taints) == 0 {
+		return true, []corev1.Toleration{}
+	}
+	if len(tolerations) == 0 && len(taints) > 0 {
+		return false, []corev1.Toleration{}
+	}
+	result := []corev1.Toleration{}
+	for i := range taints {
+		tolerated := false
+		for j := range tolerations {
+			if tolerations[j].ToleratesTaint(&taints[i]) {
+				result = append(result, tolerations[j])
+				tolerated = true
+				break
+			}
+		}
+		if !tolerated {
+			return false, []corev1.Toleration{}
+		}
+	}
+	return true, result
 }

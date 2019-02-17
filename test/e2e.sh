@@ -200,6 +200,9 @@ main() {
     # other namespace will result in permission errors.
     kubectl create ns storageos-operator
 
+    NODE_NAME=$(kubectl get nodes --no-headers=true -o=name)
+    kubectl taint nodes $NODE_NAME key=value:NoSchedule
+
     # Build the operator container image.
     # This would build a container with tag storageos/cluster-operator:test,
     # which is used in the e2e test setup below.

@@ -121,6 +121,7 @@ Parameter | Description | Default
 `pause` | Pause the operator for cluster maintenance | `false`
 `debug` | Enable debug mode for all the cluster nodes | `false`
 `nodeSelectorTerms` | Set node selector for storageos pod placement |
+`tolerations` | Set pod tolerations for storageos pod placement |
 `resources` | Set resource requirements for the containers |
 
 
