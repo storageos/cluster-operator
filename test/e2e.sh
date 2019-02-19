@@ -233,8 +233,8 @@ main() {
     # echo "**** Resource details for storageos-operator namespace ****"
     # print_pod_details_and_logs storageos-operator
 
-    echo "**** Resource details for storageos namespace ****"
-    print_pod_details_and_logs storageos
+    # echo "**** Resource details for storageos namespace ****"
+    # print_pod_details_and_logs storageos
 
     echo "Done Testing!"
 }
