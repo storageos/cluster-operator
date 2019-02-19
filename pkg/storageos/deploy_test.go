@@ -2,6 +2,7 @@ package storageos
 
 import (
 	"context"
+	"os"
 	"reflect"
 	"strconv"
 	"testing"
@@ -9,14 +10,17 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	kscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	storageosapis "github.com/storageos/cluster-operator/pkg/apis"
 	api "github.com/storageos/cluster-operator/pkg/apis/storageos/v1alpha1"
 )
 
@@ -26,12 +30,12 @@ var gvk = schema.GroupVersionKind{
 	Kind:    "StorageOSCluster",
 }
 
-var testScheme = &runtime.Scheme{}
+var testScheme = runtime.NewScheme()
 
 const defaultNS = "storageos"
 
 func setupFakeDeployment() (client.Client, *Deployment) {
-	c := fake.NewFakeClient()
+	c := fake.NewFakeClientWithScheme(testScheme)
 	stosCluster := &api.StorageOSCluster{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: gvk.GroupVersion().String(),
@@ -41,6 +45,18 @@ func setupFakeDeployment() (client.Client, *Deployment) {
 
 	deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
 	return c, deploy
+}
+
+func testSetup() {
+	// Register all the schemes.
+	kscheme.AddToScheme(testScheme)
+	apiextensionsv1beta1.AddToScheme(testScheme)
+	storageosapis.AddToScheme(testScheme)
+}
+
+func TestMain(m *testing.M) {
+	testSetup()
+	os.Exit(m.Run())
 }
 
 // func checkObjectOwner(t *testing.T, owner metav1.OwnerReference, wantGVK schema.GroupVersionKind) {
@@ -278,7 +294,7 @@ func checkSubjectsEquality(t *testing.T, wantSubjects, gotSubjects []rbacv1.Subj
 }
 
 func TestCreateDaemonSet(t *testing.T) {
-	c := fake.NewFakeClient()
+	c := fake.NewFakeClientWithScheme(testScheme)
 	clusterName := "my-stos-cluster"
 	stosCluster := &api.StorageOSCluster{
 		TypeMeta: metav1.TypeMeta{
@@ -480,9 +496,15 @@ func TestDeployLegacy(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			c := fake.NewFakeClient()
+			c := fake.NewFakeClientWithScheme(testScheme)
+			if err := c.Create(context.Background(), stosCluster); err != nil {
+				t.Fatalf("failed to create storageoscluster object: %v", err)
+			}
+
 			deploy := NewDeployment(c, stosCluster, nil, testScheme, tc.k8sVersion, false)
-			deploy.Deploy()
+			if err := deploy.Deploy(); err != nil {
+				t.Fatalf("failed to deploy cluster: %v", err)
+			}
 
 			createdDaemonset := &appsv1.DaemonSet{
 				TypeMeta: metav1.TypeMeta{
@@ -576,9 +598,15 @@ func TestDeployCSI(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			c := fake.NewFakeClient()
+			c := fake.NewFakeClientWithScheme(testScheme)
+			if err := c.Create(context.Background(), stosCluster); err != nil {
+				t.Fatalf("failed to create storageoscluster object: %v", err)
+			}
+
 			deploy := NewDeployment(c, stosCluster, nil, testScheme, tc.k8sVersion, false)
-			deploy.Deploy()
+			if err := deploy.Deploy(); err != nil {
+				t.Fatalf("failed to deploy cluster: %v", err)
+			}
 
 			createdDaemonset := &appsv1.DaemonSet{
 				TypeMeta: metav1.TypeMeta{
@@ -649,9 +677,15 @@ func TestDeployKVBackend(t *testing.T) {
 		},
 	}
 
-	c := fake.NewFakeClient()
+	c := fake.NewFakeClientWithScheme(testScheme)
+	if err := c.Create(context.Background(), stosCluster); err != nil {
+		t.Fatalf("failed to create storageoscluster object: %v", err)
+	}
+
 	deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
-	deploy.Deploy()
+	if err := deploy.Deploy(); err != nil {
+		t.Fatalf("failed to deploy cluster: %v", err)
+	}
 
 	createdDaemonset := &appsv1.DaemonSet{
 		TypeMeta: metav1.TypeMeta{
@@ -716,9 +750,15 @@ func TestDeployDebug(t *testing.T) {
 		},
 	}
 
-	c := fake.NewFakeClient()
+	c := fake.NewFakeClientWithScheme(testScheme)
+	if err := c.Create(context.Background(), stosCluster); err != nil {
+		t.Fatalf("failed to create storageoscluster object: %v", err)
+	}
+
 	deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
-	deploy.Deploy()
+	if err := deploy.Deploy(); err != nil {
+		t.Fatalf("failed to deploy cluster: %v", err)
+	}
 
 	createdDaemonset := &appsv1.DaemonSet{
 		TypeMeta: metav1.TypeMeta{
@@ -784,9 +824,15 @@ func TestDeployNodeAffinity(t *testing.T) {
 		},
 	}
 
-	c := fake.NewFakeClient()
+	c := fake.NewFakeClientWithScheme(testScheme)
+	if err := c.Create(context.Background(), stosCluster); err != nil {
+		t.Fatalf("failed to create storageoscluster object: %v", err)
+	}
+
 	deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
-	deploy.Deploy()
+	if err := deploy.Deploy(); err != nil {
+		t.Fatalf("failed to deploy cluster: %v", err)
+	}
 
 	createdDaemonset := &appsv1.DaemonSet{
 		TypeMeta: metav1.TypeMeta{
@@ -839,9 +885,15 @@ func TestDeployNodeResources(t *testing.T) {
 		},
 	}
 
-	c := fake.NewFakeClient()
+	c := fake.NewFakeClientWithScheme(testScheme)
+	if err := c.Create(context.Background(), stosCluster); err != nil {
+		t.Fatalf("failed to create storageoscluster object: %v", err)
+	}
+
 	deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
-	deploy.Deploy()
+	if err := deploy.Deploy(); err != nil {
+		t.Fatalf("failed to deploy cluster: %v", err)
+	}
 
 	createdDaemonset := &appsv1.DaemonSet{
 		TypeMeta: metav1.TypeMeta{
