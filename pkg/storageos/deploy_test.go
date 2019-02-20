@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -76,7 +76,7 @@ func TestCreateNamespace(t *testing.T) {
 
 	// Fetch the created namespace and check if it's a child of StorageOSCluster.
 	nsName := types.NamespacedName{Name: defaultNS}
-	wantNS := &v1.Namespace{}
+	wantNS := &corev1.Namespace{}
 	if err := c.Get(context.TODO(), nsName, wantNS); err != nil {
 		t.Fatal("failed to get the created object", err)
 	}
@@ -96,7 +96,7 @@ func TestCreateServiceAccount(t *testing.T) {
 		Name:      saName,
 		Namespace: defaultNS,
 	}
-	wantServiceAccount := &v1.ServiceAccount{
+	wantServiceAccount := &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "ServiceAccount",
@@ -810,12 +810,12 @@ func TestDeployNodeAffinity(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: api.StorageOSClusterSpec{
-			NodeSelectorTerms: []v1.NodeSelectorTerm{
+			NodeSelectorTerms: []corev1.NodeSelectorTerm{
 				{
-					MatchExpressions: []v1.NodeSelectorRequirement{
+					MatchExpressions: []corev1.NodeSelectorRequirement{
 						{
 							Key:      "foo",
-							Operator: v1.NodeSelectorOpIn,
+							Operator: corev1.NodeSelectorOpIn,
 							Values:   []string{"baz"},
 						},
 					},
@@ -861,6 +861,114 @@ func TestDeployNodeAffinity(t *testing.T) {
 	}
 }
 
+func TestDeployTolerations(t *testing.T) {
+	testCases := []struct {
+		name        string
+		tolerations []corev1.Toleration
+		wantError   bool
+	}{
+		{
+			name: "TolerationOpExists without value",
+			tolerations: []corev1.Toleration{
+				{
+					Key:      "foo",
+					Operator: corev1.TolerationOpExists,
+					Effect:   corev1.TaintEffectNoSchedule,
+				},
+			},
+		},
+		{
+			name: "TolerationOpExists with value",
+			tolerations: []corev1.Toleration{
+				{
+					Key:      "foo",
+					Operator: corev1.TolerationOpExists,
+					Value:    "bar",
+					Effect:   corev1.TaintEffectNoSchedule,
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "TolerationOpEqual",
+			tolerations: []corev1.Toleration{
+				{
+					Key:      "foo",
+					Operator: corev1.TolerationOpEqual,
+					Value:    "bar",
+					Effect:   corev1.TaintEffectNoSchedule,
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			stosCluster := &api.StorageOSCluster{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gvk.GroupVersion().String(),
+					Kind:       gvk.Kind,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "teststos",
+					Namespace: "default",
+				},
+				Spec: api.StorageOSClusterSpec{
+					CSI: api.StorageOSClusterCSI{
+						Enable: false,
+					},
+					Tolerations: tc.tolerations,
+				},
+			}
+
+			c := fake.NewFakeClientWithScheme(testScheme)
+			if err := c.Create(context.Background(), stosCluster); err != nil {
+				t.Fatalf("failed to create storageoscluster object: %v", err)
+			}
+
+			deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
+			err := deploy.Deploy()
+			if !tc.wantError && err != nil {
+				t.Errorf("expected no error but got one: %v", err)
+			}
+			if tc.wantError && err == nil {
+				t.Errorf("expected error but got none")
+			}
+
+			if tc.wantError {
+				return
+			}
+
+			createdDaemonset := &appsv1.DaemonSet{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "apps/v1",
+					Kind:       "DaemonSet",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      daemonsetName,
+					Namespace: stosCluster.Spec.GetResourceNS(),
+				},
+			}
+
+			nsName := types.NamespacedName{
+				Name:      daemonsetName,
+				Namespace: defaultNS,
+			}
+
+			if err := c.Get(context.Background(), nsName, createdDaemonset); err != nil {
+				t.Fatal("failed to get the created daemonset", err)
+			}
+
+			podSpec := createdDaemonset.Spec.Template.Spec
+
+			if !reflect.DeepEqual(podSpec.Tolerations, stosCluster.Spec.Tolerations) {
+				t.Errorf("unexpected Tolerations value:\n\t(GOT) %v\n\t(WNT) %v", podSpec.Tolerations, stosCluster.Spec.Tolerations)
+			}
+		})
+	}
+
+}
+
 func TestDeployNodeResources(t *testing.T) {
 	memLimit, _ := resource.ParseQuantity("1Gi")
 	memReq, _ := resource.ParseQuantity("702Mi")
@@ -874,12 +982,12 @@ func TestDeployNodeResources(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: api.StorageOSClusterSpec{
-			Resources: v1.ResourceRequirements{
-				Limits: v1.ResourceList{
-					v1.ResourceMemory: memLimit,
+			Resources: corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{
+					corev1.ResourceMemory: memLimit,
 				},
-				Requests: v1.ResourceList{
-					v1.ResourceMemory: memReq,
+				Requests: corev1.ResourceList{
+					corev1.ResourceMemory: memReq,
 				},
 			},
 		},

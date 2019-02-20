@@ -7,6 +7,7 @@ import (
 	"log"
 	"strings"
 	"time"
+	"fmt"
 
 	storageosv1alpha1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -280,6 +281,17 @@ func newDaemonSetForCR(cr *storageosv1alpha1.Job) (*appsv1.DaemonSet, error) {
 		},
 	}
 
+	// Add pod tolerations if defined.
+	tolerations := cr.Spec.Tolerations
+	for i := range tolerations {
+		if tolerations[i].Operator == corev1.TolerationOpExists && tolerations[i].Value != "" {
+			return nil, fmt.Errorf("key(%s): toleration value must be empty when `operator` is 'Exists'", tolerations[i].Key)
+		}
+	}
+	if len(tolerations) > 0 {
+		dset.Spec.Template.Spec.Tolerations = cr.Spec.Tolerations
+	}
+	
 	// Add node affinity if defined.
 	if len(cr.Spec.NodeSelectorTerms) > 0 {
 		dset.Spec.Template.Spec.Affinity = &corev1.Affinity{NodeAffinity: &corev1.NodeAffinity{

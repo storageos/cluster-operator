@@ -9,6 +9,7 @@ import (
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	storageos "github.com/storageos/cluster-operator/pkg/apis/storageos/v1alpha1"
 	testutil "github.com/storageos/cluster-operator/test/e2e/util"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -26,6 +27,14 @@ func TestClusterInTreePlugin(t *testing.T) {
 		SecretRefName:      "storageos-api",
 		SecretRefNamespace: "default",
 		ResourceNS:         "storageos",
+		Tolerations: []corev1.Toleration{
+			{
+				Key:      "key",
+				Operator: corev1.TolerationOpEqual,
+				Value:    "value",
+				Effect:   corev1.TaintEffectNoSchedule,
+			},
+		},
 	}
 
 	testStorageOS := testutil.NewStorageOSCluster(namespace, clusterSpec)

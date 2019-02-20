@@ -114,6 +114,11 @@ type StorageOSClusterSpec struct {
 	// NodeSelectorTerms is to set the placement of storageos pods using
 	// node affinity requiredDuringSchedulingIgnoredDuringExecution.
 	NodeSelectorTerms []corev1.NodeSelectorTerm `json:"nodeSelectorTerms"`
+
+	// Tolerations is to set the placement of storageos pods using
+	// pod toleration.
+	Tolerations []corev1.Toleration `json:"tolerations"`
+
 	// Resources is to set the resource requirements of the storageos containers.
 	Resources corev1.ResourceRequirements `json:"resources"`
 

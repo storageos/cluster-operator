@@ -101,6 +101,7 @@ spec:
             debug:
               type: boolean
             nodeSelectorTerms: {}
+            tolerations: {}
             resources:
               properties:
                 limits: {}

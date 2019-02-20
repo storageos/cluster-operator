@@ -9,7 +9,7 @@ import (
 	"github.com/blang/semver"
 	api "github.com/storageos/cluster-operator/pkg/apis/storageos/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
@@ -229,7 +229,7 @@ func (s *Deployment) Deploy() error {
 }
 
 func (s *Deployment) createNamespace() error {
-	ns := &v1.Namespace{
+	ns := &corev1.Namespace{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Namespace",
@@ -247,7 +247,7 @@ func (s *Deployment) createNamespace() error {
 }
 
 func (s *Deployment) createServiceAccount(name string) error {
-	sa := &v1.ServiceAccount{
+	sa := &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "ServiceAccount",
@@ -524,7 +524,7 @@ func (s *Deployment) createClusterRoleBindingForAttacher() error {
 func (s *Deployment) createDaemonSet() error {
 	ls := labelsForDaemonSet(s.stos.Name)
 	privileged := true
-	mountPropagationBidirectional := v1.MountPropagationBidirectional
+	mountPropagationBidirectional := corev1.MountPropagationBidirectional
 	allowPrivilegeEscalation := true
 
 	dset := &appsv1.DaemonSet{
@@ -543,20 +543,20 @@ func (s *Deployment) createDaemonSet() error {
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
 			},
-			Template: v1.PodTemplateSpec{
+			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: ls,
 				},
-				Spec: v1.PodSpec{
+				Spec: corev1.PodSpec{
 					ServiceAccountName: "storageos-daemonset-sa",
 					HostPID:            true,
 					HostNetwork:        true,
-					DNSPolicy:          v1.DNSClusterFirstWithHostNet,
-					InitContainers: []v1.Container{
+					DNSPolicy:          corev1.DNSClusterFirstWithHostNet,
+					InitContainers: []corev1.Container{
 						{
 							Name:  "enable-lio",
 							Image: s.stos.Spec.GetInitContainerImage(),
-							VolumeMounts: []v1.VolumeMount{
+							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "kernel-modules",
 									MountPath: "/lib/modules",
@@ -568,59 +568,59 @@ func (s *Deployment) createDaemonSet() error {
 									MountPropagation: &mountPropagationBidirectional,
 								},
 							},
-							SecurityContext: &v1.SecurityContext{
+							SecurityContext: &corev1.SecurityContext{
 								Privileged: &privileged,
-								Capabilities: &v1.Capabilities{
-									Add: []v1.Capability{"SYS_ADMIN"},
+								Capabilities: &corev1.Capabilities{
+									Add: []corev1.Capability{"SYS_ADMIN"},
 								},
 							},
 						},
 					},
-					Containers: []v1.Container{
+					Containers: []corev1.Container{
 						{
 							Image: s.stos.Spec.GetNodeContainerImage(),
 							Name:  "storageos",
 							Args:  []string{"server"},
-							Ports: []v1.ContainerPort{{
+							Ports: []corev1.ContainerPort{{
 								ContainerPort: 5705,
 								Name:          "api",
 							}},
-							LivenessProbe: &v1.Probe{
+							LivenessProbe: &corev1.Probe{
 								InitialDelaySeconds: int32(65),
 								TimeoutSeconds:      int32(10),
 								FailureThreshold:    int32(5),
-								Handler: v1.Handler{
-									HTTPGet: &v1.HTTPGetAction{
+								Handler: corev1.Handler{
+									HTTPGet: &corev1.HTTPGetAction{
 										Path: "/v1/health",
 										Port: intstr.IntOrString{Type: intstr.String, StrVal: "api"},
 									},
 								},
 							},
-							ReadinessProbe: &v1.Probe{
+							ReadinessProbe: &corev1.Probe{
 								InitialDelaySeconds: int32(65),
 								TimeoutSeconds:      int32(10),
 								FailureThreshold:    int32(5),
-								Handler: v1.Handler{
-									HTTPGet: &v1.HTTPGetAction{
+								Handler: corev1.Handler{
+									HTTPGet: &corev1.HTTPGetAction{
 										Path: "/v1/health",
 										Port: intstr.IntOrString{Type: intstr.String, StrVal: "api"},
 									},
 								},
 							},
-							Env: []v1.EnvVar{
+							Env: []corev1.EnvVar{
 								{
 									Name: hostnameEnvVar,
-									ValueFrom: &v1.EnvVarSource{
-										FieldRef: &v1.ObjectFieldSelector{
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
 											FieldPath: "spec.nodeName",
 										},
 									},
 								},
 								{
 									Name: adminUsernameEnvVar,
-									ValueFrom: &v1.EnvVarSource{
-										SecretKeyRef: &v1.SecretKeySelector{
-											LocalObjectReference: v1.LocalObjectReference{
+									ValueFrom: &corev1.EnvVarSource{
+										SecretKeyRef: &corev1.SecretKeySelector{
+											LocalObjectReference: corev1.LocalObjectReference{
 												Name: initSecretName,
 											},
 											Key: "username",
@@ -629,9 +629,9 @@ func (s *Deployment) createDaemonSet() error {
 								},
 								{
 									Name: adminPasswordEnvVar,
-									ValueFrom: &v1.EnvVarSource{
-										SecretKeyRef: &v1.SecretKeySelector{
-											LocalObjectReference: v1.LocalObjectReference{
+									ValueFrom: &corev1.EnvVarSource{
+										SecretKeyRef: &corev1.SecretKeySelector{
+											LocalObjectReference: corev1.LocalObjectReference{
 												Name: initSecretName,
 											},
 											Key: "password",
@@ -641,16 +641,16 @@ func (s *Deployment) createDaemonSet() error {
 								{
 									Name:  joinEnvVar,
 									Value: s.stos.Spec.Join,
-									// ValueFrom: &v1.EnvVarSource{
-									// 	FieldRef: &v1.ObjectFieldSelector{
+									// ValueFrom: &corev1.EnvVarSource{
+									// 	FieldRef: &corev1.ObjectFieldSelector{
 									// 		FieldPath: "status.podIP",
 									// 	},
 									// },
 								},
 								{
 									Name: advertiseIPEnvVar,
-									ValueFrom: &v1.EnvVarSource{
-										FieldRef: &v1.ObjectFieldSelector{
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
 											FieldPath: "status.podIP",
 										},
 									},
@@ -668,14 +668,14 @@ func (s *Deployment) createDaemonSet() error {
 									Value: s.stos.Spec.GetCSIVersion(CSIV1Supported(s.k8sVersion)),
 								},
 							},
-							SecurityContext: &v1.SecurityContext{
+							SecurityContext: &corev1.SecurityContext{
 								Privileged: &privileged,
-								Capabilities: &v1.Capabilities{
-									Add: []v1.Capability{sysAdminCap},
+								Capabilities: &corev1.Capabilities{
+									Add: []corev1.Capability{sysAdminCap},
 								},
 								AllowPrivilegeEscalation: &allowPrivilegeEscalation,
 							},
-							VolumeMounts: []v1.VolumeMount{
+							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "fuse",
 									MountPath: "/dev/fuse",
@@ -692,35 +692,35 @@ func (s *Deployment) createDaemonSet() error {
 							},
 						},
 					},
-					Volumes: []v1.Volume{
+					Volumes: []corev1.Volume{
 						{
 							Name: "kernel-modules",
-							VolumeSource: v1.VolumeSource{
-								HostPath: &v1.HostPathVolumeSource{
+							VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
 									Path: "/lib/modules",
 								},
 							},
 						},
 						{
 							Name: "fuse",
-							VolumeSource: v1.VolumeSource{
-								HostPath: &v1.HostPathVolumeSource{
+							VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
 									Path: "/dev/fuse",
 								},
 							},
 						},
 						{
 							Name: "sys",
-							VolumeSource: v1.VolumeSource{
-								HostPath: &v1.HostPathVolumeSource{
+							VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
 									Path: "/sys",
 								},
 							},
 						},
 						{
 							Name: "state",
-							VolumeSource: v1.VolumeSource{
-								HostPath: &v1.HostPathVolumeSource{
+							VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
 									Path: "/var/lib/storageos",
 								},
 							},
@@ -735,6 +735,10 @@ func (s *Deployment) createDaemonSet() error {
 	nodeContainer := &podSpec.Containers[0]
 
 	s.addNodeAffinity(podSpec)
+
+	if err := s.addTolerations(podSpec); err != nil {
+		return err
+	}
 
 	nodeContainer.Env = s.addKVBackendEnvVars(nodeContainer.Env)
 
@@ -751,12 +755,12 @@ func (s *Deployment) createDaemonSet() error {
 }
 
 // addNodeContainerResources adds resource requirements for the node containers.
-func (s *Deployment) addNodeContainerResources(nodeContainer *v1.Container) {
+func (s *Deployment) addNodeContainerResources(nodeContainer *corev1.Container) {
 	if s.stos.Spec.Resources.Limits != nil ||
 		s.stos.Spec.Resources.Requests != nil {
-		nodeContainer.Resources = v1.ResourceRequirements{
-			Limits:   v1.ResourceList{},
-			Requests: v1.ResourceList{},
+		nodeContainer.Resources = corev1.ResourceRequirements{
+			Limits:   corev1.ResourceList{},
+			Requests: corev1.ResourceList{},
 		}
 		s.stos.Spec.Resources.DeepCopyInto(&nodeContainer.Resources)
 	}
@@ -795,10 +799,10 @@ func versionSupported(haveVersion, wantVersion string) bool {
 }
 
 // addKVBackendEnvVars checks if KVBackend is set and sets the appropriate env vars.
-func (s *Deployment) addKVBackendEnvVars(env []v1.EnvVar) []v1.EnvVar {
-	kvStoreEnv := []v1.EnvVar{}
+func (s *Deployment) addKVBackendEnvVars(env []corev1.EnvVar) []corev1.EnvVar {
+	kvStoreEnv := []corev1.EnvVar{}
 	if s.stos.Spec.KVBackend.Address != "" {
-		kvAddressEnv := v1.EnvVar{
+		kvAddressEnv := corev1.EnvVar{
 			Name:  kvAddrEnvVar,
 			Value: s.stos.Spec.KVBackend.Address,
 		}
@@ -806,7 +810,7 @@ func (s *Deployment) addKVBackendEnvVars(env []v1.EnvVar) []v1.EnvVar {
 	}
 
 	if s.stos.Spec.KVBackend.Backend != "" {
-		kvBackendEnv := v1.EnvVar{
+		kvBackendEnv := corev1.EnvVar{
 			Name:  kvBackendEnvVar,
 			Value: s.stos.Spec.KVBackend.Backend,
 		}
@@ -820,9 +824,9 @@ func (s *Deployment) addKVBackendEnvVars(env []v1.EnvVar) []v1.EnvVar {
 }
 
 // addDebugEnvVars checks if the debug mode is set and set the appropriate env var.
-func (s *Deployment) addDebugEnvVars(env []v1.EnvVar) []v1.EnvVar {
+func (s *Deployment) addDebugEnvVars(env []corev1.EnvVar) []corev1.EnvVar {
 	if s.stos.Spec.Debug {
-		debugEnvVar := v1.EnvVar{
+		debugEnvVar := corev1.EnvVar{
 			Name:  debugEnvVar,
 			Value: debugVal,
 		}
@@ -833,29 +837,29 @@ func (s *Deployment) addDebugEnvVars(env []v1.EnvVar) []v1.EnvVar {
 
 // addSharedDir adds env var and volumes for shared dir when running kubelet in
 // a container.
-func (s *Deployment) addSharedDir(podSpec *v1.PodSpec) {
-	mountPropagationBidirectional := v1.MountPropagationBidirectional
+func (s *Deployment) addSharedDir(podSpec *corev1.PodSpec) {
+	mountPropagationBidirectional := corev1.MountPropagationBidirectional
 	nodeContainer := &podSpec.Containers[0]
 
 	// If kubelet is running in a container, sharedDir should be set.
 	if s.stos.Spec.SharedDir != "" {
-		envVar := v1.EnvVar{
+		envVar := corev1.EnvVar{
 			Name:  deviceDirEnvVar,
 			Value: fmt.Sprintf("%s/devices", s.stos.Spec.SharedDir),
 		}
 		nodeContainer.Env = append(nodeContainer.Env, envVar)
 
-		sharedDir := v1.Volume{
+		sharedDir := corev1.Volume{
 			Name: "shared",
-			VolumeSource: v1.VolumeSource{
-				HostPath: &v1.HostPathVolumeSource{
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
 					Path: s.stos.Spec.SharedDir,
 				},
 			},
 		}
 		podSpec.Volumes = append(podSpec.Volumes, sharedDir)
 
-		volMnt := v1.VolumeMount{
+		volMnt := corev1.VolumeMount{
 			Name:             "shared",
 			MountPath:        s.stos.Spec.SharedDir,
 			MountPropagation: &mountPropagationBidirectional,
@@ -865,20 +869,20 @@ func (s *Deployment) addSharedDir(podSpec *v1.PodSpec) {
 }
 
 // addCSI adds the CSI env vars, volumes and containers to the provided podSpec.
-func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
-	hostpathDirOrCreate := v1.HostPathDirectoryOrCreate
-	hostpathDir := v1.HostPathDirectory
-	mountPropagationBidirectional := v1.MountPropagationBidirectional
+func (s *Deployment) addCSI(podSpec *corev1.PodSpec) {
+	hostpathDirOrCreate := corev1.HostPathDirectoryOrCreate
+	hostpathDir := corev1.HostPathDirectory
+	mountPropagationBidirectional := corev1.MountPropagationBidirectional
 
 	nodeContainer := &podSpec.Containers[0]
 
 	// Add CSI specific configurations if enabled.
 	if s.stos.Spec.CSI.Enable {
-		vols := []v1.Volume{
+		vols := []corev1.Volume{
 			{
 				Name: "registrar-socket-dir",
-				VolumeSource: v1.VolumeSource{
-					HostPath: &v1.HostPathVolumeSource{
+				VolumeSource: corev1.VolumeSource{
+					HostPath: &corev1.HostPathVolumeSource{
 						Path: s.stos.Spec.GetCSIRegistrarSocketDir(),
 						Type: &hostpathDirOrCreate,
 					},
@@ -886,8 +890,8 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 			},
 			{
 				Name: "kubelet-dir",
-				VolumeSource: v1.VolumeSource{
-					HostPath: &v1.HostPathVolumeSource{
+				VolumeSource: corev1.VolumeSource{
+					HostPath: &corev1.HostPathVolumeSource{
 						Path: s.stos.Spec.GetCSIKubeletDir(),
 						Type: &hostpathDir,
 					},
@@ -895,8 +899,8 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 			},
 			{
 				Name: "plugin-dir",
-				VolumeSource: v1.VolumeSource{
-					HostPath: &v1.HostPathVolumeSource{
+				VolumeSource: corev1.VolumeSource{
+					HostPath: &corev1.HostPathVolumeSource{
 						Path: s.stos.Spec.GetCSIPluginDir(CSIV1Supported(s.k8sVersion)),
 						Type: &hostpathDirOrCreate,
 					},
@@ -904,8 +908,8 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 			},
 			{
 				Name: "device-dir",
-				VolumeSource: v1.VolumeSource{
-					HostPath: &v1.HostPathVolumeSource{
+				VolumeSource: corev1.VolumeSource{
+					HostPath: &corev1.HostPathVolumeSource{
 						Path: s.stos.Spec.GetCSIDeviceDir(),
 						Type: &hostpathDir,
 					},
@@ -913,8 +917,8 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 			},
 			{
 				Name: "registration-dir",
-				VolumeSource: v1.VolumeSource{
-					HostPath: &v1.HostPathVolumeSource{
+				VolumeSource: corev1.VolumeSource{
+					HostPath: &corev1.HostPathVolumeSource{
 						Path: s.stos.Spec.GetCSIRegistrationDir(CSIV1Supported(s.k8sVersion)),
 						Type: &hostpathDir,
 					},
@@ -924,7 +928,7 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 
 		podSpec.Volumes = append(podSpec.Volumes, vols...)
 
-		volMnts := []v1.VolumeMount{
+		volMnts := []corev1.VolumeMount{
 			{
 				Name:             "kubelet-dir",
 				MountPath:        s.stos.Spec.GetCSIKubeletDir(),
@@ -943,7 +947,7 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 		// Append volume mounts to the first container, the only container is the node container, at this point.
 		nodeContainer.VolumeMounts = append(nodeContainer.VolumeMounts, volMnts...)
 
-		envVar := []v1.EnvVar{
+		envVar := []corev1.EnvVar{
 			{
 				Name:  csiEndpointEnvVar,
 				Value: s.stos.Spec.GetCSIEndpoint(CSIV1Supported(s.k8sVersion)),
@@ -954,11 +958,11 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 		if s.stos.Spec.CSI.EnableProvisionCreds {
 			envVar = append(
 				envVar,
-				v1.EnvVar{
+				corev1.EnvVar{
 					Name:  csiRequireCredsCreateEnvVar,
 					Value: "true",
 				},
-				v1.EnvVar{
+				corev1.EnvVar{
 					Name:  csiRequireCredsDeleteEnvVar,
 					Value: "true",
 				},
@@ -971,11 +975,11 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 		if s.stos.Spec.CSI.EnableControllerPublishCreds {
 			envVar = append(
 				envVar,
-				v1.EnvVar{
+				corev1.EnvVar{
 					Name:  csiRequireCredsCtrlPubEnvVar,
 					Value: "true",
 				},
-				v1.EnvVar{
+				corev1.EnvVar{
 					Name:  csiRequireCredsCtrlUnpubEnvVar,
 					Value: "true",
 				},
@@ -988,7 +992,7 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 		if s.stos.Spec.CSI.EnableNodePublishCreds {
 			envVar = append(
 				envVar,
-				v1.EnvVar{
+				corev1.EnvVar{
 					Name:  csiRequireCredsNodePubEnvVar,
 					Value: "true",
 				},
@@ -1000,30 +1004,30 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 		// Append env vars to the first container, node container.
 		nodeContainer.Env = append(nodeContainer.Env, envVar...)
 
-		driverReg := v1.Container{
+		driverReg := corev1.Container{
 			Image:           s.stos.Spec.GetCSINodeDriverRegistrarImage(CSIV1Supported(s.k8sVersion)),
 			Name:            "csi-driver-registrar",
-			ImagePullPolicy: v1.PullIfNotPresent,
+			ImagePullPolicy: corev1.PullIfNotPresent,
 			Args: []string{
 				"--v=5",
 				"--csi-address=$(ADDRESS)",
 			},
-			Env: []v1.EnvVar{
+			Env: []corev1.EnvVar{
 				{
 					Name:  addressEnvVar,
 					Value: "/csi/csi.sock",
 				},
 				{
 					Name: kubeNodeNameEnvVar,
-					ValueFrom: &v1.EnvVarSource{
-						FieldRef: &v1.ObjectFieldSelector{
+					ValueFrom: &corev1.EnvVarSource{
+						FieldRef: &corev1.ObjectFieldSelector{
 							APIVersion: "v1",
 							FieldPath:  "spec.nodeName",
 						},
 					},
 				},
 			},
-			VolumeMounts: []v1.VolumeMount{
+			VolumeMounts: []corev1.VolumeMount{
 				{
 					Name:      "plugin-dir",
 					MountPath: "/csi",
@@ -1049,21 +1053,21 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 		podSpec.Containers = append(podSpec.Containers, driverReg)
 
 		if CSIV1Supported(s.k8sVersion) {
-			livenessProbe := v1.Container{
+			livenessProbe := corev1.Container{
 				Image:           s.stos.Spec.GetCSILivenessProbeImage(),
 				Name:            "csi-liveness-probe",
-				ImagePullPolicy: v1.PullIfNotPresent,
+				ImagePullPolicy: corev1.PullIfNotPresent,
 				Args: []string{
 					"--csi-address=$(ADDRESS)",
 					"--connection-timeout=3s",
 				},
-				Env: []v1.EnvVar{
+				Env: []corev1.EnvVar{
 					{
 						Name:  addressEnvVar,
 						Value: "/csi/csi.sock",
 					},
 				},
-				VolumeMounts: []v1.VolumeMount{
+				VolumeMounts: []corev1.VolumeMount{
 					{
 						Name:      "plugin-dir",
 						MountPath: "/csi",
@@ -1077,24 +1081,39 @@ func (s *Deployment) addCSI(podSpec *v1.PodSpec) {
 
 // addNodeAffinity adds node affinity to the given pod spec from the cluster
 // spec NodeSelectorLabel.
-func (s *Deployment) addNodeAffinity(podSpec *v1.PodSpec) {
+func (s *Deployment) addNodeAffinity(podSpec *corev1.PodSpec) {
 	if len(s.stos.Spec.NodeSelectorTerms) > 0 {
-		podSpec.Affinity = &v1.Affinity{NodeAffinity: &v1.NodeAffinity{
-			RequiredDuringSchedulingIgnoredDuringExecution: &v1.NodeSelector{
+		podSpec.Affinity = &corev1.Affinity{NodeAffinity: &corev1.NodeAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
 				NodeSelectorTerms: s.stos.Spec.NodeSelectorTerms,
 			},
 		}}
 	}
 }
 
-// getCSICredsEnvVar returns a v1.EnvVar object with value from a secret key
+// addTolerations adds tolerations to the given pod spec from cluster
+// spec Tolerations.
+func (s *Deployment) addTolerations(podSpec *corev1.PodSpec) error {
+	tolerations := s.stos.Spec.Tolerations
+	for i := range tolerations {
+		if tolerations[i].Operator == corev1.TolerationOpExists && tolerations[i].Value != "" {
+			return fmt.Errorf("key(%s): toleration value must be empty when `operator` is 'Exists'", tolerations[i].Key)
+		}
+	}
+	if len(tolerations) > 0 {
+		podSpec.Tolerations = s.stos.Spec.Tolerations
+	}
+	return nil
+}
+
+// getCSICredsEnvVar returns a corev1.EnvVar object with value from a secret key
 // reference, given env var name, reference secret name and key in the secret.
-func getCSICredsEnvVar(envVarName, secretName, key string) v1.EnvVar {
-	return v1.EnvVar{
+func getCSICredsEnvVar(envVarName, secretName, key string) corev1.EnvVar {
+	return corev1.EnvVar{
 		Name: envVarName,
-		ValueFrom: &v1.EnvVarSource{
-			SecretKeyRef: &v1.SecretKeySelector{
-				LocalObjectReference: v1.LocalObjectReference{
+		ValueFrom: &corev1.EnvVarSource{
+			SecretKeyRef: &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{
 					Name: secretName,
 				},
 				Key: key,
@@ -1106,7 +1125,7 @@ func getCSICredsEnvVar(envVarName, secretName, key string) v1.EnvVar {
 func (s *Deployment) createStatefulSet() error {
 	ls := labelsForStatefulSet(s.stos.Name)
 	replicas := int32(1)
-	hostpathDirOrCreate := v1.HostPathDirectoryOrCreate
+	hostpathDirOrCreate := corev1.HostPathDirectoryOrCreate
 
 	sset := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
@@ -1126,29 +1145,29 @@ func (s *Deployment) createStatefulSet() error {
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
 			},
-			Template: v1.PodTemplateSpec{
+			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: ls,
 				},
-				Spec: v1.PodSpec{
+				Spec: corev1.PodSpec{
 					ServiceAccountName: "storageos-statefulset-sa",
-					Containers: []v1.Container{
+					Containers: []corev1.Container{
 						{
 							Image:           s.stos.Spec.GetCSIExternalProvisionerImage(CSIV1Supported(s.k8sVersion)),
 							Name:            "csi-external-provisioner",
-							ImagePullPolicy: v1.PullIfNotPresent,
+							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args: []string{
 								"--v=5",
 								"--provisioner=storageos",
 								"--csi-address=$(ADDRESS)",
 							},
-							Env: []v1.EnvVar{
+							Env: []corev1.EnvVar{
 								{
 									Name:  addressEnvVar,
 									Value: "/csi/csi.sock",
 								},
 							},
-							VolumeMounts: []v1.VolumeMount{
+							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "plugin-dir",
 									MountPath: "/csi",
@@ -1158,18 +1177,18 @@ func (s *Deployment) createStatefulSet() error {
 						{
 							Image:           s.stos.Spec.GetCSIExternalAttacherImage(CSIV1Supported(s.k8sVersion)),
 							Name:            "csi-external-attacher",
-							ImagePullPolicy: v1.PullIfNotPresent,
+							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args: []string{
 								"--v=5",
 								"--csi-address=$(ADDRESS)",
 							},
-							Env: []v1.EnvVar{
+							Env: []corev1.EnvVar{
 								{
 									Name:  addressEnvVar,
 									Value: "/csi/csi.sock",
 								},
 							},
-							VolumeMounts: []v1.VolumeMount{
+							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "plugin-dir",
 									MountPath: "/csi",
@@ -1177,11 +1196,11 @@ func (s *Deployment) createStatefulSet() error {
 							},
 						},
 					},
-					Volumes: []v1.Volume{
+					Volumes: []corev1.Volume{
 						{
 							Name: "plugin-dir",
-							VolumeSource: v1.VolumeSource{
-								HostPath: &v1.HostPathVolumeSource{
+							VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
 									Path: s.stos.Spec.GetCSIPluginDir(CSIV1Supported(s.k8sVersion)),
 									Type: &hostpathDirOrCreate,
 								},
@@ -1194,31 +1213,31 @@ func (s *Deployment) createStatefulSet() error {
 	}
 
 	if CSIV1Supported(s.k8sVersion) {
-		driverReg := v1.Container{
+		driverReg := corev1.Container{
 			Image:           s.stos.Spec.GetCSIClusterDriverRegistrarImage(),
 			Name:            "csi-driver-k8s-registrar",
-			ImagePullPolicy: v1.PullIfNotPresent,
+			ImagePullPolicy: corev1.PullIfNotPresent,
 			Args: []string{
 				"--v=5",
 				"--csi-address=$(ADDRESS)",
 				"--pod-info-mount-version=v1",
 			},
-			Env: []v1.EnvVar{
+			Env: []corev1.EnvVar{
 				{
 					Name:  addressEnvVar,
 					Value: "/csi/csi.sock",
 				},
 				{
 					Name: kubeNodeNameEnvVar,
-					ValueFrom: &v1.EnvVarSource{
-						FieldRef: &v1.ObjectFieldSelector{
+					ValueFrom: &corev1.EnvVarSource{
+						FieldRef: &corev1.ObjectFieldSelector{
 							APIVersion: "v1",
 							FieldPath:  "spec.nodeName",
 						},
 					},
 				},
 			},
-			VolumeMounts: []v1.VolumeMount{
+			VolumeMounts: []corev1.VolumeMount{
 				{
 					Name:      "plugin-dir",
 					MountPath: "/csi",
@@ -1229,12 +1248,18 @@ func (s *Deployment) createStatefulSet() error {
 		sset.Spec.Template.Spec.Containers = append(sset.Spec.Template.Spec.Containers, driverReg)
 	}
 
+	podSpec := &sset.Spec.Template.Spec
+
+	if err := s.addTolerations(podSpec); err != nil {
+		return err
+	}
+
 	controllerutil.SetControllerReference(s.stos, sset, s.scheme)
 	return s.createOrUpdateObject(sset)
 }
 
 func (s *Deployment) createService() error {
-	svc := &v1.Service{
+	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Service",
@@ -1247,9 +1272,9 @@ func (s *Deployment) createService() error {
 			},
 			Annotations: s.stos.Spec.Service.Annotations,
 		},
-		Spec: v1.ServiceSpec{
-			Type: v1.ServiceType(s.stos.Spec.GetServiceType()),
-			Ports: []v1.ServicePort{
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceType(s.stos.Spec.GetServiceType()),
+			Ports: []corev1.ServicePort{
 				{
 					Name:       s.stos.Spec.GetServiceName(),
 					Protocol:   "TCP",
@@ -1274,7 +1299,7 @@ func (s *Deployment) createService() error {
 
 	// Patch storageos-api secret with above service IP in apiAddress.
 	if !s.stos.Spec.CSI.Enable {
-		secret := &v1.Secret{
+		secret := &corev1.Secret{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Secret",
 				APIVersion: "v1",
@@ -1352,7 +1377,7 @@ func (s *Deployment) createTLSSecret() error {
 		return err
 	}
 
-	secret := &v1.Secret{
+	secret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Secret",
@@ -1364,7 +1389,7 @@ func (s *Deployment) createTLSSecret() error {
 				"app": appName,
 			},
 		},
-		Type: v1.SecretType(tlsSecretType),
+		Type: corev1.SecretType(tlsSecretType),
 		Data: map[string][]byte{
 			tlsCertKey: cert,
 			tlsKeyKey:  key,
@@ -1389,7 +1414,7 @@ func (s *Deployment) createInitSecret() error {
 func (s *Deployment) getAdminCreds() ([]byte, []byte, error) {
 	var username, password []byte
 	if s.stos.Spec.SecretRefName != "" && s.stos.Spec.SecretRefNamespace != "" {
-		se := &v1.Secret{
+		se := &corev1.Secret{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Secret",
 				APIVersion: "v1",
@@ -1421,7 +1446,7 @@ func (s *Deployment) getAdminCreds() ([]byte, []byte, error) {
 func (s *Deployment) getTLSData() ([]byte, []byte, error) {
 	var cert, key []byte
 	if s.stos.Spec.SecretRefName != "" && s.stos.Spec.SecretRefNamespace != "" {
-		se := &v1.Secret{
+		se := &corev1.Secret{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Secret",
 				APIVersion: "v1",
@@ -1489,7 +1514,7 @@ func (s *Deployment) createCSISecrets() error {
 }
 
 func (s *Deployment) createCredSecret(name string, username, password []byte) error {
-	secret := &v1.Secret{
+	secret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Secret",
@@ -1501,7 +1526,7 @@ func (s *Deployment) createCredSecret(name string, username, password []byte) er
 				"app": appName,
 			},
 		},
-		Type: v1.SecretType(v1.SecretTypeOpaque),
+		Type: corev1.SecretType(corev1.SecretTypeOpaque),
 		Data: map[string][]byte{
 			"username": username,
 			"password": password,
@@ -1516,7 +1541,7 @@ func (s *Deployment) createCredSecret(name string, username, password []byte) er
 // storageos-api secret and returns them.
 func (s *Deployment) getCSICreds(usernameKey, passwordKey string) (username []byte, password []byte, err error) {
 	// Get the username and password from storageos-api secret object.
-	secret := &v1.Secret{
+	secret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Secret",
 			APIVersion: "v1",
@@ -1646,8 +1671,8 @@ func asOwner(m *api.StorageOSCluster) metav1.OwnerReference {
 	}
 }
 
-func podList() *v1.PodList {
-	return &v1.PodList{
+func podList() *corev1.PodList {
+	return &corev1.PodList{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Pod",
 			APIVersion: "v1",
@@ -1656,8 +1681,8 @@ func podList() *v1.PodList {
 }
 
 // NodeList returns an empty NodeList object.
-func NodeList() *v1.NodeList {
-	return &v1.NodeList{
+func NodeList() *corev1.NodeList {
+	return &corev1.NodeList{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Node",
 			APIVersion: "v1",
@@ -1665,7 +1690,7 @@ func NodeList() *v1.NodeList {
 	}
 }
 
-func getPodNames(pods []v1.Pod) []string {
+func getPodNames(pods []corev1.Pod) []string {
 	var podNames []string
 	for _, pod := range pods {
 		podNames = append(podNames, pod.Name)
@@ -1674,7 +1699,7 @@ func getPodNames(pods []v1.Pod) []string {
 }
 
 // GetNodeIPs returns a slice of IPs, given a slice of nodes.
-func GetNodeIPs(nodes []v1.Node) []string {
+func GetNodeIPs(nodes []corev1.Node) []string {
 	var ips []string
 	for _, node := range nodes {
 		ips = append(ips, node.Status.Addresses[0].Address)
