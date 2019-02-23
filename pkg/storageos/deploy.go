@@ -1638,12 +1638,16 @@ func (s *Deployment) createStorageClass() error {
 // the existing object is updated.
 func (s *Deployment) createOrUpdateObject(obj runtime.Object) error {
 	if err := s.client.Create(context.Background(), obj); err != nil {
-		if apierrors.IsAlreadyExists(err) && s.update {
-			return s.client.Update(context.Background(), obj)
-		} else if !apierrors.IsAlreadyExists(err) {
-			kind := obj.GetObjectKind().GroupVersionKind().Kind
-			return fmt.Errorf("failed to create %s: %v", kind, err)
+		if apierrors.IsAlreadyExists(err) {
+			if s.update {
+				return s.client.Update(context.Background(), obj)
+			}
+			// Exists, no update.
+			return nil
 		}
+
+		kind := obj.GetObjectKind().GroupVersionKind().Kind
+		return fmt.Errorf("failed to create %s: %v", kind, err)
 	}
 	return nil
 }
