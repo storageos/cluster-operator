@@ -21,7 +21,6 @@ import (
 	"k8s.io/client-go/tools/record"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -37,6 +36,9 @@ const (
 
 	daemonsetName   = "storageos-daemonset"
 	statefulsetName = "storageos-statefulset"
+
+	keyManagementRoleName    = "key-management-role"
+	keyManagementBindingName = "key-management-binding"
 
 	tlsSecretType       = "kubernetes.io/tls"
 	storageosSecretType = "kubernetes.io/storageos"
@@ -228,6 +230,90 @@ func (s *Deployment) Deploy() error {
 	return s.updateStorageOSStatus(status)
 }
 
+// Delete deletes all the storageos resources.
+// This explicit delete is implemented instead of depending on the garbage
+// collector because sometimes the garbage collector deletes the resources
+// with owner reference as a CRD without the parent being deleted. This happens
+// especially when a cluster reboots. Althrough the operator re-creates the
+// resources, we want to avoid this behavior by implementing an explcit delete.
+func (s *Deployment) Delete() error {
+
+	if err := s.deleteStorageClass("fast"); err != nil {
+		return err
+	}
+
+	if err := s.deleteService(s.stos.Spec.GetServiceName()); err != nil {
+		return err
+	}
+
+	if err := s.deleteDaemonSet(daemonsetName); err != nil {
+		return err
+	}
+
+	if err := s.deleteSecret(initSecretName); err != nil {
+		return err
+	}
+
+	if err := s.deleteRoleBinding(keyManagementBindingName); err != nil {
+		return err
+	}
+
+	if err := s.deleteRole(keyManagementRoleName); err != nil {
+		return err
+	}
+
+	if err := s.deleteServiceAccount("storageos-daemonset-sa"); err != nil {
+		return err
+	}
+
+	if s.stos.Spec.CSI.Enable {
+		if err := s.deleteStatefulSet(statefulsetName); err != nil {
+			return err
+		}
+
+		if err := s.deleteClusterRoleBinding("csi-attacher-binding"); err != nil {
+			return err
+		}
+
+		if err := s.deleteClusterRoleBinding("csi-provisioner-binding"); err != nil {
+			return err
+		}
+
+		if err := s.deleteClusterRole("csi-attacher-role"); err != nil {
+			return err
+		}
+
+		if err := s.deleteClusterRole("csi-provisioner-role"); err != nil {
+			return err
+		}
+
+		if err := s.deleteServiceAccount("storageos-statefulset-sa"); err != nil {
+			return err
+		}
+
+		if err := s.deleteClusterRoleBinding("k8s-driver-registrar-binding"); err != nil {
+			return err
+		}
+
+		if err := s.deleteClusterRoleBinding("driver-registrar-binding"); err != nil {
+			return err
+		}
+
+		if err := s.deleteClusterRole("driver-registrar-role"); err != nil {
+			return err
+		}
+
+		if err := s.deleteCSISecrets(); err != nil {
+			return err
+		}
+	}
+
+	// NOTE: Do not delete the namespace. Namespace can have some resources
+	// created by the control plane. They must not be deleted.
+
+	return nil
+}
+
 func (s *Deployment) createNamespace() error {
 	ns := &corev1.Namespace{
 		TypeMeta: metav1.TypeMeta{
@@ -242,12 +328,22 @@ func (s *Deployment) createNamespace() error {
 		},
 	}
 
-	controllerutil.SetControllerReference(s.stos, ns, s.scheme)
 	return s.createOrUpdateObject(ns)
 }
 
 func (s *Deployment) createServiceAccount(name string) error {
-	sa := &corev1.ServiceAccount{
+	sa := s.getServiceAccount(name)
+	return s.createOrUpdateObject(sa)
+}
+
+func (s *Deployment) deleteServiceAccount(name string) error {
+	return s.deleteObject(s.getServiceAccount(name))
+}
+
+// getServiceAccount creates a generic service account object with the given
+// name and returns it.
+func (s *Deployment) getServiceAccount(name string) *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "ServiceAccount",
@@ -260,9 +356,6 @@ func (s *Deployment) createServiceAccount(name string) error {
 			},
 		},
 	}
-
-	controllerutil.SetControllerReference(s.stos, sa, s.scheme)
-	return s.createOrUpdateObject(sa)
 }
 
 func (s *Deployment) createServiceAccountForDaemonSet() error {
@@ -274,33 +367,51 @@ func (s *Deployment) createServiceAccountForStatefulSet() error {
 }
 
 func (s *Deployment) createRoleForKeyMgmt() error {
-	role := &rbacv1.Role{
+	role := s.getRole(keyManagementRoleName)
+	role.Rules = []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{""},
+			Resources: []string{"secrets"},
+			Verbs:     []string{"get", "list", "create", "delete"},
+		},
+	}
+
+	return s.createOrUpdateObject(role)
+}
+
+func (s *Deployment) deleteRole(name string) error {
+	return s.deleteObject(s.getRole(keyManagementRoleName))
+}
+
+// getRole creates a generic role object with the given name and returns it.
+func (s *Deployment) getRole(name string) *rbacv1.Role {
+	return &rbacv1.Role{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
 			Kind:       "Role",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "key-management-role",
+			Name:      name,
 			Namespace: s.stos.Spec.GetResourceNS(),
 			Labels: map[string]string{
 				"app": appName,
 			},
 		},
-		Rules: []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{""},
-				Resources: []string{"secrets"},
-				Verbs:     []string{"get", "list", "create", "delete"},
-			},
-		},
 	}
-
-	controllerutil.SetControllerReference(s.stos, role, s.scheme)
-	return s.createOrUpdateObject(role)
 }
 
 func (s *Deployment) createClusterRole(name string, rules []rbacv1.PolicyRule) error {
-	role := &rbacv1.ClusterRole{
+	role := s.getClusterRole(name)
+	role.Rules = rules
+	return s.createOrUpdateObject(role)
+}
+
+func (s *Deployment) deleteClusterRole(name string) error {
+	return s.deleteObject(s.getClusterRole(name))
+}
+
+func (s *Deployment) getClusterRole(name string) *rbacv1.ClusterRole {
+	return &rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
 			Kind:       "ClusterRole",
@@ -311,11 +422,7 @@ func (s *Deployment) createClusterRole(name string, rules []rbacv1.PolicyRule) e
 				"app": appName,
 			},
 		},
-		Rules: rules,
 	}
-
-	controllerutil.SetControllerReference(s.stos, role, s.scheme)
-	return s.createOrUpdateObject(role)
 }
 
 func (s *Deployment) createClusterRoleForDriverRegistrar() error {
@@ -407,38 +514,55 @@ func (s *Deployment) createClusterRoleForAttacher() error {
 }
 
 func (s *Deployment) createRoleBindingForKeyMgmt() error {
-	roleBinding := &rbacv1.RoleBinding{
+	roleBinding := s.getRoleBinding(keyManagementBindingName)
+	roleBinding.Subjects = []rbacv1.Subject{
+		{
+			Kind:      "ServiceAccount",
+			Name:      "storageos-daemonset-sa",
+			Namespace: s.stos.Spec.GetResourceNS(),
+		},
+	}
+	roleBinding.RoleRef = rbacv1.RoleRef{
+		Kind:     "Role",
+		Name:     keyManagementRoleName,
+		APIGroup: "rbac.authorization.k8s.io",
+	}
+	return s.createOrUpdateObject(roleBinding)
+}
+
+func (s *Deployment) deleteRoleBinding(name string) error {
+	return s.deleteObject(s.getRoleBinding(name))
+}
+
+func (s *Deployment) getRoleBinding(name string) *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
 			Kind:       "RoleBinding",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "key-management-binding",
+			Name:      name,
 			Namespace: s.stos.Spec.GetResourceNS(),
 			Labels: map[string]string{
 				"app": appName,
 			},
 		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      "ServiceAccount",
-				Name:      "storageos-daemonset-sa",
-				Namespace: s.stos.Spec.GetResourceNS(),
-			},
-		},
-		RoleRef: rbacv1.RoleRef{
-			Kind:     "Role",
-			Name:     "key-management-role",
-			APIGroup: "rbac.authorization.k8s.io",
-		},
 	}
-
-	controllerutil.SetControllerReference(s.stos, roleBinding, s.scheme)
-	return s.createOrUpdateObject(roleBinding)
 }
 
 func (s *Deployment) createClusterRoleBinding(name string, subjects []rbacv1.Subject, roleRef rbacv1.RoleRef) error {
-	roleBinding := &rbacv1.ClusterRoleBinding{
+	roleBinding := s.getClusterRoleBinding(name)
+	roleBinding.Subjects = subjects
+	roleBinding.RoleRef = roleRef
+	return s.createOrUpdateObject(roleBinding)
+}
+
+func (s *Deployment) deleteClusterRoleBinding(name string) error {
+	return s.deleteObject(s.getClusterRoleBinding(name))
+}
+
+func (s *Deployment) getClusterRoleBinding(name string) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
 			Kind:       "ClusterRoleBinding",
@@ -449,12 +573,7 @@ func (s *Deployment) createClusterRoleBinding(name string, subjects []rbacv1.Sub
 				"app": appName,
 			},
 		},
-		Subjects: subjects,
-		RoleRef:  roleRef,
 	}
-
-	controllerutil.SetControllerReference(s.stos, roleBinding, s.scheme)
-	return s.createOrUpdateObject(roleBinding)
 }
 
 func (s *Deployment) createClusterRoleBindingForDriverRegistrar() error {
@@ -750,8 +869,27 @@ func (s *Deployment) createDaemonSet() error {
 
 	s.addCSI(podSpec)
 
-	controllerutil.SetControllerReference(s.stos, dset, s.scheme)
 	return s.createOrUpdateObject(dset)
+}
+
+func (s *Deployment) deleteDaemonSet(name string) error {
+	return s.deleteObject(s.getDaemonSet(name))
+}
+
+func (s *Deployment) getDaemonSet(name string) *appsv1.DaemonSet {
+	return &appsv1.DaemonSet{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "DaemonSet",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: s.stos.Spec.GetResourceNS(),
+			Labels: map[string]string{
+				"app": "storageos",
+			},
+		},
+	}
 }
 
 // addNodeContainerResources adds resource requirements for the node containers.
@@ -1254,42 +1392,47 @@ func (s *Deployment) createStatefulSet() error {
 		return err
 	}
 
-	controllerutil.SetControllerReference(s.stos, sset, s.scheme)
 	return s.createOrUpdateObject(sset)
 }
 
-func (s *Deployment) createService() error {
-	svc := &corev1.Service{
+func (s *Deployment) deleteStatefulSet(name string) error {
+	return s.deleteObject(s.getStatefulSet(name))
+}
+
+func (s *Deployment) getStatefulSet(name string) *appsv1.StatefulSet {
+	return &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
+			APIVersion: "apps/v1",
+			Kind:       "StatefulSet",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      s.stos.Spec.GetServiceName(),
+			Name:      name,
 			Namespace: s.stos.Spec.GetResourceNS(),
 			Labels: map[string]string{
-				"app": appName,
-			},
-			Annotations: s.stos.Spec.Service.Annotations,
-		},
-		Spec: corev1.ServiceSpec{
-			Type: corev1.ServiceType(s.stos.Spec.GetServiceType()),
-			Ports: []corev1.ServicePort{
-				{
-					Name:       s.stos.Spec.GetServiceName(),
-					Protocol:   "TCP",
-					Port:       int32(s.stos.Spec.GetServiceInternalPort()),
-					TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: int32(s.stos.Spec.GetServiceExternalPort())},
-				},
-			},
-			Selector: map[string]string{
-				"app":  appName,
-				"kind": daemonsetKind,
+				"app": "storageos",
 			},
 		},
 	}
+}
 
-	controllerutil.SetControllerReference(s.stos, svc, s.scheme)
+func (s *Deployment) createService() error {
+	svc := s.getService(s.stos.Spec.GetServiceName())
+	svc.Spec = corev1.ServiceSpec{
+		Type: corev1.ServiceType(s.stos.Spec.GetServiceType()),
+		Ports: []corev1.ServicePort{
+			{
+				Name:       s.stos.Spec.GetServiceName(),
+				Protocol:   "TCP",
+				Port:       int32(s.stos.Spec.GetServiceInternalPort()),
+				TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: int32(s.stos.Spec.GetServiceExternalPort())},
+			},
+		},
+		Selector: map[string]string{
+			"app":  appName,
+			"kind": daemonsetKind,
+		},
+	}
+
 	if err := s.client.Create(context.Background(), svc); err != nil && !apierrors.IsAlreadyExists(err) {
 		return fmt.Errorf("failed to create %s: %v", svc.GroupVersionKind().Kind, err)
 	}
@@ -1336,6 +1479,27 @@ func (s *Deployment) createService() error {
 	return nil
 }
 
+func (s *Deployment) deleteService(name string) error {
+	return s.deleteObject(s.getService(name))
+}
+
+func (s *Deployment) getService(name string) *corev1.Service {
+	return &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: s.stos.Spec.GetResourceNS(),
+			Labels: map[string]string{
+				"app": appName,
+			},
+			Annotations: s.stos.Spec.Service.Annotations,
+		},
+	}
+}
+
 func (s *Deployment) createIngress() error {
 	ingress := &v1beta1.Ingress{
 		TypeMeta: metav1.TypeMeta{
@@ -1367,8 +1531,28 @@ func (s *Deployment) createIngress() error {
 		}
 	}
 
-	controllerutil.SetControllerReference(s.stos, ingress, s.scheme)
 	return s.createOrUpdateObject(ingress)
+}
+
+func (s *Deployment) deleteIngress(name string) error {
+	return s.deleteObject(s.getIngress(name))
+}
+
+func (s *Deployment) getIngress(name string) *v1beta1.Ingress {
+	return &v1beta1.Ingress{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "extensions/v1beta1",
+			Kind:       "Ingress",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: s.stos.Spec.GetResourceNS(),
+			Labels: map[string]string{
+				"app": appName,
+			},
+			Annotations: s.stos.Spec.Ingress.Annotations,
+		},
+	}
 }
 
 func (s *Deployment) createTLSSecret() error {
@@ -1377,27 +1561,33 @@ func (s *Deployment) createTLSSecret() error {
 		return err
 	}
 
-	secret := &corev1.Secret{
+	secret := s.getSecret(tlsSecretName)
+	secret.Type = corev1.SecretType(tlsSecretType)
+	secret.Data = map[string][]byte{
+		tlsCertKey: cert,
+		tlsKeyKey:  key,
+	}
+	return s.createOrUpdateObject(secret)
+}
+
+func (s *Deployment) deleteSecret(name string) error {
+	return s.deleteObject(s.getSecret(name))
+}
+
+func (s *Deployment) getSecret(name string) *corev1.Secret {
+	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Secret",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      tlsSecretName,
+			Name:      name,
 			Namespace: s.stos.Spec.GetResourceNS(),
 			Labels: map[string]string{
 				"app": appName,
 			},
 		},
-		Type: corev1.SecretType(tlsSecretType),
-		Data: map[string][]byte{
-			tlsCertKey: cert,
-			tlsKeyKey:  key,
-		},
 	}
-
-	controllerutil.SetControllerReference(s.stos, secret, s.scheme)
-	return s.createOrUpdateObject(secret)
 }
 
 func (s *Deployment) createInitSecret() error {
@@ -1513,6 +1703,23 @@ func (s *Deployment) createCSISecrets() error {
 	return nil
 }
 
+// deleteCSISecrets deletes all the CSI related secrets.
+func (s *Deployment) deleteCSISecrets() error {
+	if err := s.deleteSecret(csiProvisionerSecretName); err != nil {
+		return err
+	}
+
+	if err := s.deleteSecret(csiControllerPublishSecretName); err != nil {
+		return err
+	}
+
+	if err := s.deleteSecret(csiNodePublishSecretName); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *Deployment) createCredSecret(name string, username, password []byte) error {
 	secret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
@@ -1533,7 +1740,6 @@ func (s *Deployment) createCredSecret(name string, username, password []byte) er
 		},
 	}
 
-	controllerutil.SetControllerReference(s.stos, secret, s.scheme)
 	return s.createOrUpdateObject(secret)
 }
 
@@ -1573,21 +1779,10 @@ func (s *Deployment) createStorageClass() error {
 		provisioner = csiProvisionerName
 	}
 
-	sc := &storagev1.StorageClass{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "storage.k8s.io/v1",
-			Kind:       "StorageClass",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "fast",
-			Labels: map[string]string{
-				"app": appName,
-			},
-		},
-		Provisioner: provisioner,
-		Parameters: map[string]string{
-			"pool": "default",
-		},
+	sc := s.getStorageClass("fast")
+	sc.Provisioner = provisioner
+	sc.Parameters = map[string]string{
+		"pool": "default",
 	}
 
 	if s.stos.Spec.CSI.Enable {
@@ -1629,8 +1824,26 @@ func (s *Deployment) createStorageClass() error {
 		sc.Parameters[secretNameKey] = s.stos.Spec.SecretRefName
 	}
 
-	controllerutil.SetControllerReference(s.stos, sc, s.scheme)
 	return s.createOrUpdateObject(sc)
+}
+
+func (s *Deployment) deleteStorageClass(name string) error {
+	return s.deleteObject(s.getStorageClass(name))
+}
+
+func (s *Deployment) getStorageClass(name string) *storagev1.StorageClass {
+	return &storagev1.StorageClass{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "storage.k8s.io/v1",
+			Kind:       "StorageClass",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+			Labels: map[string]string{
+				"app": appName,
+			},
+		},
+	}
 }
 
 // createOrUpdateObject attempts to create a given object. If the object already
@@ -1648,6 +1861,18 @@ func (s *Deployment) createOrUpdateObject(obj runtime.Object) error {
 
 		kind := obj.GetObjectKind().GroupVersionKind().Kind
 		return fmt.Errorf("failed to create %s: %v", kind, err)
+	}
+	return nil
+}
+
+// deleteObject deletes a given runtime object.
+func (s *Deployment) deleteObject(obj runtime.Object) error {
+	if err := s.client.Delete(context.Background(), obj); err != nil {
+		// If not found, the object has already been deleted.
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
 	}
 	return nil
 }
