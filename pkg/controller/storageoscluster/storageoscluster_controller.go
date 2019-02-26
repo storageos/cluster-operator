@@ -75,6 +75,7 @@ type ReconcileStorageOSCluster struct {
 	currentCluster *storageosv1alpha1.StorageOSCluster
 	k8sVersion     string
 	recorder       record.EventRecorder
+	deployment     *storageos.Deployment
 }
 
 // SetCurrentClusterIfNone checks if there's any existing current cluster and
@@ -123,7 +124,13 @@ func (r *ReconcileStorageOSCluster) Reconcile(request reconcile.Request) (reconc
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// Cluster instance not found. Reset the current cluster.
+			// Cluster instance not found. Delete the resources and reset the current cluster.
+			if r.currentCluster != nil {
+				if err := getDeployment(r).Delete(); err != nil {
+					// Error deleting - requeue the request.
+					return reconcileResult, err
+				}
+			}
 			r.ResetCurrentCluster()
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
@@ -216,12 +223,7 @@ func (r *ReconcileStorageOSCluster) reconcile(m *storageosv1alpha1.StorageOSClus
 		// 	r.SetCurrentCluster(m)
 		// }
 
-		// TODO: Remove this after resolving the conflict between two way
-		// binding and upgrade.
-		updateIfExists := false
-
-		stosDeployment := storageos.NewDeployment(r.client, m, r.recorder, r.scheme, r.k8sVersion, updateIfExists)
-		if err := stosDeployment.Deploy(); err != nil {
+		if err := getDeployment(r).Deploy(); err != nil {
 			// Ignore "Operation cannot be fulfilled" error. It happens when the
 			// actual state of object is different from what is known to the operator.
 			// Operator would resync and retry the failed operation on its own.
@@ -231,7 +233,14 @@ func (r *ReconcileStorageOSCluster) reconcile(m *storageosv1alpha1.StorageOSClus
 			return err
 		}
 	} else {
-		r.recorder.Event(m, corev1.EventTypeNormal, "Terminating", "StorageOS object deleted")
+		// Delete the deployment once the finalizers are set on the cluster
+		// resource.
+		r.recorder.Event(m, corev1.EventTypeNormal, "Terminating", "Deleting all the resources...")
+
+		if err := getDeployment(r).Delete(); err != nil {
+			return err
+		}
+
 		r.ResetCurrentCluster()
 		// Reset finalizers and let k8s delete the object.
 		// When finalizers are set on an object, metadata.deletionTimestamp is
@@ -325,4 +334,21 @@ func getMatchingTolerations(taints []corev1.Taint, tolerations []corev1.Tolerati
 		}
 	}
 	return true, result
+}
+
+// getDeployment returns an existing storageos deployment if found, else creates
+// a new deployment object, stores in the reconcile object and returns the same.
+func getDeployment(r *ReconcileStorageOSCluster) *storageos.Deployment {
+	if r.deployment != nil {
+		return r.deployment
+	}
+
+	// update is set to false because we don't update any existing resources
+	// for now. May change in future.
+	// TODO: Change this after resolving the conflict between two way
+	// binding and upgrade.
+	updateIfExists := false
+
+	r.deployment = storageos.NewDeployment(r.client, r.currentCluster, r.recorder, r.scheme, r.k8sVersion, updateIfExists)
+	return r.deployment
 }

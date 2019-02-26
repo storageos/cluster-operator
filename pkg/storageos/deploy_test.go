@@ -1033,3 +1033,87 @@ func TestDeployNodeResources(t *testing.T) {
 		t.Errorf("unexpected resources requests value:\n\t(GOT) %v\n\t(WNT) %v", nodeContainer.Resources.Requests, stosCluster.Spec.Resources.Limits)
 	}
 }
+
+func TestDelete(t *testing.T) {
+	stosCluster := &api.StorageOSCluster{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: gvk.GroupVersion().String(),
+			Kind:       gvk.Kind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "teststos",
+			Namespace: "default",
+		},
+		Spec: api.StorageOSClusterSpec{
+			CSI: api.StorageOSClusterCSI{
+				Enable: true,
+			},
+		},
+	}
+
+	c := fake.NewFakeClientWithScheme(testScheme)
+	if err := c.Create(context.Background(), stosCluster); err != nil {
+		t.Fatalf("failed to create storageoscluster object: %v", err)
+	}
+
+	createdNamespace := &corev1.Namespace{}
+	nsNameNamespace := types.NamespacedName{
+		Name: defaultNS,
+	}
+
+	// The namespace should not exist.
+	if err := c.Get(context.Background(), nsNameNamespace, createdNamespace); err == nil {
+		t.Fatal("expected the namespace to not exist initially", err)
+	}
+
+	deploy := NewDeployment(c, stosCluster, nil, testScheme, "1.13.0", false)
+	if err := deploy.Deploy(); err != nil {
+		t.Fatalf("failed to deploy cluster: %v", err)
+	}
+
+	// Check if the namespace, daemonset and statefulset have been created.
+	if err := c.Get(context.Background(), nsNameNamespace, createdNamespace); err != nil {
+		t.Fatal("failed to get the created namespace", err)
+	}
+
+	createdDaemonset := &appsv1.DaemonSet{}
+
+	nsNameDaemonSet := types.NamespacedName{
+		Name:      daemonsetName,
+		Namespace: defaultNS,
+	}
+
+	if err := c.Get(context.Background(), nsNameDaemonSet, createdDaemonset); err != nil {
+		t.Fatal("failed to get the created daemonset", err)
+	}
+
+	createdStatefulset := &appsv1.StatefulSet{}
+
+	nsNameStatefulSet := types.NamespacedName{
+		Name:      statefulsetName,
+		Namespace: defaultNS,
+	}
+
+	if err := c.Get(context.Background(), nsNameStatefulSet, createdStatefulset); err != nil {
+		t.Fatal("failed to get the created statefulset", err)
+	}
+
+	// Delete the deployment.
+	if err := deploy.Delete(); err != nil {
+		t.Fatalf("failed to delete cluster: %v", err)
+	}
+
+	// Daemonset and statefulset should have been deleted.
+	if err := c.Get(context.Background(), nsNameDaemonSet, createdDaemonset); err == nil {
+		t.Fatal("expected the daemonset to be deleted, but it still exists")
+	}
+
+	if err := c.Get(context.Background(), nsNameStatefulSet, createdStatefulset); err == nil {
+		t.Fatal("expected the statefulset to be deleted, but it still exists")
+	}
+
+	// The namespace should not be deleted.
+	if err := c.Get(context.Background(), nsNameNamespace, createdNamespace); err != nil {
+		t.Fatal("failed to get the created namespace", err)
+	}
+}
