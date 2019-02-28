@@ -464,7 +464,7 @@ func (s *Deployment) createClusterRoleForProvisioner() error {
 			Verbs:     []string{"get", "list", "watch", "update"},
 		},
 		{
-			APIGroups: []string{"storageo.k8s.io"},
+			APIGroups: []string{"storage.k8s.io"},
 			Resources: []string{"storageclasses"},
 			Verbs:     []string{"list", "watch", "get"},
 		},
