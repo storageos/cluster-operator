@@ -194,14 +194,7 @@ main() {
 
     echo "Ready for testing"
 
-    # Create a namespace for testing operator.
-    # This is needed because the service account created using
-    # deploy/service_account.yaml has a static namespace. Craeting operator in
-    # other namespace will result in permission errors.
-    kubectl create ns storageos-operator
-
     NODE_NAME=$(kubectl get nodes --no-headers=true -o=name)
-    kubectl taint nodes $NODE_NAME key=value:NoSchedule
 
     # Build the operator container image.
     # This would build a container with tag storageos/cluster-operator:test,
@@ -217,27 +210,42 @@ main() {
         docker exec $x bash -c "docker load < /cluster-operator.tar"
     fi
 
-    # Run the e2e test in the created namespace.
-    #
-    # Tags are passed to test local command to run e2e test packages only with
-    # specific config.
-    # Tag "intree" would run k8s intree plugin test setup.
-    # Tag "csi" would run csi test setup.
-    # The cluster-operator container image used in the e2e setup is based on the
-    # operator container image in the manifest file deploy/operator.yaml. The
-    # deploy manifests are combined and applied to deploy the operator before
-    # running the e2e tests.
-    #
-    # NOTE: Append this test command with `|| true` to debug by inspecting the
-    # resource details. Also comment `defer ctx.Cleanup()` in the cluster to
-    # avoid resouce cleanup.
-    operator-sdk test local ./test/e2e --go-test-flags "-v -tags $2" --namespace storageos-operator
+    if [ "$3" = "olm" ]; then
+        source ./test/olm.sh
+        install_olm
+        install_olm_storageos
+    else
+        # Add taint on the node.
+        kubectl taint nodes $NODE_NAME key=value:NoSchedule
 
-    # echo "**** Resource details for storageos-operator namespace ****"
-    # print_pod_details_and_logs storageos-operator
+        # Create a namespace for testing operator.
+        # This is needed because the service account created using
+        # deploy/service_account.yaml has a static namespace. Creating operator in
+        # other namespace will result in permission errors.
+        kubectl create ns storageos-operator
 
-    # echo "**** Resource details for storageos namespace ****"
-    # print_pod_details_and_logs storageos
+        # Run the e2e test in the created namespace.
+        #
+        # Tags are passed to test local command to run e2e test packages only with
+        # specific config.
+        # Tag "intree" would run k8s intree plugin test setup.
+        # Tag "csi" woul run csi test setup.
+        # The cluster-operator container image used in the e2e setup is based on the
+        # operator container image in the manifest file deploy/operator.yaml. The
+        # deploy manifests are combined and applied to deploy the operator before
+        # running the e2e tests.
+        #
+        # NOTE: Append this test command with `|| true` to debug by inspecting the
+        # resource details. Also comment `defer ctx.Cleanup()` in the cluster to
+        # avoid resouce cleanup.
+        operator-sdk test local ./test/e2e --go-test-flags "-v -tags $2" --namespace storageos-operator
+
+        # echo "**** Resource details for storageos-operator namespace ****"
+        # print_pod_details_and_logs storageos-operator
+
+        # echo "**** Resource details for storageos namespace ****"
+        # print_pod_details_and_logs storageos
+    fi
 
     echo "Done Testing!"
 }
