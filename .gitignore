@@ -3,6 +3,7 @@ build/_output
 build/_test
 build/operator-sdk
 deploy/test
+test/olm
 # Created by https://www.gitignore.io/api/go,vim,emacs,visualstudiocode
 ### Emacs ###
 # -*- mode: gitignore; -*-
