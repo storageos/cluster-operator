@@ -292,11 +292,11 @@ data:
         minKubeVersion: "1.10.0"
         maturity: alpha
         maintainers:
-        - name: StorageOS, Ltd
+        - name: StorageOS, Inc
           email: support@storageos.com
 
         provider:
-          name: StorageOS, Ltd
+          name: StorageOS, Inc
 
         labels:
           alm-status-descriptors: storageosoperator.v0.0.9
