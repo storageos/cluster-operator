@@ -1,5 +1,5 @@
 #! package-manifest: deploy/chart/catalog_resources/rh-operators/storageosoperator.v0.0.10.clusterserviceversion.yaml
 packageName: storageos
 channels:
-- name: alpha
+- name: stable
   currentCSV: storageosoperator.v0.0.10
