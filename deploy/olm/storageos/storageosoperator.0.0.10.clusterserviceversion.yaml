@@ -12,17 +12,18 @@ metadata:
     description: Cloud-native, persistent storage for containers.
 spec:
   # replaces: 
-  displayName: Storageos Cluster Operator description: |
+  displayName: Storageos
+  description: |
     StorageOS is a cloud native, software-defined storage platform that
     transforms commodity server or cloud based disk capacity into
     enterprise-class persistent storage for containers. StorageOS is ideal for
     deploying databases, message busses, and other mission-critical stateful
     solutions, where rapid recovery and fault tolerance are essential.
 
-    The StorageOS Cluster Operator installs and manages StorageOS within a
-    cluster. Cluster nodes may contribute local or attached disk-based storage
-    into a distributed pool, which is then available to all cluster members via
-    a global namespace.
+    The StorageOS Operator installs and manages StorageOS within a cluster.
+    Cluster nodes may contribute local or attached disk-based storage into a
+    distributed pool, which is then available to all cluster members via a
+    global namespace.
 
     Volumes are available across the cluster so if a container gets moved to
     another node it has immediate access to re-attach its data. Data can be
@@ -53,7 +54,8 @@ spec:
     amount of storage used in a backing store as well as reducing the network
     bandwidth requirements for replication.
 
-    * **In-memory caching** - Speed up access to data even when accessed remotely.
+    * **In-memory caching** - Speed up access to data even when accessed
+    remotely.
 
     * **Quality of service** - Prioritize data traffic and address the “noisy
     neighbors” problem.
@@ -73,7 +75,7 @@ spec:
     application requirements.  Works with any infrastructure – on-premises, VM,
     bare metal or cloud.
 
-    * **Small footprint** - Lightweight container requires minumum 1 core with
+    * **Small footprint** - Lightweight container requires minimum 1 core with
     2GB of RAM.  Runs in user-space on any 64-bit Linux with no custom kernel
     modules.
 
@@ -107,7 +109,7 @@ spec:
   links:
   - name: Documentation
     url: https://docs.storageos.com/
-  - name: StorageOS Cluster Operator Source Code
+  - name: StorageOS Operator Source Code
     url: https://github.com/storageos/cluster-operator
 
   icon:
