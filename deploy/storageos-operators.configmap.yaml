@@ -164,13 +164,92 @@ data:
       metadata:
         name: storageosoperator.0.0.0
         namespace: olm
-        annotations:		
-          alm-examples: '[{"apiVersion":"storageos.com/v1","kind":"StorageOSCluster","metadata":{"name":"example","namespace":"default"},"spec":{"secretRefName":"storageos-api","secretRefNamespace": "default"}}]'
+        annotations:
+          capabilities: Full Lifecycle
+          categories: "Storage"
+          alm-examples: '[{"apiVersion":"storageos.com/v1alpha","kind":"StorageOSCluster","metadata":{"name":"example","namespace":"default"},"spec":{"secretRefName":"storageos-api","secretRefNamespace":"default"}}]'
+          description: Cloud-native, persistent storage for containers.
       spec:
         # replaces: 
-        displayName: Storageos Cluster Operator
+        displayName: Storageos
         description: |
-          StorageOS Cluster Operator description.
+          StorageOS is a cloud native, software-defined storage platform that
+          transforms commodity server or cloud based disk capacity into
+          enterprise-class persistent storage for containers. StorageOS is ideal for
+          deploying databases, message busses, and other mission-critical stateful
+          solutions, where rapid recovery and fault tolerance are essential.
+
+          The StorageOS Operator installs and manages StorageOS within a cluster.
+          Cluster nodes may contribute local or attached disk-based storage into a
+          distributed pool, which is then available to all cluster members via a
+          global namespace.
+
+          Volumes are available across the cluster so if a container gets moved to
+          another node it has immediate access to re-attach its data. Data can be
+          protected with synchronous replication. Compression, caching, and QoS are
+          enabled by default, and all volumes are thinly-provisioned.
+
+          No other hardware or software is required.
+
+          StorageOS is free to use up to 100GB of presented Storage, increasing to
+          500GB after registration.  For additional capacity and support plans contact
+          sales@storageos.com.
+
+          ## Supported Features
+
+          * **Rapid volume failover** - If a container gets re-scheduled to another
+          node, any StorageOS volumes can be re-attached immediately, irrespective of
+          where the data is located within the cluster.
+
+          * **Data protection** - Data is replicated synchronously, up to 6 copies.
+
+          * **Block checksums** - Each block is protected by a checksum which
+          automatically detects any corruption of data in the underlying storage
+          media.
+
+          * **Thin provisioning** - Only consume the space you need in a storage pool.
+
+          * **Data reduction** - Transparent inline data compression to reduce the
+          amount of storage used in a backing store as well as reducing the network
+          bandwidth requirements for replication.
+
+          * **In-memory caching** - Speed up access to data even when accessed
+          remotely.
+
+          * **Quality of service** - Prioritize data traffic and address the “noisy
+          neighbors” problem.
+
+          * **Flexible configuration** - Use labels to automate data placement and
+          enforce data policy such as replication. Ideal for compliance and infosec
+          teams to enforce policies and rules while still enabling self-service
+          storage by developers and DevOps teams.
+
+          * **Access control** - Support multiple namespace – individual users are
+          permissioned to specific storage namespaces.
+
+          * **Observability & instrumentation** - Log streams for observability and
+          Prometheus support for instrumentation.
+
+          * **Deployment flexibility** - Scale up or scale out storage based on
+          application requirements.  Works with any infrastructure – on-premises, VM,
+          bare metal or cloud.
+
+          * **Small footprint** - Lightweight container requires minimum 1 core with
+          2GB of RAM.  Runs in user-space on any 64-bit Linux with no custom kernel
+          modules.
+
+          ## Required Parameters
+
+          * `secretRefName` - the name of a secret that contains two keys for the `apiUsername` and `apiPassword` to be used as api credentials ([documentation](https://docs.storageos.com/docs/reference/cluster-operator/examples))
+          * `secretRefNamespace` - the namespace where the api credentials secret is stored
+
+          ## About StorageOS
+
+          StorageOS gives users total control of their own storage environment –
+          whether in the cloud or on-premises. Our customers take advantage of storage
+          on any platform while maintaining full control of business requirements
+          around availability, data mobility, performance, security, data residency
+          compliance and business continuity.
 
         keywords: ['storageos', 'storage', 'persistent storage', 'open source']
 
@@ -331,17 +410,24 @@ data:
             version: v1alpha1
             kind: StorageOSCluster
             displayName: StorageOS Cluster
-            description: Represents a cluster of StorageOS nodes.
+            description: StorageOS Cluster installs StorageOS in the cluster. It contains all the configuration for setting up a StorageOS cluster and also shows the status of the running StorageOS cluster.
+            specDescriptors:
+            - description: The name of the secret object that stores the api credentials.
+              displayName: Cluster Secret
+              path: secretRefName
+            - description: The name of the namespace where the secret object that stores the api credentials exists.
+              displayName: Cluster Secret Namespace
+              path: secretRefNamespace
           - name: jobs.storageos.com
             version: v1alpha1
             kind: Job
             displayName: StorageOS Job
-            description: Represents a StorageOS Job.
+            description: StorageOS Job creates special pods that run on all the node and perform an administrative task. This could be used for cluster maintenance tasks.
           - name: storageosupgrades.storageos.com
             version: v1alpha1
             kind: StorageOSUpgrade
             displayName: StorageOS Upgrade
-            description: Represents a StorageOS Upgrade.
+            description: StorageOS Upgrade automatically upgrades an existing StorageOS cluster as per the upgrade configuration.
 
   packages: |-
 
