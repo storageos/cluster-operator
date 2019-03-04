@@ -75,7 +75,7 @@ uninstall_storageos() {
 }
 
 uninstall_storageos_operator() {
-    echo "Install StorageOS Operator via OLM"
+    echo "Uninstall StorageOS Operator"
 
     # Delete the current operator instance.
     kubectl -n olm delete csv storageosoperator.0.0.0

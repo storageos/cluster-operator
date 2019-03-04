@@ -1,5 +1,3 @@
-#! validate-crd: deploy/chart/templates/0000_30_02-clusterserviceversion.crd.yaml
-#! parse-kind: ClusterServiceVersion
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
@@ -8,7 +6,7 @@ metadata:
   annotations:
     capabilities: Full Lifecycle
     categories: "Storage"
-    alm-examples: '[{"apiVersion":"storageos.com/v1","kind":"StorageOSCluster","metadata":{"name":"example","namespace":"default"},"spec":{"secretRefName":"storageos-api","secretRefNamespace": "default"}}]'
+    alm-examples: '[{"apiVersion":"storageos.com/v1alpha1","kind":"StorageOSCluster","metadata":{"name":"example-storageos","namespace":"default"},"spec":{"secretRefName":"storageos-api","secretRefNamespace":"default"}},{"apiVersion":"storageos.com/v1alpha1","kind":"Job","metadata":{"name":"example-job","namespace":"default"},"spec":{"image":"storageos/cluster-operator:latest","args":["/var/lib/storageos"],"mountPath":"/var/lib","hostPath":"/var/lib","completionWord":"done"}},{"apiVersion":"storageos.com/v1alpha1","kind":"StorageOSUpgrade","metadata":{"name":"example-upgrade","namespace":"default"},"spec":{"newImage":"storageos/node:latest"}}]'
     description: Cloud-native, persistent storage for containers.
 spec:
   # replaces: 
@@ -78,6 +76,11 @@ spec:
     * **Small footprint** - Lightweight container requires minimum 1 core with
     2GB of RAM.  Runs in user-space on any 64-bit Linux with no custom kernel
     modules.
+
+    ## Required Parameters
+
+    * `secretRefName` - the name of a secret that contains two keys for the `apiUsername` and `apiPassword` to be used as api credentials ([documentation](https://docs.storageos.com/docs/reference/cluster-operator/examples))
+    * `secretRefNamespace` - the namespace where the api credentials secret is stored
 
     ## About StorageOS
 
@@ -234,6 +237,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.namespace
+                        fieldPath: metadata.annotations['olm.targetNamespaces']
                 - name: OPERATOR_NAME
                   value: "cluster-operator"
                 ports:
@@ -245,14 +249,21 @@ spec:
       version: v1alpha1
       kind: StorageOSCluster
       displayName: StorageOS Cluster
-      description: Represents a cluster of StorageOS nodes.
+      description: StorageOS Cluster installs StorageOS in the cluster. It contains all the configuration for setting up a StorageOS cluster and also shows the status of the running StorageOS cluster.
+      specDescriptors:
+      - description: The name of the secret object that stores the api credentials.
+        displayName: Cluster Secret
+        path: secretRefName
+      - description: The name of the namespace where the secret object that stores the api credentials exists.
+        displayName: Cluster Secret Namespace
+        path: secretRefNamespace
     - name: jobs.storageos.com
       version: v1alpha1
       kind: Job
       displayName: StorageOS Job
-      description: Represents a StorageOS Job.
+      description: StorageOS Job creates special pods that run on all the node and perform an administrative task. This could be used for cluster maintenance tasks.
     - name: storageosupgrades.storageos.com
       version: v1alpha1
       kind: StorageOSUpgrade
       displayName: StorageOS Upgrade
-      description: Represents a StorageOS Upgrade.
+      description: StorageOS Upgrade automatically upgrades an existing StorageOS cluster as per the upgrade configuration.
