@@ -211,9 +211,18 @@ main() {
     fi
 
     if [ "$3" = "olm" ]; then
-        source ./test/olm.sh
+        source ./deploy/olm/olm.sh
+        # Not using quick install here because the order in which the resources
+        # are created is unreliable and results in flaky test setup. Hard to
+        # reproduce it locally. The errors are mostly due to the CRD being
+        # used before it's created.
         install_olm
-        install_olm_storageos
+
+        # Wait for all the OLM resources to be created and ready.
+        sleep 10
+
+        install_storageos_operator
+        install_storageos
     else
         # Add taint on the node.
         kubectl taint nodes $NODE_NAME key=value:NoSchedule
