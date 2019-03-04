@@ -12,16 +12,18 @@ metadata:
     description: Cloud-native, persistent storage for containers.
 spec:
   # replaces: 
-  displayName: Storageos Cluster Operator
+  displayName: Storageos
   description: |
-    StorageOS is a software-defined storage platform that transforms commodity
-    server or cloud based disk capacity into enterprise-class storage for
-    running persistent workloads such as databases in containers.
+    StorageOS is a cloud native, software-defined storage platform that
+    transforms commodity server or cloud based disk capacity into
+    enterprise-class persistent storage for containers. StorageOS is ideal for
+    deploying databases, message busses, and other mission-critical stateful
+    solutions, where rapid recovery and fault tolerance are essential.
 
-    The StorageOS Cluster Operator installs and manages StorageOS within an
-    Openshift cluster. Cluster nodes may contribute local or attached disk-based
-    storage into a distributed pool, which is then available to all cluster
-    members via a global namespace.
+    The StorageOS Operator installs and manages StorageOS within a cluster.
+    Cluster nodes may contribute local or attached disk-based storage into a
+    distributed pool, which is then available to all cluster members via a
+    global namespace.
 
     Volumes are available across the cluster so if a container gets moved to
     another node it has immediate access to re-attach its data. Data can be
@@ -30,7 +32,7 @@ spec:
 
     No other hardware or software is required.
 
-    StorageOS is free to use for up to 100GB of presented Storage, increasing to
+    StorageOS is free to use up to 100GB of presented Storage, increasing to
     500GB after registration.  For additional capacity and support plans contact
     sales@storageos.com.
 
@@ -40,8 +42,7 @@ spec:
     node, any StorageOS volumes can be re-attached immediately, irrespective of
     where the data is located within the cluster.
 
-    * **Data protection** - Data is replicated synchronously for up to 6
-    copies.
+    * **Data protection** - Data is replicated synchronously, up to 6 copies.
 
     * **Block checksums** - Each block is protected by a checksum which
     automatically detects any corruption of data in the underlying storage
@@ -53,15 +54,16 @@ spec:
     amount of storage used in a backing store as well as reducing the network
     bandwidth requirements for replication.
 
-    * **In-memory caching** - Speed up access to data even when accessed remotely.
+    * **In-memory caching** - Speed up access to data even when accessed
+    remotely.
 
     * **Quality of service** - Prioritize data traffic and address the “noisy
-    neighbours” problem.
+    neighbors” problem.
 
     * **Flexible configuration** - Use labels to automate data placement and
     enforce data policy such as replication. Ideal for compliance and infosec
     teams to enforce policies and rules while still enabling self-service
-    storage by developers and devops teams.
+    storage by developers and DevOps teams.
 
     * **Access control** - Support multiple namespace – individual users are
     permissioned to specific storage namespaces.
@@ -73,7 +75,7 @@ spec:
     application requirements.  Works with any infrastructure – on-premises, VM,
     bare metal or cloud.
 
-    * **Small footprint** - Lightweight container requires minumum 1 core with
+    * **Small footprint** - Lightweight container requires minimum 1 core with
     2GB of RAM.  Runs in user-space on any 64-bit Linux with no custom kernel
     modules.
 
@@ -107,7 +109,7 @@ spec:
   links:
   - name: Documentation
     url: https://docs.storageos.com/
-  - name: StorageOS Cluster Operator Source Code
+  - name: StorageOS Operator Source Code
     url: https://github.com/storageos/cluster-operator
 
   icon:
