@@ -4,7 +4,7 @@ metadata:
   name: storageos
   namespace: olm
 spec:
-  source: olm-operators
+  source: storageos-catalog
   sourceNamespace: olm
   name: storageos
   channel: alpha

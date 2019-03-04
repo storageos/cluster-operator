@@ -3,7 +3,7 @@
 kind: ConfigMap
 apiVersion: v1
 metadata:
-  name: olm-operators
+  name: storageos-operators
   namespace: olm
 
 data:
@@ -157,126 +157,12 @@ data:
 
   clusterServiceVersions: |-
 
-    - apiVersion: operators.coreos.com/v1alpha1
-      kind: ClusterServiceVersion
-      metadata:
-        name: packageserver.v0.8.1
-        namespace: olm
-      spec:
-        displayName: Package Server
-        description: Represents an Operator package that is available from a given CatalogSource which will resolve to a ClusterServiceVersion.
-        minKubeVersion: 1.11.0
-        keywords: ['packagemanifests', 'olm', 'packages']
-        maintainers:
-        - name: Red Hat
-          email: openshift-operators@redhat.com
-        provider:
-          name: Red Hat
-        links:
-        - name: Package Server
-          url: https://github.com/operator-framework/operator-lifecycle-manager/tree/master/pkg/package-server
-        installModes:
-        - type: OwnNamespace
-          supported: true
-        - type: SingleNamespace
-          supported: true
-        - type: MultiNamespace
-          supported: true
-        - type: AllNamespaces
-          supported: true
-        install:
-          strategy: deployment
-          spec:
-            clusterPermissions:
-            - serviceAccountName: packageserver
-              rules:
-              - apiGroups:
-                - ""
-                resources:
-                - configmaps
-                verbs:
-                - get
-                - list
-                - watch
-              - apiGroups:
-                - "operators.coreos.com"
-                resources:
-                - catalogsources
-                verbs:
-                - get
-                - list
-                - watch
-              - apiGroups:
-                - "packages.apps.redhat.com"
-                resources:
-                - packagemanifests
-                verbs:
-                - get
-                - list
-                - watch
-                - create
-                - delete
-                - patch
-                - update
-            deployments:
-            - name: packageserver
-              spec:
-                replicas: 1
-                strategy:
-                  type: RollingUpdate
-                selector:
-                  matchLabels:
-                    app: packageserver
-                template:
-                  metadata:
-                    labels:
-                      app: packageserver
-                  spec:
-                    serviceAccountName: packageserver
-                    nodeSelector:
-                      beta.kubernetes.io/os: linux
-                      
-                    containers:
-                    - name: packageserver
-                      command:
-                      - /bin/package-server
-                      - -v=4
-                      - --secure-port
-                      - "5443"
-                      - --global-namespace
-                      - olm
-                      image: quay.io/coreos/olm@sha256:995a181839f301585a0e115c083619b6d73812c58a8444d7b13b8e407010325f
-                      imagePullPolicy: Always
-                      ports:
-                      - containerPort: 5443
-                      livenessProbe:
-                          httpGet:
-                            scheme: HTTPS
-                            path: /healthz
-                            port: 5443
-                      readinessProbe:
-                          httpGet:
-                            scheme: HTTPS
-                            path: /healthz
-                            port: 5443
-        maturity: alpha
-        version: 0.8.1
-        apiservicedefinitions:
-          owned:
-          - group: packages.apps.redhat.com
-            version: v1alpha1
-            kind: PackageManifest
-            displayName: PackageManifest
-            description: A PackageManifest is a resource generated from existing CatalogSources and their ConfigMaps
-            deploymentName: packageserver
-            containerPort: 5443
-
     - #! validate-crd: deploy/chart/templates/0000_30_02-clusterserviceversion.crd.yaml
       #! parse-kind: ClusterServiceVersion
       apiVersion: operators.coreos.com/v1alpha1
       kind: ClusterServiceVersion
       metadata:
-        name: storageosoperator.v0.0.9
+        name: storageosoperator.0.0.0
         namespace: olm
         annotations:		
           alm-examples: '[{"apiVersion":"storageos.com/v1","kind":"StorageOSCluster","metadata":{"name":"example","namespace":"default"},"spec":{"secretRefName":"storageos-api","secretRefNamespace": "default"}}]'
@@ -288,7 +174,7 @@ data:
 
         keywords: ['storageos', 'storage', 'persistent storage', 'open source']
 
-        version: 0.0.9
+        version: "0.0.0"
         minKubeVersion: "1.10.0"
         maturity: alpha
         maintainers:
@@ -299,8 +185,6 @@ data:
           name: StorageOS, Inc
 
         labels:
-          alm-status-descriptors: storageosoperator.v0.0.9
-          alm-owner-storageos: storageosoperator
           operated-by: storageosoperator
 
         selector:
@@ -460,15 +344,10 @@ data:
             description: Represents a StorageOS Upgrade.
 
   packages: |-
-    
-    - packageName: packageserver
-      channels:
-      - name: alpha
-        currentCSV: packageserver.v0.8.1
 
     - packageName: storageos
       channels:
       - name: alpha
-        currentCSV: storageosoperator.v0.0.9
+        currentCSV: storageosoperator.0.0.0
 
 
