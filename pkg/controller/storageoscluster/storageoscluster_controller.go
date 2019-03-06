@@ -107,6 +107,9 @@ func (r *ReconcileStorageOSCluster) IsCurrentCluster(cluster *storageosv1alpha1.
 // ResetCurrentCluster resets the current cluster of the controller.
 func (r *ReconcileStorageOSCluster) ResetCurrentCluster() {
 	r.currentCluster = nil
+	// Reset deployment as well. Deployments are specific to the current
+	// cluster.
+	r.deployment = nil
 }
 
 // Reconcile reads that state of the cluster for a StorageOSCluster object and makes changes based on the state read
