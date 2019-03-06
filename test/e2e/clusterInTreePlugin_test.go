@@ -17,6 +17,7 @@ import (
 func TestClusterInTreePlugin(t *testing.T) {
 	ctx := framework.NewTestCtx(t)
 	defer ctx.Cleanup()
+	resourceNS := "storageos"
 
 	namespace, err := ctx.GetNamespace()
 	if err != nil {
@@ -26,7 +27,7 @@ func TestClusterInTreePlugin(t *testing.T) {
 	clusterSpec := storageos.StorageOSClusterSpec{
 		SecretRefName:      "storageos-api",
 		SecretRefNamespace: "default",
-		ResourceNS:         "storageos",
+		ResourceNS:         resourceNS,
 		Tolerations: []corev1.Toleration{
 			{
 				Key:      "key",
@@ -54,7 +55,7 @@ func TestClusterInTreePlugin(t *testing.T) {
 
 	testutil.ClusterStatusCheck(t, testStorageOS.Status, 1)
 
-	daemonset, err := f.KubeClient.AppsV1().DaemonSets("storageos").Get("storageos-daemonset", metav1.GetOptions{IncludeUninitialized: true})
+	daemonset, err := f.KubeClient.AppsV1().DaemonSets(resourceNS).Get("storageos-daemonset", metav1.GetOptions{IncludeUninitialized: true})
 	if err != nil {
 		t.Fatalf("failed to get storageos-daemonset: %v", err)
 	}

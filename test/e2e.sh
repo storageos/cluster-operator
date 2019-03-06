@@ -210,7 +210,7 @@ main() {
         docker exec $x bash -c "docker load < /cluster-operator.tar"
     fi
 
-    if [ "$3" = "olm" ]; then
+    if [ "$2" = "olm" ]; then
         source ./deploy/olm/olm.sh
         # Not using quick install here because the order in which the resources
         # are created is unreliable and results in flaky test setup. Hard to
@@ -238,7 +238,7 @@ main() {
         # Tags are passed to test local command to run e2e test packages only with
         # specific config.
         # Tag "intree" would run k8s intree plugin test setup.
-        # Tag "csi" woul run csi test setup.
+        # Tag "csi" would run csi test setup.
         # The cluster-operator container image used in the e2e setup is based on the
         # operator container image in the manifest file deploy/operator.yaml. The
         # deploy manifests are combined and applied to deploy the operator before
@@ -247,7 +247,15 @@ main() {
         # NOTE: Append this test command with `|| true` to debug by inspecting the
         # resource details. Also comment `defer ctx.Cleanup()` in the cluster to
         # avoid resouce cleanup.
-        operator-sdk test local ./test/e2e --go-test-flags "-v -tags $2" --namespace storageos-operator
+        operator-sdk test local ./test/e2e --go-test-flags "-v -tags intree" --namespace storageos-operator
+
+        echo "Deleting namespace storageos..."
+        kubectl delete ns storageos --ignore-not-found=true
+
+        operator-sdk test local ./test/e2e --go-test-flags "-v -tags csi" --namespace storageos-operator
+
+        echo "Deleting namespace storageos..."
+        kubectl delete ns storageos --ignore-not-found=true
 
         # echo "**** Resource details for storageos-operator namespace ****"
         # print_pod_details_and_logs storageos-operator
