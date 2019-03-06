@@ -9,8 +9,7 @@ metadata:
     alm-examples: '[{"apiVersion":"storageos.com/v1alpha1","kind":"StorageOSCluster","metadata":{"name":"example-storageos","namespace":"default"},"spec":{"secretRefName":"storageos-api","secretRefNamespace":"default"}},{"apiVersion":"storageos.com/v1alpha1","kind":"Job","metadata":{"name":"example-job","namespace":"default"},"spec":{"image":"storageos/cluster-operator:latest","args":["/var/lib/storageos"],"mountPath":"/var/lib","hostPath":"/var/lib","completionWord":"done"}},{"apiVersion":"storageos.com/v1alpha1","kind":"StorageOSUpgrade","metadata":{"name":"example-upgrade","namespace":"default"},"spec":{"newImage":"storageos/node:latest"}}]'
     description: Cloud-native, persistent storage for containers.
 spec:
-  # replaces: 
-  displayName: Storageos
+  displayName: StorageOS
   description: |
     StorageOS is a cloud native, software-defined storage platform that
     transforms commodity server or cloud based disk capacity into
