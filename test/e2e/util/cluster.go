@@ -21,9 +21,9 @@ import (
 // Time constants.
 const (
 	RetryInterval        = time.Second * 5
-	Timeout              = time.Second * 60
+	Timeout              = time.Second * 90
 	CleanupRetryInterval = time.Second * 1
-	CleanupTimeout       = time.Second * 5
+	CleanupTimeout       = time.Second * 15
 )
 
 // NewStorageOSCluster returns a StorageOSCluster object, created using a given
@@ -125,13 +125,13 @@ func DeployCluster(t *testing.T, ctx *framework.TestCtx, cluster *storageos.Stor
 		return err
 	}
 
-	err = WaitForDaemonSet(t, f.KubeClient, "storageos", "storageos-daemonset", RetryInterval, Timeout*2)
+	err = WaitForDaemonSet(t, f.KubeClient, cluster.Spec.GetResourceNS(), "storageos-daemonset", RetryInterval, Timeout*2)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if cluster.Spec.CSI.Enable {
-		err = WaitForStatefulSet(t, f.KubeClient, "storageos", "storageos-statefulset", RetryInterval, Timeout*2)
+		err = WaitForStatefulSet(t, f.KubeClient, cluster.Spec.GetResourceNS(), "storageos-statefulset", RetryInterval, Timeout*2)
 		if err != nil {
 			t.Fatal(err)
 		}
