@@ -810,6 +810,9 @@ func TestDeployNodeAffinity(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: api.StorageOSClusterSpec{
+			CSI: api.StorageOSClusterCSI{
+				Enable: true,
+			},
 			NodeSelectorTerms: []corev1.NodeSelectorTerm{
 				{
 					MatchExpressions: []corev1.NodeSelectorRequirement{
@@ -857,7 +860,24 @@ func TestDeployNodeAffinity(t *testing.T) {
 	podSpec := createdDaemonset.Spec.Template.Spec
 
 	if !reflect.DeepEqual(podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms, stosCluster.Spec.NodeSelectorTerms) {
-		t.Errorf("unexpected NodeSelectorTerms value:\n\t(GOT) %v\n\t(WNT) %v", stosCluster.Spec.NodeSelectorTerms, podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution)
+		t.Errorf("unexpected DaemonSet NodeSelectorTerms value:\n\t(GOT) %v\n\t(WNT) %v", stosCluster.Spec.NodeSelectorTerms, podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution)
+	}
+
+	createdStatefulset := &appsv1.StatefulSet{}
+
+	nsNameStatefulSet := types.NamespacedName{
+		Name:      statefulsetName,
+		Namespace: defaultNS,
+	}
+
+	if err := c.Get(context.Background(), nsNameStatefulSet, createdStatefulset); err != nil {
+		t.Fatal("failed to get the created statefulset", err)
+	}
+
+	podSpec = createdStatefulset.Spec.Template.Spec
+
+	if !reflect.DeepEqual(podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms, stosCluster.Spec.NodeSelectorTerms) {
+		t.Errorf("unexpected StatefulSet NodeSelectorTerms value:\n\t(GOT) %v\n\t(WNT) %v", stosCluster.Spec.NodeSelectorTerms, podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution)
 	}
 }
 
