@@ -39,6 +39,8 @@ spec:
               type: string
             namespace:
               type: string
+            disableFencing:
+              type: boolean
             disableTelemetry:
               type: boolean
             images:
