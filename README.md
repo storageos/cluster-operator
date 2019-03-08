@@ -6,45 +6,56 @@
 The StorageOS Cluster Operator deploys and configures a StorageOS cluster on
 Kubernetes.
 
-For quick installation of cluster operator, use the [cluster operator helm chart](https://github.com/storageos/charts/tree/master/stable/storageoscluster-operator).
+For quick installation of the cluster operator, use the [cluster operator helm
+chart](https://github.com/storageos/charts/tree/master/stable/storageoscluster-operator).
 
 ## Pre-requisites
 
 * Kubernetes 1.9+
 * Kubernetes must be configured to allow (configured by default in 1.10+):
-    - Privileged mode containers (enabled by default)
-    - Feature gate: MountPropagation=true.  This can be done by appending `--feature-gates MountPropagation=true` to the
-      kube-apiserver and kubelet services.
+  * Privileged mode containers (enabled by default)
+  * Feature gate: MountPropagation=true.  This can be done by appending
+    `--feature-gates MountPropagation=true` to the kube-apiserver and kubelet
+    services.
 
-Refer to the [StorageOS prerequisites docs](https://docs.storageos.com/docs/prerequisites/overview) for more information.
+Refer to the [StorageOS prerequisites docs](https://docs.storageos.com/docs/prerequisites/overview)
+for more information.
 
-
-## Setup/Development:
+## Setup/Development
 
 1. Install [operator-sdk](https://github.com/operator-framework/operator-sdk/tree/master#quick-start).
 2. Run `operator-sdk generate k8s` if there's a change in api type.
 3. Build operator container with `operator-sdk build storageos/cluster-operator:<tag>`
 4. Apply the manifests in `deploy/` to install the operator
-    - Apply `service_account.yaml`, `role.yaml` and `role_binding.yaml` to create a service account and to grant all the permissions.
-    - Apply `crds/*_crd.yaml` to define the custom resources.
-    - Apply `operator.yaml` to install the operator. Change the container image in this file when installing a new operator.
-    - Apply `crds/*_storageoscluster_cr.yaml` to create a `StorageOSCluster` custom resource.
+   * Apply `namespace.yaml` to create the `storageos-operator` namespace.
+   * Apply `service_account.yaml`, `role.yaml` and `role_binding.yaml` to create
+    a service account and to grant all the permissions.
+   * Apply `crds/*_crd.yaml` to define the custom resources.
+   * Apply `operator.yaml` to install the operator. Change the container image
+     in this file when installing a new operator.
+   * Apply `crds/*_storageoscluster_cr.yaml` to create a `StorageOSCluster`
+     custom resource.
 
-**NOTE**: Installing StorageOS on Minikube is not currently supported due to missing [kernel prerequisites](https://docs.storageos.com/docs/prerequisites/systemconfiguration).
+**NOTE**: Installing StorageOS on Minikube is not currently supported due to
+missing [kernel prerequisites](https://docs.storageos.com/docs/prerequisites/systemconfiguration).
 
 For development, run the operator outside of the k8s cluster by running:
-```
-$ make local-run
+
+```bash
+make local-run
 ```
 
 Build operator container image:
+
+```bash
+make image/cluster-operator OPERATOR_IMAGE=storageos/cluster-operator:test
 ```
-$ make image/cluster-operator OPERATOR_IMAGE=storageos/cluster-operator:test
-```
+
 This builds all the components and copies the binaries into the same container.
 
 After creating a resource, query the resource:
-```
+
+```bash
 $ kubectl get storageoscluster
 NAME                READY     STATUS    AGE
 example-storageos   3/3       Running   4m
@@ -53,7 +64,8 @@ example-storageos   3/3       Running   4m
 ## Inspect a StorageOSCluster Resource
 
 Get all the details about the cluster:
-```
+
+```bash
 $ kubectl describe storageoscluster/example-storageos
 Name:         example-storageos
 Namespace:    default
@@ -85,11 +97,12 @@ Events:   <none>
 ## StorageOSCluster Resource Configuration
 
 Once the StorageOS operator is running, a StorageOS cluster can be deployed by
-creating a Cluster Configuration. The parameters specified in the
-configuration will define how StorageOS is deployed, the rest of the
-installation details are handled by the operator.
+creating a Cluster Configuration. The parameters specified in the configuration
+will define how StorageOS is deployed, the rest of the installation details are
+handled by the operator.
 
-The following tables lists the configurable spec parameters of the StorageOSCluster custom resource and their default values.
+The following tables lists the configurable spec
+parameters of the StorageOSCluster custom resource and their default values.
 
 Parameter | Description | Default
 --------- | ----------- | -------
@@ -126,7 +139,6 @@ Parameter | Description | Default
 `tolerations` | Set pod tolerations for storageos pod placement |
 `resources` | Set resource requirements for the containers |
 
-
 ## Upgrading a StorageOS Cluster
 
 An existing StorageOS cluster can be upgraded to a new version of StorageOS by
@@ -147,7 +159,7 @@ Once an upgrade resource is created, events related to the upgrade can be
 viewed in the upgrade object description. All the status and errors, if any,
 encountered during the upgrade are posted as events.
 
-```
+```bash
 $ kubectl describe storageosupgrades example-storageosupgrade
 Name:         example-storageosupgrade
 Namespace:    default
@@ -176,7 +188,6 @@ Parameter | Description | Default
 --------- | ----------- | -------
 `newImage` | StorageOS node container image to upgrade to |
 
-
 ## Cleanup Old Configurations
 
 StorageOS creates and saves its files at `/var/lib/storageos` on the hosts. This
@@ -187,13 +198,15 @@ __WARNING__: This will delete any existing data and won't be recoverable.
 
 __NOTE__: When using an external etcd, the data related to storageos should also
 be removed.
-```
+
+```bash
 ETCDCTL_API=3 /usr/local/bin/etcdctl --endpoints http://storageos-etcd-server:2379 del --prefix storageos
 ```
 
-The cluster-operator provides a `Job`resources, that can execute certain tasks
-on all the nodes or on some selected nodes. This can be used to easily perform
-cleanup task. An example would be to create a `Job` resource:
+The cluster-operator provides a `Job`resource that can execute certain tasks on
+all nodes or on selected nodes. This can be used to easily perform cleanup
+task. An example would be to create a `Job` resource:
+
 ```yaml
 apiVersion: storageos.com/v1alpha1
 kind: Job
@@ -212,6 +225,7 @@ spec:
         values:
         - "true"
 ```
+
 When applied, this job will run `darkowlzz/cleanup` container on the nodes that
 have label `node-role.kubernetes.io/worker` with value `"true"`, mounting
 `/var/lib` and passing the argument `/var/lib/storageos`. This will run
@@ -219,7 +233,8 @@ have label `node-role.kubernetes.io/worker` with value `"true"`, mounting
 files. To run it on all the nodes, remove the `nodeSelectorTerms` attribute.
 On completion, the resource description shows that the task is completed and
 can be deleted.
-```
+
+```bash
 $ kubectl describe jobs.storageos.com cleanup-job
 Name:         cleanup-job
 Namespace:    default
@@ -239,14 +254,16 @@ Events:
   ----    ------        ----  ----                       -------
   Normal  JobCompleted  39s   storageoscluster-operator  Job Completed. Safe to delete.
 ```
+
 Deleting the resource, will terminate all the pods that were created to run the
 task.
 
-Internally, this `Job` is backed by a controller that creates pods using
-DaemonSet. And the job containers have to be built in a specific way, in order
-to achieve this behavior.
+Internally, this `Job` is backed by a controller that creates pods using a
+DaemonSet. Job containers have to be built in a specific way to achieve this
+behavior.
 
 In the above example, the cleanup container runs a shell script(`script.sh`):
+
 ```bash
 #!/bin/ash
 
@@ -266,8 +283,10 @@ echo "done"
 # and k8s restarting the daemonset pod
 while true; do sleep 1; done
 ```
+
 And the container image is made with Dockerfile:
-```
+
+```dockerfile
 FROM alpine:3.6
 COPY script.sh .
 RUN chmod u+x script.sh
@@ -283,8 +302,7 @@ completed the task, the Job status is completed and it can be deleted.
 This can be extended to do other similar cluster management operations. This is
 also used internally in the cluster upgrade process.
 
-
-## Job(jobs.storageos.com) Resource Configuration
+## Job (jobs.storageos.com) Resource Configuration
 
 The following table lists the configurable spec parameters of the
 Job custom resource and their default values.
@@ -299,12 +317,12 @@ Parameter | Description | Default
 `labelSelector` | Labels that are added to the job pods and are used to select them. |
 `nodeSelectorTerms` | This can be used to select the nodes where the job runs. |
 
-
 ## TLS Support
 
 To enable TLS, ensure that an ingress controller is installed in the cluster.
 Set `ingress.enable` and `ingress.tls` to `true`.
 Store the TLS cert and key as part of the storageos secret as:
+
 ```yaml
 apiVersion: v1
 kind: Secret
@@ -323,12 +341,15 @@ data:
 
 ## CSI
 
-StorageOS also supports the [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec) to communicate with Kubernetes.
-Only versions 1.10+ are supported. CSI ensures forward compatibility with future releases of
-Kubernetes, as vendor-specific drivers will soon be deprecated from Kubernetes.
-However, some functionalities are not supported yet.
+StorageOS also supports the [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec)
+to communicate with Kubernetes.
 
-To enable CSI, set `csi.enable` to `true` in the `StorageOSCluster` resource config.
+Only versions 1.10+ are supported. CSI ensures forward compatibility with
+future releases of Kubernetes, as vendor-specific drivers will soon be
+deprecated from Kubernetes. However, some functionality is not yet supported.
+
+To enable CSI, set `csi.enable` to `true` in the `StorageOSCluster` resource
+config.
 
 ```yaml
 apiVersion: "storageos.com/v1alpha1"
@@ -346,7 +367,9 @@ spec:
 ### CSI Credentials
 
 To enable CSI Credentials, ensure that CSI is enabled by setting `csi.enable` to
-`true`. Based on the type of credentials to enable, set the csi fields to `true`:
+`true`. Based on the type of credentials to enable, set the csi fields to
+`true`:
+
 ```yaml
 apiVersion: "storageos.com/v1alpha1"
 kind: "StorageOSCluster"
@@ -365,6 +388,7 @@ spec:
 ```
 
 Specify the CSI credentials as part of the storageos secret object as:
+
 ```yaml
 apiVersion: v1
 kind: Secret
