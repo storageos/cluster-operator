@@ -8,5 +8,5 @@ subjects:
   namespace: storageos-operator
 roleRef:
   kind: ClusterRole
-  name: cluster-admin
+  name: storageos-operator
   apiGroup: rbac.authorization.k8s.io
