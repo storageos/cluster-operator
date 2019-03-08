@@ -25,8 +25,8 @@ Refer to the [StorageOS prerequisites docs](https://docs.storageos.com/docs/prer
 2. Run `operator-sdk generate k8s` if there's a change in api type.
 3. Build operator container with `operator-sdk build storageos/cluster-operator:<tag>`
 4. Apply the manifests in `deploy/` to install the operator
-    - Apply `service_account.yaml` and `role_binding.yaml` to create a service account and to grant all the permissions.
-    - Apply `crds/*_storageoscluster_crd.yaml` to define the custom resources.
+    - Apply `service_account.yaml`, `role.yaml` and `role_binding.yaml` to create a service account and to grant all the permissions.
+    - Apply `crds/*_crd.yaml` to define the custom resources.
     - Apply `operator.yaml` to install the operator. Change the container image in this file when installing a new operator.
     - Apply `crds/*_storageoscluster_cr.yaml` to create a `StorageOSCluster` custom resource.
 
