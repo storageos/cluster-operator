@@ -135,6 +135,7 @@ type StorageOSClusterStatus struct {
 	NodeHealthStatus map[string]NodeHealth `json:"nodeHealthStatus,omitempty"`
 	Nodes            []string              `json:"nodes"`
 	Ready            string                `json:"ready"`
+	Members          MembersStatus         `json:"members"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -160,6 +161,15 @@ type StorageOSClusterList struct {
 
 func init() {
 	SchemeBuilder.Register(&StorageOSCluster{}, &StorageOSClusterList{})
+}
+
+// MembersStatus stores the status details of cluster member nodes.
+type MembersStatus struct {
+	// Ready are the storageos cluster members that are ready to serve requests.
+	// The member names are the same as the node IPs.
+	Ready []string `json:"ready,omitempty"`
+	// Unready are the storageos cluster nodes not ready to serve requests.
+	Unready []string `json:"unready,omitempty"`
 }
 
 // GetResourceNS returns the namespace where all the resources should be provisioned.

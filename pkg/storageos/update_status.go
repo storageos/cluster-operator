@@ -49,12 +49,16 @@ func (s *Deployment) getStorageOSStatus() (*api.StorageOSClusterStatus, error) {
 	readyNodes := 0
 
 	healthStatus := make(map[string]api.NodeHealth)
+	memberStatus := new(api.MembersStatus)
 
 	for _, node := range nodeIPs {
 		if status, err := getNodeHealth(node, 1); err == nil {
 			healthStatus[node] = *status
 			if isHealthy(status) {
 				readyNodes++
+				memberStatus.Ready = append(memberStatus.Ready, node)
+			} else {
+				memberStatus.Unready = append(memberStatus.Unready, node)
 			}
 		} else {
 			log.Printf("failed to get health of node %s: %v", node, err)
@@ -71,6 +75,7 @@ func (s *Deployment) getStorageOSStatus() (*api.StorageOSClusterStatus, error) {
 		Nodes:            nodeIPs,
 		NodeHealthStatus: healthStatus,
 		Ready:            fmt.Sprintf("%d/%d", readyNodes, totalNodes),
+		Members:          *memberStatus,
 	}, nil
 }
 

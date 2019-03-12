@@ -157,9 +157,7 @@ data:
 
   clusterServiceVersions: |-
 
-    - #! validate-crd: deploy/chart/templates/0000_30_02-clusterserviceversion.crd.yaml
-      #! parse-kind: ClusterServiceVersion
-      apiVersion: operators.coreos.com/v1alpha1
+    - apiVersion: operators.coreos.com/v1alpha1
       kind: ClusterServiceVersion
       metadata:
         name: storageosoperator.0.0.0
@@ -417,6 +415,23 @@ data:
             - description: The name of the namespace where the secret object that stores the api credentials exists.
               displayName: Cluster Secret Namespace
               path: secretRefNamespace
+            statusDescriptors:
+            - description: Set of nodes that are part of the StorageOS Cluster.
+              displayName: Nodes
+              path: nodes
+            - description: The status of each of the members of StorageOS Cluster.
+              displayName: Member Status
+              path: members
+              x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:podStatuses
+            - description: The current status of the StorageOS Cluster.
+              displayName: Status
+              path: phase
+              x-descriptors:
+              - urn:alm:descriptor:io.kubernetes.phase
+            - description: Ready Nodes
+              displayName: Ready
+              path: ready
           - name: jobs.storageos.com
             version: v1alpha1
             kind: Job
