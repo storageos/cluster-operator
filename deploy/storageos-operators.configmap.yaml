@@ -351,6 +351,7 @@ data:
                 resources:
                 - storageclasses
                 - volumeattachments
+                - csinodeinfos
                 verbs:
                 - create
                 - delete
