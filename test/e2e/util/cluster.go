@@ -3,6 +3,8 @@ package util
 import (
 	goctx "context"
 	"fmt"
+	"log"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -198,4 +200,49 @@ func WaitForStatefulSet(t *testing.T, kubeclient kubernetes.Interface, namespace
 	}
 	t.Logf("StatefulSet Ready!\n")
 	return nil
+}
+
+// NodeLabelSyncTest adds a new label to k8s node and checks if the label is
+// synced to the storageos node labels.
+func NodeLabelSyncTest(t *testing.T, kubeclient kubernetes.Interface) {
+	// Get the existing node to update its labels.
+	nodes, err := kubeclient.CoreV1().Nodes().List(metav1.ListOptions{})
+	if err != nil {
+		t.Fatalf("failed to get nodes: %v", err)
+	}
+	node := nodes.Items[0]
+	labels := node.GetLabels()
+	labels["foo10"] = "bar10"
+	node.SetLabels(labels)
+	_, err = kubeclient.CoreV1().Nodes().Update(&node)
+	if err != nil {
+		t.Fatalf("failed to update node labels: %v", err)
+	}
+
+	// Wait for the node-controller to update storageos node.
+	time.Sleep(5 * time.Second)
+
+	out, err := exec.Command("./test/port-forward.sh").Output()
+	if err != nil {
+		log.Fatalf("failed while executing script: %v", err)
+	}
+	if string(out) != "0\n" {
+		log.Fatalf("unexpected script output: %v", string(out))
+	}
+
+	// Cleanup - remove the label from k8s node.
+
+	// Get the latest version of node to update.
+	nodes, err = kubeclient.CoreV1().Nodes().List(metav1.ListOptions{})
+	if err != nil {
+		t.Fatalf("failed to get nodes: %v", err)
+	}
+	node = nodes.Items[0]
+	labels = node.GetLabels()
+	delete(labels, "foo10")
+	node.SetLabels(labels)
+	_, err = kubeclient.CoreV1().Nodes().Update(&node)
+	if err != nil {
+		t.Fatalf("failed to cleanup node labels: %v", err)
+	}
 }

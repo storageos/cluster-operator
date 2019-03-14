@@ -22,6 +22,8 @@ before_install:
           exit
         fi
       fi
+  - sudo apt -y update && sudo apt install -y jq
+  - curl -Lo storageos https://github.com/storageos/go-cli/releases/download/1.0.0/storageos_linux_amd64 && chmod +x storageos && sudo mv storageos /usr/local/bin/
 #  - docker run -d -p 2399:2399 quay.io/coreos/etcd:v3.3.10 /usr/local/bin/etcd -advertise-client-urls http://0.0.0.0:2399 -listen-client-urls http://0.0.0.0:2399
 
 # Skip downloading deps.
