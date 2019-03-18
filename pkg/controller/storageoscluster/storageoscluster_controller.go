@@ -72,10 +72,9 @@ type ReconcileStorageOSCluster struct {
 	// that reads objects from the cache and writes to the apiserver
 	client         client.Client
 	scheme         *runtime.Scheme
-	currentCluster *storageosv1alpha1.StorageOSCluster
 	k8sVersion     string
 	recorder       record.EventRecorder
-	deployment     *storageos.Deployment
+	currentCluster *StorageOSCluster
 }
 
 // SetCurrentClusterIfNone checks if there's any existing current cluster and
@@ -88,28 +87,12 @@ func (r *ReconcileStorageOSCluster) SetCurrentClusterIfNone(cluster *storageosv1
 
 // SetCurrentCluster sets the currently active cluster in the controller.
 func (r *ReconcileStorageOSCluster) SetCurrentCluster(cluster *storageosv1alpha1.StorageOSCluster) {
-	r.currentCluster = cluster
-}
-
-// IsCurrentCluster compares a given cluster with the current cluster to check
-// if they are the same.
-func (r *ReconcileStorageOSCluster) IsCurrentCluster(cluster *storageosv1alpha1.StorageOSCluster) bool {
-	if cluster == nil {
-		return false
-	}
-
-	if (r.currentCluster.GetName() == cluster.GetName()) && (r.currentCluster.GetNamespace() == cluster.GetNamespace()) {
-		return true
-	}
-	return false
+	r.currentCluster = NewStorageOSCluster(cluster)
 }
 
 // ResetCurrentCluster resets the current cluster of the controller.
 func (r *ReconcileStorageOSCluster) ResetCurrentCluster() {
 	r.currentCluster = nil
-	// Reset deployment as well. Deployments are specific to the current
-	// cluster.
-	r.deployment = nil
 }
 
 // Reconcile reads that state of the cluster for a StorageOSCluster object and makes changes based on the state read
@@ -127,9 +110,10 @@ func (r *ReconcileStorageOSCluster) Reconcile(request reconcile.Request) (reconc
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// Cluster instance not found. Delete the resources and reset the current cluster.
+			// Cluster instance not found. Delete the resources and reset the
+			// current cluster.
 			if r.currentCluster != nil {
-				if err := getDeployment(r).Delete(); err != nil {
+				if err := r.currentCluster.DeleteDeployment(); err != nil {
 					// Error deleting - requeue the request.
 					return reconcileResult, err
 				}
@@ -149,10 +133,18 @@ func (r *ReconcileStorageOSCluster) Reconcile(request reconcile.Request) (reconc
 
 	// If the event doesn't belongs to the current cluster, do not reconcile.
 	// There must be only a single instance of storageos in a cluster.
-	if !r.IsCurrentCluster(instance) {
+	if !r.currentCluster.IsCurrentCluster(instance) {
 		err := fmt.Errorf("can't create more than one storageos cluster")
 		r.recorder.Event(instance, corev1.EventTypeWarning, "FailedCreation", err.Error())
 		return reconcileResult, err
+	} else if r.currentCluster.cluster.GetUID() != instance.GetUID() {
+		// If the cluster name and namespace match with the current cluster, but
+		// the resource UIDs are different, maybe the current cluster reset
+		// failed when the previous cluster was deleted. The same cluster was
+		// created again and has a different UID. Create and assign a new
+		// current cluster.
+		log.Printf("replacing current cluster UID: %s with new cluster UID: %s", r.currentCluster.cluster.GetUID(), instance.GetUID())
+		r.SetCurrentCluster(instance)
 	}
 
 	if err := r.reconcile(instance); err != nil {
@@ -163,8 +155,8 @@ func (r *ReconcileStorageOSCluster) Reconcile(request reconcile.Request) (reconc
 }
 
 func (r *ReconcileStorageOSCluster) reconcile(m *storageosv1alpha1.StorageOSCluster) error {
-	// Do not reconcile, the operator is paused for the cluster.
 	if m.Spec.Pause {
+		// Do not reconcile, the operator is paused for the cluster.
 		return nil
 	}
 
@@ -226,7 +218,7 @@ func (r *ReconcileStorageOSCluster) reconcile(m *storageosv1alpha1.StorageOSClus
 		// 	r.SetCurrentCluster(m)
 		// }
 
-		if err := getDeployment(r).Deploy(); err != nil {
+		if err := r.currentCluster.Deploy(r); err != nil {
 			// Ignore "Operation cannot be fulfilled" error. It happens when the
 			// actual state of object is different from what is known to the operator.
 			// Operator would resync and retry the failed operation on its own.
@@ -240,7 +232,7 @@ func (r *ReconcileStorageOSCluster) reconcile(m *storageosv1alpha1.StorageOSClus
 		// resource.
 		r.recorder.Event(m, corev1.EventTypeNormal, "Terminating", "Deleting all the resources...")
 
-		if err := getDeployment(r).Delete(); err != nil {
+		if err := r.currentCluster.DeleteDeployment(); err != nil {
 			return err
 		}
 
@@ -337,21 +329,4 @@ func getMatchingTolerations(taints []corev1.Taint, tolerations []corev1.Tolerati
 		}
 	}
 	return true, result
-}
-
-// getDeployment returns an existing storageos deployment if found, else creates
-// a new deployment object, stores in the reconcile object and returns the same.
-func getDeployment(r *ReconcileStorageOSCluster) *storageos.Deployment {
-	if r.deployment != nil {
-		return r.deployment
-	}
-
-	// update is set to false because we don't update any existing resources
-	// for now. May change in future.
-	// TODO: Change this after resolving the conflict between two way
-	// binding and upgrade.
-	updateIfExists := false
-
-	r.deployment = storageos.NewDeployment(r.client, r.currentCluster, r.recorder, r.scheme, r.k8sVersion, updateIfExists)
-	return r.deployment
 }

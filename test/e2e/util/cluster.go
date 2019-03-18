@@ -92,6 +92,14 @@ func ClusterStatusCheck(t *testing.T, status storageos.StorageOSClusterStatus, n
 	if status.Ready != wantReady {
 		t.Errorf("unexpected Ready:\n\t(GOT) %s\n\t(WNT) %s", status.Ready, wantReady)
 	}
+
+	if len(status.Members.Ready) != nodes {
+		t.Errorf("unexpected number of ready members:\n\t(GOT) %d\n\t(WNT) %d", len(status.Members.Ready), nodes)
+	}
+
+	if len(status.Members.Unready) != 0 {
+		t.Errorf("unexpected number of unready members:\n\t(GOT) %d\n\t(WNT) %d", len(status.Members.Unready), 0)
+	}
 }
 
 // DeployCluster creates a custom resource and checks if the
