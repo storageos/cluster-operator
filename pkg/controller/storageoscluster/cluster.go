@@ -10,10 +10,10 @@ import (
 // right cluster resource.
 type StorageOSCluster struct {
 	cluster *storageosv1alpha1.StorageOSCluster
-	// deployment is the storageos.Deployment object. This is cached for a
-	// cluster to avoid recreating it without any change to the cluster object.
-	// Every new cluster will create their unique deployment.
-	deployment *storageos.Deployment
+	// deployment implements storageoscluster.Deployment interface. This is
+	// cached for a cluster to avoid recreating it without any change to the
+	// cluster object. Every new cluster will create its unique deployment.
+	deployment Deployment
 }
 
 // NewStorageOSCluster creates a new StorageOSCluster object.
