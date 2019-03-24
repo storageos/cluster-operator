@@ -65,14 +65,12 @@ jobs:
         - make image/cluster-operator
       before_deploy:
         - docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS"
-        - docker tag "${IMAGE_NAME}:${IMAGE_TAG}" "${IMAGE_NAME}:latest"
-        - docker tag "${IMAGE_NAME}:${IMAGE_TAG}" "${IMAGE_NAME}:${TRAVIS_TAG}"
       deploy:
         - provider: script
-          script: docker push "${IMAGE_NAME}:latest" && docker push "${IMAGE_NAME}:${TRAVIS_TAG}"
+          script: bash scripts/deploy.sh tagged
           on:
             tags: true
         - provider: script
-          script: docker tag "${IMAGE_NAME}:${IMAGE_TAG}" "${IMAGE_NAME}:develop" && docker push "${IMAGE_NAME}:develop"
+          script: bash scripts/deploy.sh develop
           on:
             branch: master
