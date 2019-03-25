@@ -11,6 +11,8 @@ metadata:
     containerImage: storageos/cluster-operator:v0.0.12
     repository: https://github.com/storageos/cluster-operator
     createdAt: 2019-03-25T08:00:00Z
+    support: StorageOS, Inc
+    certified: "false"
 spec:
   displayName: StorageOS
   description: |
