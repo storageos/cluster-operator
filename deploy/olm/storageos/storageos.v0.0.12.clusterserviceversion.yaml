@@ -1,14 +1,16 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: storageosoperator.v0.0.11
+  name: storageosoperator.v0.0.12
   namespace: placeholder
   annotations:
     capabilities: Full Lifecycle
     categories: "Storage"
     alm-examples: '[{"apiVersion":"storageos.com/v1alpha1","kind":"StorageOSCluster","metadata":{"name":"example-storageos","namespace":"default"},"spec":{"secretRefName":"storageos-api","secretRefNamespace":"default"}},{"apiVersion":"storageos.com/v1alpha1","kind":"Job","metadata":{"name":"example-job","namespace":"default"},"spec":{"image":"storageos/cluster-operator:latest","args":["/var/lib/storageos"],"mountPath":"/var/lib","hostPath":"/var/lib","completionWord":"done"}},{"apiVersion":"storageos.com/v1alpha1","kind":"StorageOSUpgrade","metadata":{"name":"example-upgrade","namespace":"default"},"spec":{"newImage":"storageos/node:latest"}}]'
     description: Cloud-native, persistent storage for containers.
-    containterImage: storageos/cluster-operator:v0.0.11
+    containerImage: storageos/cluster-operator:v0.0.12
+    repository: https://github.com/storageos/cluster-operator
+    createdAt: 2019-03-25T08:00:00Z
 spec:
   displayName: StorageOS
   description: |
@@ -232,13 +234,12 @@ spec:
               - name: storageos-operator
                 command:
                 - cluster-operator
-                image: storageos/cluster-operator:v0.0.11
+                image: storageos/cluster-operator:v0.0.12
                 env:
                 - name: WATCH_NAMESPACE
                   valueFrom:
                     fieldRef:
-                      fieldPath: metadata.namespace
-                        fieldPath: metadata.annotations['olm.targetNamespaces']
+                      fieldPath: metadata.annotations['olm.targetNamespaces']
                 - name: OPERATOR_NAME
                   value: "cluster-operator"
                 ports:
