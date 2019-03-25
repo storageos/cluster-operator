@@ -68,6 +68,7 @@ spec:
   #     memory: "1Gi"
   #   requests:
   #     memory: "702Mi"
+  # disableFencing: false
 
 
 ---
