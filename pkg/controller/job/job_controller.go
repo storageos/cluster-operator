@@ -3,13 +3,13 @@ package job
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"strings"
 	"time"
-	"fmt"
 
-	storageosv1alpha1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1alpha1"
+	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -50,7 +50,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource Job
-	err = c.Watch(&source.Kind{Type: &storageosv1alpha1.Job{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &storageosv1.Job{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to secondary resource DaemonSet and requeue the owner Job
 	err = c.Watch(&source.Kind{Type: &appsv1.DaemonSet{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &storageosv1alpha1.Job{},
+		OwnerType:    &storageosv1.Job{},
 	})
 	if err != nil {
 		return err
@@ -93,7 +93,7 @@ func (r *ReconcileJob) Reconcile(request reconcile.Request) (reconcile.Result, e
 	reconcileResult := reconcile.Result{RequeueAfter: reconcilePeriod}
 
 	// Fetch the Job instance
-	instance := &storageosv1alpha1.Job{}
+	instance := &storageosv1.Job{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -164,7 +164,7 @@ func (r *ReconcileJob) Reconcile(request reconcile.Request) (reconcile.Result, e
 // checkPods checks the logs of all pods with the given label selector for the
 // completionWord and published a "JobCompleted" event when all the pods have
 // completed their task.
-func checkPods(client kubernetes.Interface, cr *storageosv1alpha1.Job, recorder record.EventRecorder) (bool, error) {
+func checkPods(client kubernetes.Interface, cr *storageosv1.Job, recorder record.EventRecorder) (bool, error) {
 	podListOpts := metav1.ListOptions{
 		LabelSelector: cr.Spec.GetLabelSelector(),
 	}
@@ -225,7 +225,7 @@ func getPlainLogs(req *restclient.Request) (string, error) {
 }
 
 // newPodForCR returns a busybox pod with the same name/namespace as the cr
-func newDaemonSetForCR(cr *storageosv1alpha1.Job) (*appsv1.DaemonSet, error) {
+func newDaemonSetForCR(cr *storageosv1.Job) (*appsv1.DaemonSet, error) {
 	defaultLabels := map[string]string{
 		"daemonset": cr.Name + "-daemonset-job",
 		"job":       cr.Name,
@@ -291,7 +291,7 @@ func newDaemonSetForCR(cr *storageosv1alpha1.Job) (*appsv1.DaemonSet, error) {
 	if len(tolerations) > 0 {
 		dset.Spec.Template.Spec.Tolerations = cr.Spec.Tolerations
 	}
-	
+
 	// Add node affinity if defined.
 	if len(cr.Spec.NodeSelectorTerms) > 0 {
 		dset.Spec.Template.Spec.Affinity = &corev1.Affinity{NodeAffinity: &corev1.NodeAffinity{

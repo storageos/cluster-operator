@@ -10,13 +10,13 @@ import (
 	"strings"
 	"time"
 
-	api "github.com/storageos/cluster-operator/pkg/apis/storageos/v1alpha1"
+	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	storageosapi "github.com/storageos/go-api"
 	"github.com/storageos/go-api/types"
 	"k8s.io/api/core/v1"
 )
 
-func (s *Deployment) updateStorageOSStatus(status *api.StorageOSClusterStatus) error {
+func (s *Deployment) updateStorageOSStatus(status *storageosv1.StorageOSClusterStatus) error {
 	if reflect.DeepEqual(s.stos.Status, *status) {
 		return nil
 	}
@@ -42,14 +42,14 @@ func (s *Deployment) updateStorageOSStatus(status *api.StorageOSClusterStatus) e
 
 // getStorageOSStatus queries health of all the nodes in the join token and
 // returns the cluster status.
-func (s *Deployment) getStorageOSStatus() (*api.StorageOSClusterStatus, error) {
+func (s *Deployment) getStorageOSStatus() (*storageosv1.StorageOSClusterStatus, error) {
 	nodeIPs := strings.Split(s.stos.Spec.Join, ",")
 
 	totalNodes := len(nodeIPs)
 	readyNodes := 0
 
-	healthStatus := make(map[string]api.NodeHealth)
-	memberStatus := new(api.MembersStatus)
+	healthStatus := make(map[string]storageosv1.NodeHealth)
+	memberStatus := new(storageosv1.MembersStatus)
 
 	for _, node := range nodeIPs {
 		if status, err := getNodeHealth(node, 1); err == nil {
@@ -65,12 +65,12 @@ func (s *Deployment) getStorageOSStatus() (*api.StorageOSClusterStatus, error) {
 		}
 	}
 
-	phase := api.ClusterPhaseInitial
+	phase := storageosv1.ClusterPhaseInitial
 	if readyNodes == totalNodes {
-		phase = api.ClusterPhaseRunning
+		phase = storageosv1.ClusterPhaseRunning
 	}
 
-	return &api.StorageOSClusterStatus{
+	return &storageosv1.StorageOSClusterStatus{
 		Phase:            phase,
 		Nodes:            nodeIPs,
 		NodeHealthStatus: healthStatus,
@@ -79,7 +79,7 @@ func (s *Deployment) getStorageOSStatus() (*api.StorageOSClusterStatus, error) {
 	}, nil
 }
 
-func isHealthy(health *api.NodeHealth) bool {
+func isHealthy(health *storageosv1.NodeHealth) bool {
 	if health.DirectfsInitiator+health.Director+health.KV+health.KVWrite+
 		health.Nats+health.Presentation+health.Rdb == strings.Repeat("alive", 7) {
 		return true
@@ -87,7 +87,7 @@ func isHealthy(health *api.NodeHealth) bool {
 	return false
 }
 
-func getNodeHealth(address string, timeout int) (*api.NodeHealth, error) {
+func getNodeHealth(address string, timeout int) (*storageosv1.NodeHealth, error) {
 	healthEndpointFormat := "http://%s:%s/v1/" + storageosapi.HealthAPIPrefix
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(timeout))
@@ -111,7 +111,7 @@ func getNodeHealth(address string, timeout int) (*api.NodeHealth, error) {
 		return nil, err
 	}
 
-	return &api.NodeHealth{
+	return &storageosv1.NodeHealth{
 		DirectfsInitiator: healthStatus.Submodules.DirectFSClient.Status,
 		Director:          healthStatus.Submodules.Director.Status,
 		KV:                healthStatus.Submodules.KV.Status,

@@ -9,7 +9,7 @@ import (
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
 	"github.com/storageos/cluster-operator/pkg/apis"
-	storageos "github.com/storageos/cluster-operator/pkg/apis/storageos/v1alpha1"
+	storageos "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -32,7 +32,7 @@ func NewStorageOSCluster(namespace string, clusterSpec storageos.StorageOSCluste
 	return &storageos.StorageOSCluster{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "StorageOSCluster",
-			APIVersion: "storageos.com/v1alpha1",
+			APIVersion: "storageos.com/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "example-storageos",
@@ -50,7 +50,7 @@ func SetupOperator(t *testing.T, ctx *framework.TestCtx) {
 	clusterList := &storageos.StorageOSClusterList{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "StorageOSCluster",
-			APIVersion: "storageos.com/v1alpha1",
+			APIVersion: "storageos.com/v1",
 		},
 	}
 	err := framework.AddToFrameworkScheme(apis.AddToScheme, clusterList)

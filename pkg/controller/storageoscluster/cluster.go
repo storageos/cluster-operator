@@ -1,7 +1,7 @@
 package storageoscluster
 
 import (
-	storageosv1alpha1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1alpha1"
+	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	"github.com/storageos/cluster-operator/pkg/storageos"
 )
 
@@ -9,7 +9,7 @@ import (
 // cluster and the deployment together, ensuring deployment interacts with the
 // right cluster resource.
 type StorageOSCluster struct {
-	cluster *storageosv1alpha1.StorageOSCluster
+	cluster *storageosv1.StorageOSCluster
 	// deployment implements storageoscluster.Deployment interface. This is
 	// cached for a cluster to avoid recreating it without any change to the
 	// cluster object. Every new cluster will create its unique deployment.
@@ -17,7 +17,7 @@ type StorageOSCluster struct {
 }
 
 // NewStorageOSCluster creates a new StorageOSCluster object.
-func NewStorageOSCluster(cluster *storageosv1alpha1.StorageOSCluster) *StorageOSCluster {
+func NewStorageOSCluster(cluster *storageosv1.StorageOSCluster) *StorageOSCluster {
 	return &StorageOSCluster{cluster: cluster}
 }
 
@@ -34,7 +34,7 @@ func (c *StorageOSCluster) SetDeployment(r *ReconcileStorageOSCluster) {
 
 // IsCurrentCluster compares the cluster attributes to check if the given
 // cluster is the same as the current cluster.
-func (c *StorageOSCluster) IsCurrentCluster(cluster *storageosv1alpha1.StorageOSCluster) bool {
+func (c *StorageOSCluster) IsCurrentCluster(cluster *storageosv1.StorageOSCluster) bool {
 	if (c.cluster.GetName() == cluster.GetName()) &&
 		(c.cluster.GetNamespace() == cluster.GetNamespace()) {
 		return true

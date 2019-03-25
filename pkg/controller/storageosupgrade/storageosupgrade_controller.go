@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	storageosv1alpha1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1alpha1"
+	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -55,7 +55,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource StorageOSUpgrade
-	err = c.Watch(&source.Kind{Type: &storageosv1alpha1.StorageOSUpgrade{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &storageosv1.StorageOSUpgrade{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -71,28 +71,28 @@ type ReconcileStorageOSUpgrade struct {
 	// that reads objects from the cache and writes to the apiserver
 	client         client.Client
 	scheme         *runtime.Scheme
-	currentUpgrade *storageosv1alpha1.StorageOSUpgrade
-	currentCluster *storageosv1alpha1.StorageOSCluster
-	imagePuller    *storageosv1alpha1.Job
+	currentUpgrade *storageosv1.StorageOSUpgrade
+	currentCluster *storageosv1.StorageOSCluster
+	imagePuller    *storageosv1.Job
 	recorder       record.EventRecorder
 }
 
 // SetCurrentUpgradeIfNone checks if there's any existing current upgrade and
 // sets a new current upgrade if it wasn't set before.
-func (r *ReconcileStorageOSUpgrade) SetCurrentUpgradeIfNone(upgrade *storageosv1alpha1.StorageOSUpgrade) {
+func (r *ReconcileStorageOSUpgrade) SetCurrentUpgradeIfNone(upgrade *storageosv1.StorageOSUpgrade) {
 	if r.currentUpgrade == nil {
 		r.SetCurrentUpgrade(upgrade)
 	}
 }
 
 // SetCurrentUpgrade sets the currently active upgrade in the controller.
-func (r *ReconcileStorageOSUpgrade) SetCurrentUpgrade(upgrade *storageosv1alpha1.StorageOSUpgrade) {
+func (r *ReconcileStorageOSUpgrade) SetCurrentUpgrade(upgrade *storageosv1.StorageOSUpgrade) {
 	r.currentUpgrade = upgrade
 }
 
 // IsCurrentUpgrade compares a given upgrade with the current cluster to check
 // if they are the same.
-func (r *ReconcileStorageOSUpgrade) IsCurrentUpgrade(upgrade *storageosv1alpha1.StorageOSUpgrade) bool {
+func (r *ReconcileStorageOSUpgrade) IsCurrentUpgrade(upgrade *storageosv1.StorageOSUpgrade) bool {
 	if upgrade == nil {
 		return false
 	}
@@ -112,16 +112,16 @@ func (r *ReconcileStorageOSUpgrade) ResetCurrentUpgrade(request reconcile.Reques
 }
 
 // findCurrentCluster finds the running cluster.
-func (r *ReconcileStorageOSUpgrade) findCurrentCluster() (*storageosv1alpha1.StorageOSCluster, error) {
-	clusterList := &storageosv1alpha1.StorageOSClusterList{}
+func (r *ReconcileStorageOSUpgrade) findCurrentCluster() (*storageosv1.StorageOSCluster, error) {
+	clusterList := &storageosv1.StorageOSClusterList{}
 	if err := r.client.List(context.TODO(), &client.ListOptions{}, clusterList); err != nil {
 		return nil, fmt.Errorf("failed to list clusters: %v", err)
 	}
 
-	var currentCluster *storageosv1alpha1.StorageOSCluster
+	var currentCluster *storageosv1.StorageOSCluster
 	for _, cluster := range clusterList.Items {
 		// The cluster with Phase "Running" is the only active cluster.
-		if cluster.Status.Phase == storageosv1alpha1.ClusterPhaseRunning {
+		if cluster.Status.Phase == storageosv1.ClusterPhaseRunning {
 			currentCluster = &cluster
 			break
 		}
@@ -217,7 +217,7 @@ func (r *ReconcileStorageOSUpgrade) Reconcile(request reconcile.Request) (reconc
 	reconcileResult := reconcile.Result{RequeueAfter: reconcilePeriod}
 
 	// Fetch the StorageOSUpgrade instance
-	instance := &storageosv1alpha1.StorageOSUpgrade{}
+	instance := &storageosv1.StorageOSUpgrade{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -458,7 +458,7 @@ func (r *ReconcileStorageOSUpgrade) DisableClusterMaintenance() error {
 }
 
 // newJobForCR returns a job with the same name/namespace as the cr.
-func newJobForCR(cr *storageosv1alpha1.StorageOSUpgrade) *batchv1.Job {
+func newJobForCR(cr *storageosv1.StorageOSUpgrade) *batchv1.Job {
 	labels := map[string]string{
 		"app": cr.Name,
 	}
@@ -494,7 +494,7 @@ func newJobForCR(cr *storageosv1alpha1.StorageOSUpgrade) *batchv1.Job {
 	}
 }
 
-func newServiceAccountForCR(name string, cr *storageosv1alpha1.StorageOSUpgrade) *corev1.ServiceAccount {
+func newServiceAccountForCR(name string, cr *storageosv1.StorageOSUpgrade) *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -546,13 +546,13 @@ func newClusterRole(name string, rules []rbacv1.PolicyRule) *rbacv1.ClusterRole 
 // newImagePullJob creates a jobs.storageos.com instance for pulling container
 // image and return. It uses the cluster instance to set the NodeSelectorTerm,
 // in order to pull the image only on the nodes that are part of the cluster.
-func newImagePullJob(cr *storageosv1alpha1.StorageOSUpgrade, cluster *storageosv1alpha1.StorageOSCluster) *storageosv1alpha1.Job {
-	return &storageosv1alpha1.Job{
+func newImagePullJob(cr *storageosv1.StorageOSUpgrade, cluster *storageosv1.StorageOSCluster) *storageosv1.Job {
+	return &storageosv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cr.Name + "-image-puller",
 			Namespace: cr.Namespace,
 		},
-		Spec: storageosv1alpha1.JobSpec{
+		Spec: storageosv1.JobSpec{
 			Image:             operatorImage,
 			Args:              []string{"docker-puller.sh", cr.Spec.NewImage},
 			MountPath:         "/var/run",

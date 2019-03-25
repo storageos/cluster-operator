@@ -7,4 +7,4 @@ spec:
   source: storageos-catalog
   sourceNamespace: olm
   name: storageos
-  channel: alpha
+  channel: stable

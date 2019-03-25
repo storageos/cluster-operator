@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
-	storageos "github.com/storageos/cluster-operator/pkg/apis/storageos/v1alpha1"
+	storageos "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	deploy "github.com/storageos/cluster-operator/pkg/storageos"
 	testutil "github.com/storageos/cluster-operator/test/e2e/util"
 	corev1 "k8s.io/api/core/v1"
