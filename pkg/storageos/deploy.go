@@ -30,6 +30,9 @@ const (
 	keyManagementRoleName    = "key-management-role"
 	keyManagementBindingName = "key-management-binding"
 
+	fencingClusterRoleName    = "storageos:pod-fencer"
+	fencingClusterBindingName = "storageos:pod-fencer"
+
 	tlsSecretType       = "kubernetes.io/tls"
 	storageosSecretType = "kubernetes.io/storageos"
 
@@ -42,6 +45,7 @@ const (
 	joinEnvVar                          = "JOIN"
 	advertiseIPEnvVar                   = "ADVERTISE_IP"
 	namespaceEnvVar                     = "NAMESPACE"
+	disableFencingEnvVar                = "DISABLE_FENCING"
 	disableTelemetryEnvVar              = "DISABLE_TELEMETRY"
 	deviceDirEnvVar                     = "DEVICE_DIR"
 	csiEndpointEnvVar                   = "CSI_ENDPOINT"
@@ -181,6 +185,16 @@ func (s *Deployment) Deploy() error {
 		}
 
 		if err := s.createStatefulSet(); err != nil {
+			return err
+		}
+	}
+
+	// Create role for Pod Fencing.
+	if !s.stos.Spec.DisableFencing {
+		if err := s.createClusterRoleForFencing(); err != nil {
+			return err
+		}
+		if err := s.createClusterRoleBindingForFencing(); err != nil {
 			return err
 		}
 	}

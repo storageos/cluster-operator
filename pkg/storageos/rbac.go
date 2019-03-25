@@ -100,6 +100,42 @@ func (s *Deployment) getClusterRole(name string) *rbacv1.ClusterRole {
 	}
 }
 
+func (s *Deployment) createClusterRoleForFencing() error {
+	rules := []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{""},
+			Resources: []string{"persistentvolumeclaims"},
+			Verbs:     []string{"get", "list", "watch"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"nodes"},
+			Verbs:     []string{"get", "list", "watch"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"pods"},
+			Verbs:     []string{"get", "list", "watch", "update", "patch", "delete"},
+		},
+		{
+			APIGroups: []string{"storage.k8s.io"},
+			Resources: []string{"storageclasses"},
+			Verbs:     []string{"get", "list", "watch"},
+		},
+		{
+			APIGroups: []string{"storage.k8s.io"},
+			Resources: []string{"volumeattachments"},
+			Verbs:     []string{"get", "list", "watch", "delete"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"events"},
+			Verbs:     []string{"list", "watch", "create", "update", "patch"},
+		},
+	}
+	return s.createClusterRole(fencingClusterRoleName, rules)
+}
+
 func (s *Deployment) createClusterRoleForDriverRegistrar() error {
 	rules := []rbacv1.PolicyRule{
 		{
@@ -254,6 +290,22 @@ func (s *Deployment) getClusterRoleBinding(name string) *rbacv1.ClusterRoleBindi
 			},
 		},
 	}
+}
+
+func (s *Deployment) createClusterRoleBindingForFencing() error {
+	subjects := []rbacv1.Subject{
+		{
+			Kind:      "ServiceAccount",
+			Name:      "storageos-daemonset-sa",
+			Namespace: s.stos.Spec.GetResourceNS(),
+		},
+	}
+	roleRef := rbacv1.RoleRef{
+		Kind:     "ClusterRole",
+		Name:     fencingClusterRoleName,
+		APIGroup: "rbac.authorization.k8s.io",
+	}
+	return s.createClusterRoleBinding(fencingClusterBindingName, subjects, roleRef)
 }
 
 func (s *Deployment) createClusterRoleBindingForDriverRegistrar() error {

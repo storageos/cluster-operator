@@ -30,6 +30,17 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - pods
+  verbs:
+  - list
+  - watch
+  - get
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
   - events
   - namespaces
   - serviceaccounts

@@ -78,6 +78,17 @@ func (s *Deployment) Delete() error {
 		}
 	}
 
+	// Delete role for Pod Fencing.
+	if !s.stos.Spec.DisableFencing {
+		if err := s.deleteClusterRoleBinding(fencingClusterBindingName); err != nil {
+			return err
+		}
+
+		if err := s.deleteClusterRole(fencingClusterRoleName); err != nil {
+			return err
+		}
+	}
+
 	// NOTE: Do not delete the namespace. Namespace can have some resources
 	// created by the control plane. They must not be deleted.
 

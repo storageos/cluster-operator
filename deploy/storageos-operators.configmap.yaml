@@ -167,6 +167,11 @@ data:
           categories: "Storage"
           alm-examples: '[{"apiVersion":"storageos.com/v1alpha1","kind":"StorageOSCluster","metadata":{"name":"example-storageos","namespace":"default"},"spec":{"secretRefName":"storageos-api","secretRefNamespace":"default"}},{"apiVersion":"storageos.com/v1alpha1","kind":"Job","metadata":{"name":"example-job","namespace":"default"},"spec":{"image":"storageos/cluster-operator:latest","args":["/var/lib/storageos"],"mountPath":"/var/lib","hostPath":"/var/lib","completionWord":"done"}},{"apiVersion":"storageos.com/v1alpha1","kind":"StorageOSUpgrade","metadata":{"name":"example-upgrade","namespace":"default"},"spec":{"newImage":"storageos/node:latest"}}]'
           description: Cloud-native, persistent storage for containers.
+          containerImage: storageos/cluster-operator:test
+          repository: https://github.com/storageos/cluster-operator
+          createdAt: 2019-03-25T08:00:00Z
+          support: StorageOS, Inc
+          certified: "false"
       spec:
         displayName: StorageOS
         description: |
@@ -252,7 +257,7 @@ data:
 
         version: "0.0.0"
         minKubeVersion: "1.10.0"
-        maturity: alpha
+        maturity: stable
         maintainers:
         - name: StorageOS, Inc
           email: support@storageos.com
@@ -265,13 +270,12 @@ data:
 
         selector:
           matchLabels:
-            alm-owner-etcd: storageosoperator
             operated-by: storageosoperator
 
         links:
         - name: Documentation
           url: https://docs.storageos.com/
-        - name: StorageOS Cluster Operator Source Code
+        - name: StorageOS Operator Source Code
           url: https://github.com/storageos/cluster-operator
 
         icon:
@@ -318,6 +322,17 @@ data:
                 - watch
                 - get
                 - update
+              - apiGroups:
+                - ""
+                resources:
+                - pods
+                verbs:
+                - list
+                - watch
+                - get
+                - update
+                - patch
+                - delete
               - apiGroups:
                 - ""
                 resources:

@@ -122,6 +122,30 @@ type StorageOSClusterSpec struct {
 	// Resources is to set the resource requirements of the storageos containers.
 	Resources corev1.ResourceRequirements `json:"resources"`
 
+	// Disable Pod Fencing.  With StatefulSets, Pods are only re-scheduled if
+	// the Pod has been marked as killed.  In practice this means that failover
+	// of a StatefulSet pod is a manual operation.
+	//
+	// By enabling Pod Fencing and setting the `storageos.com/fenced=true` label
+	// on a Pod, StorageOS will enable automated Pod failover (by killing the
+	// application Pod on the failed node) if the following conditions exist:
+	//
+	// - Pod fencing has not been explicitly disabled.
+	// - StorageOS has determined that the node the Pod is running on is
+	//   offline.  StorageOS uses Gossip and TCP checks and will retry for 30
+	//   seconds.  At this point all volumes on the failed node are marked
+	//   offline (irrespective of whether fencing is enabled) and volume
+	//   failover starts.
+	// - The Pod has the label `storageos.com/fenced=true` set.
+	// - The Pod has at least one StorageOS volume attached.
+	// - Each StorageOS volume has at least 1 healthy replica.
+	//
+	// When Pod Fencing is disabled, StorageOS will not perform any interaction
+	// with Kubernetes when it detects that a node has gone offline.
+	// Additionally, the Kubernetes permissions required for Fencing will not be
+	// added to the StorageOS role.
+	DisableFencing bool `json:"disableFencing"`
+
 	// Disable Telemetry.
 	DisableTelemetry bool `json:"disableTelemetry"`
 }
