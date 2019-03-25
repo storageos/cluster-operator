@@ -1,4 +1,4 @@
 packageName: storageos
 channels:
 - name: stable
-  currentCSV: storageosoperator.v0.0.11
+  currentCSV: storageosoperator.v0.0.12
