@@ -124,7 +124,7 @@ func TestCreateRoleForKeyMgmt(t *testing.T) {
 	}
 
 	nsName := types.NamespacedName{
-		Name:      "key-management-role",
+		Name:      KeyManagementRoleName,
 		Namespace: defaultNS,
 	}
 	wantRole := &rbacv1.Role{
@@ -133,7 +133,7 @@ func TestCreateRoleForKeyMgmt(t *testing.T) {
 			Kind:       "Role",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "key-management-role",
+			Name:      KeyManagementRoleName,
 			Namespace: defaultNS,
 			Labels: map[string]string{
 				"app": appName,
@@ -209,7 +209,7 @@ func TestCreateRoleBindingForKeyMgmt(t *testing.T) {
 	}
 
 	nsName := types.NamespacedName{
-		Name:      "key-management-binding",
+		Name:      KeyManagementBindingName,
 		Namespace: defaultNS,
 	}
 	createdRoleBinding := &rbacv1.RoleBinding{
@@ -218,7 +218,7 @@ func TestCreateRoleBindingForKeyMgmt(t *testing.T) {
 			Kind:       "RoleBinding",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "key-management-binding",
+			Name:      KeyManagementBindingName,
 			Namespace: defaultNS,
 			Labels: map[string]string{
 				"app": appName,
@@ -239,13 +239,13 @@ func TestCreateClusterRoleBinding(t *testing.T) {
 	subjects := []rbacv1.Subject{
 		{
 			Kind:      "ServiceAccount",
-			Name:      "storageos-daemonset-sa",
+			Name:      DaemonsetSA,
 			Namespace: defaultNS,
 		},
 	}
 	roleRef := rbacv1.RoleRef{
 		Kind:     "ClusterRole",
-		Name:     "driver-registrar-role",
+		Name:     CSIDriverRegistrarClusterRoleName,
 		APIGroup: "rbac.authorization.k8s.io",
 	}
 	if err := deploy.createClusterRoleBinding(bindingName, subjects, roleRef); err != nil {

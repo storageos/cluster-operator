@@ -34,7 +34,7 @@ func (s *Deployment) createStatefulSet() error {
 					Labels: ls,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: "storageos-statefulset-sa",
+					ServiceAccountName: StatefulsetSA,
 					Containers: []corev1.Container{
 						{
 							Image:           s.stos.Spec.GetCSIExternalProvisionerImage(CSIV1Supported(s.k8sVersion)),

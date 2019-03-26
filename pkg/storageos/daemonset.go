@@ -36,7 +36,7 @@ func (s *Deployment) createDaemonSet() error {
 					Labels: ls,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: "storageos-daemonset-sa",
+					ServiceAccountName: DaemonsetSA,
 					HostPID:            true,
 					HostNetwork:        true,
 					DNSPolicy:          corev1.DNSClusterFirstWithHostNet,

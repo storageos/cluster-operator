@@ -6,6 +6,28 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Exported role, binding and service account resource names.
+const (
+	DaemonsetSA   = "storageos-daemonset-sa"
+	StatefulsetSA = "storageos-statefulset-sa"
+
+	CSIProvisionerClusterRoleName    = "storageos:csi-provisioner"
+	CSIProvisionerClusterBindingName = "storageos:csi-provisioner"
+
+	CSIAttacherClusterRoleName    = "storageos:csi-attacher"
+	CSIAttacherClusterBindingName = "storageos:csi-attacher"
+
+	CSIDriverRegistrarClusterRoleName       = "storageos:driver-registrar"
+	CSIDriverRegistrarClusterBindingName    = "storageos:driver-registrar"
+	CSIK8SDriverRegistrarClusterBindingName = "storageos:k8s-driver-registrar"
+
+	KeyManagementRoleName    = "storageos:key-management"
+	KeyManagementBindingName = "storageos:key-management"
+
+	FencingClusterRoleName    = "storageos:pod-fencer"
+	FencingClusterBindingName = "storageos:pod-fencer"
+)
+
 func (s *Deployment) createServiceAccount(name string) error {
 	sa := s.getServiceAccount(name)
 	return s.createOrUpdateObject(sa)
@@ -34,15 +56,15 @@ func (s *Deployment) getServiceAccount(name string) *corev1.ServiceAccount {
 }
 
 func (s *Deployment) createServiceAccountForDaemonSet() error {
-	return s.createServiceAccount("storageos-daemonset-sa")
+	return s.createServiceAccount(DaemonsetSA)
 }
 
 func (s *Deployment) createServiceAccountForStatefulSet() error {
-	return s.createServiceAccount("storageos-statefulset-sa")
+	return s.createServiceAccount(StatefulsetSA)
 }
 
 func (s *Deployment) createRoleForKeyMgmt() error {
-	role := s.getRole(keyManagementRoleName)
+	role := s.getRole(KeyManagementRoleName)
 	role.Rules = []rbacv1.PolicyRule{
 		{
 			APIGroups: []string{""},
@@ -55,7 +77,7 @@ func (s *Deployment) createRoleForKeyMgmt() error {
 }
 
 func (s *Deployment) deleteRole(name string) error {
-	return s.deleteObject(s.getRole(keyManagementRoleName))
+	return s.deleteObject(s.getRole(KeyManagementRoleName))
 }
 
 // getRole creates a generic role object with the given name and returns it.
@@ -133,7 +155,7 @@ func (s *Deployment) createClusterRoleForFencing() error {
 			Verbs:     []string{"list", "watch", "create", "update", "patch"},
 		},
 	}
-	return s.createClusterRole(fencingClusterRoleName, rules)
+	return s.createClusterRole(FencingClusterRoleName, rules)
 }
 
 func (s *Deployment) createClusterRoleForDriverRegistrar() error {
@@ -159,7 +181,7 @@ func (s *Deployment) createClusterRoleForDriverRegistrar() error {
 			Verbs:     []string{"create"},
 		},
 	}
-	return s.createClusterRole("driver-registrar-role", rules)
+	return s.createClusterRole(CSIDriverRegistrarClusterRoleName, rules)
 }
 
 func (s *Deployment) createClusterRoleForProvisioner() error {
@@ -190,7 +212,7 @@ func (s *Deployment) createClusterRoleForProvisioner() error {
 			Verbs:     []string{"list", "watch", "create", "update", "patch"},
 		},
 	}
-	return s.createClusterRole("csi-provisioner-role", rules)
+	return s.createClusterRole(CSIProvisionerClusterRoleName, rules)
 }
 
 func (s *Deployment) createClusterRoleForAttacher() error {
@@ -226,21 +248,21 @@ func (s *Deployment) createClusterRoleForAttacher() error {
 			Verbs:     []string{"list", "watch", "create", "update", "patch"},
 		},
 	}
-	return s.createClusterRole("csi-attacher-role", rules)
+	return s.createClusterRole(CSIAttacherClusterRoleName, rules)
 }
 
 func (s *Deployment) createRoleBindingForKeyMgmt() error {
-	roleBinding := s.getRoleBinding(keyManagementBindingName)
+	roleBinding := s.getRoleBinding(KeyManagementBindingName)
 	roleBinding.Subjects = []rbacv1.Subject{
 		{
 			Kind:      "ServiceAccount",
-			Name:      "storageos-daemonset-sa",
+			Name:      DaemonsetSA,
 			Namespace: s.stos.Spec.GetResourceNS(),
 		},
 	}
 	roleBinding.RoleRef = rbacv1.RoleRef{
 		Kind:     "Role",
-		Name:     keyManagementRoleName,
+		Name:     KeyManagementRoleName,
 		APIGroup: "rbac.authorization.k8s.io",
 	}
 	return s.createOrUpdateObject(roleBinding)
@@ -296,78 +318,78 @@ func (s *Deployment) createClusterRoleBindingForFencing() error {
 	subjects := []rbacv1.Subject{
 		{
 			Kind:      "ServiceAccount",
-			Name:      "storageos-daemonset-sa",
+			Name:      DaemonsetSA,
 			Namespace: s.stos.Spec.GetResourceNS(),
 		},
 	}
 	roleRef := rbacv1.RoleRef{
 		Kind:     "ClusterRole",
-		Name:     fencingClusterRoleName,
+		Name:     FencingClusterRoleName,
 		APIGroup: "rbac.authorization.k8s.io",
 	}
-	return s.createClusterRoleBinding(fencingClusterBindingName, subjects, roleRef)
+	return s.createClusterRoleBinding(FencingClusterBindingName, subjects, roleRef)
 }
 
 func (s *Deployment) createClusterRoleBindingForDriverRegistrar() error {
 	subjects := []rbacv1.Subject{
 		{
 			Kind:      "ServiceAccount",
-			Name:      "storageos-daemonset-sa",
+			Name:      DaemonsetSA,
 			Namespace: s.stos.Spec.GetResourceNS(),
 		},
 	}
 	roleRef := rbacv1.RoleRef{
 		Kind:     "ClusterRole",
-		Name:     "driver-registrar-role",
+		Name:     CSIDriverRegistrarClusterRoleName,
 		APIGroup: "rbac.authorization.k8s.io",
 	}
-	return s.createClusterRoleBinding("driver-registrar-binding", subjects, roleRef)
+	return s.createClusterRoleBinding(CSIDriverRegistrarClusterBindingName, subjects, roleRef)
 }
 
 func (s *Deployment) createClusterRoleBindingForK8SDriverRegistrar() error {
 	subjects := []rbacv1.Subject{
 		{
 			Kind:      "ServiceAccount",
-			Name:      "storageos-statefulset-sa",
+			Name:      StatefulsetSA,
 			Namespace: s.stos.Spec.GetResourceNS(),
 		},
 	}
 	roleRef := rbacv1.RoleRef{
 		Kind:     "ClusterRole",
-		Name:     "driver-registrar-role",
+		Name:     CSIDriverRegistrarClusterRoleName,
 		APIGroup: "rbac.authorization.k8s.io",
 	}
-	return s.createClusterRoleBinding("k8s-driver-registrar-binding", subjects, roleRef)
+	return s.createClusterRoleBinding(CSIK8SDriverRegistrarClusterBindingName, subjects, roleRef)
 }
 
 func (s *Deployment) createClusterRoleBindingForProvisioner() error {
 	subjects := []rbacv1.Subject{
 		{
 			Kind:      "ServiceAccount",
-			Name:      "storageos-statefulset-sa",
+			Name:      StatefulsetSA,
 			Namespace: s.stos.Spec.GetResourceNS(),
 		},
 	}
 	roleRef := rbacv1.RoleRef{
 		Kind:     "ClusterRole",
-		Name:     "csi-provisioner-role",
+		Name:     CSIProvisionerClusterRoleName,
 		APIGroup: "rbac.authorization.k8s.io",
 	}
-	return s.createClusterRoleBinding("csi-provisioner-binding", subjects, roleRef)
+	return s.createClusterRoleBinding(CSIProvisionerClusterBindingName, subjects, roleRef)
 }
 
 func (s *Deployment) createClusterRoleBindingForAttacher() error {
 	subjects := []rbacv1.Subject{
 		{
 			Kind:      "ServiceAccount",
-			Name:      "storageos-statefulset-sa",
+			Name:      StatefulsetSA,
 			Namespace: s.stos.Spec.GetResourceNS(),
 		},
 	}
 	roleRef := rbacv1.RoleRef{
 		Kind:     "ClusterRole",
-		Name:     "csi-attacher-role",
+		Name:     CSIAttacherClusterRoleName,
 		APIGroup: "rbac.authorization.k8s.io",
 	}
-	return s.createClusterRoleBinding("csi-attacher-binding", subjects, roleRef)
+	return s.createClusterRoleBinding(CSIAttacherClusterBindingName, subjects, roleRef)
 }
