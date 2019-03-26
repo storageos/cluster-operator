@@ -70,14 +70,14 @@ $ kubectl describe storageoscluster/example-storageos
 Name:         example-storageos
 Namespace:    default
 Labels:       <none>
-Annotations:  kubectl.kubernetes.io/last-applied-configuration={"apiVersion":"storageos.com/v1alpha1","kind":"StorageOSCluster","metadata":{"annotations":{},"name":"example-storageos","namespace":"default"},"spec":{"...
-API Version:  storageos.com/v1alpha1
+Annotations:  kubectl.kubernetes.io/last-applied-configuration={"apiVersion":"storageos.com/v1","kind":"StorageOSCluster","metadata":{"annotations":{},"name":"example-storageos","namespace":"default"},"spec":{"...
+API Version:  storageos.com/v1
 Kind:         StorageOSCluster
 Metadata:
   Creation Timestamp:  2018-07-21T12:57:11Z
   Generation:          1
   Resource Version:    10939030
-  Self Link:           /apis/storageos.com/v1alpha1/namespaces/default/storageosclusters/example-storageos
+  Self Link:           /apis/storageos.com/v1/namespaces/default/storageosclusters/example-storageos
   UID:                 955b24a4-8ce5-11e8-956a-1866da35eee2
 Spec:
   Join:  test07
@@ -145,7 +145,7 @@ An existing StorageOS cluster can be upgraded to a new version of StorageOS by
 creating an Upgrade Configuration. The cluster-operator takes care of
 downloading the new container image and updating all the nodes with new version
 of StorageOS.
-An example of `StorageOSUpgrade` resource is [storageos_v1alpha1_storageosupgrade_cr.yaml](/deploy/crds/storageos_v1alpha1_storageosupgrade_cr.yaml).
+An example of `StorageOSUpgrade` resource is [storageos_v1_storageosupgrade_cr.yaml](/deploy/crds/storageos_v1_storageosupgrade_cr.yaml).
 
 Only offline upgrade is supported for now by cluster-operator. During the
 upgrade, StorageOS maintenance mode is enabled, the applications that use
@@ -164,8 +164,8 @@ $ kubectl describe storageosupgrades example-storageosupgrade
 Name:         example-storageosupgrade
 Namespace:    default
 Labels:       <none>
-Annotations:  kubectl.kubernetes.io/last-applied-configuration={"apiVersion":"storageos.com/v1alpha1","kind":"StorageOSUpgrade","metadata":{"annotations":{},"name":"example-storageosupgrade","namespace":"default"},...
-API Version:  storageos.com/v1alpha1
+Annotations:  kubectl.kubernetes.io/last-applied-configuration={"apiVersion":"storageos.com/v1","kind":"StorageOSUpgrade","metadata":{"annotations":{},"name":"example-storageosupgrade","namespace":"default"},...
+API Version:  storageos.com/v1
 Kind:         StorageOSUpgrade
 ...
 Spec:
@@ -208,7 +208,7 @@ all nodes or on selected nodes. This can be used to easily perform cleanup
 task. An example would be to create a `Job` resource:
 
 ```yaml
-apiVersion: storageos.com/v1alpha1
+apiVersion: storageos.com/v1
 kind: Job
 metadata:
   name: cleanup-job
@@ -352,7 +352,7 @@ To enable CSI, set `csi.enable` to `true` in the `StorageOSCluster` resource
 config.
 
 ```yaml
-apiVersion: "storageos.com/v1alpha1"
+apiVersion: "storageos.com/v1"
 kind: "StorageOSCluster"
 metadata:
   name: "example-storageos"
@@ -371,7 +371,7 @@ To enable CSI Credentials, ensure that CSI is enabled by setting `csi.enable` to
 `true`:
 
 ```yaml
-apiVersion: "storageos.com/v1alpha1"
+apiVersion: "storageos.com/v1"
 kind: "StorageOSCluster"
 metadata:
   name: "example-storageos"

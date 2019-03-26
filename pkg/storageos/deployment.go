@@ -1,7 +1,7 @@
 package storageos
 
 import (
-	api "github.com/storageos/cluster-operator/pkg/apis/storageos/v1alpha1"
+	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -11,7 +11,7 @@ import (
 // resource creation and update.
 type Deployment struct {
 	client     client.Client
-	stos       *api.StorageOSCluster
+	stos       *storageosv1.StorageOSCluster
 	recorder   record.EventRecorder
 	k8sVersion string
 	scheme     *runtime.Scheme
@@ -20,7 +20,7 @@ type Deployment struct {
 
 // NewDeployment creates a new Deployment given a k8c client, storageos manifest
 // and an event broadcast recorder.
-func NewDeployment(client client.Client, stos *api.StorageOSCluster, recorder record.EventRecorder, scheme *runtime.Scheme, version string, update bool) *Deployment {
+func NewDeployment(client client.Client, stos *storageosv1.StorageOSCluster, recorder record.EventRecorder, scheme *runtime.Scheme, version string, update bool) *Deployment {
 	return &Deployment{
 		client:     client,
 		stos:       stos,

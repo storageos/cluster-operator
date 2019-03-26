@@ -21,12 +21,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	storageosapis "github.com/storageos/cluster-operator/pkg/apis"
-	api "github.com/storageos/cluster-operator/pkg/apis/storageos/v1alpha1"
+	api "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 )
 
 var gvk = schema.GroupVersionKind{
 	Group:   "storageos.com",
-	Version: "v1alpha1",
+	Version: "v1",
 	Kind:    "StorageOSCluster",
 }
 

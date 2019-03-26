@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	storageosv1alpha1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1alpha1"
+	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -56,7 +56,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource StorageOSCluster
-	err = c.Watch(&source.Kind{Type: &storageosv1alpha1.StorageOSCluster{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &storageosv1.StorageOSCluster{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -79,14 +79,14 @@ type ReconcileStorageOSCluster struct {
 
 // SetCurrentClusterIfNone checks if there's any existing current cluster and
 // sets a new current cluster if it wasn't set before.
-func (r *ReconcileStorageOSCluster) SetCurrentClusterIfNone(cluster *storageosv1alpha1.StorageOSCluster) {
+func (r *ReconcileStorageOSCluster) SetCurrentClusterIfNone(cluster *storageosv1.StorageOSCluster) {
 	if r.currentCluster == nil {
 		r.SetCurrentCluster(cluster)
 	}
 }
 
 // SetCurrentCluster sets the currently active cluster in the controller.
-func (r *ReconcileStorageOSCluster) SetCurrentCluster(cluster *storageosv1alpha1.StorageOSCluster) {
+func (r *ReconcileStorageOSCluster) SetCurrentCluster(cluster *storageosv1.StorageOSCluster) {
 	r.currentCluster = NewStorageOSCluster(cluster)
 }
 
@@ -106,7 +106,7 @@ func (r *ReconcileStorageOSCluster) Reconcile(request reconcile.Request) (reconc
 	reconcileResult := reconcile.Result{RequeueAfter: reconcilePeriod}
 
 	// Fetch the StorageOSCluster instance
-	instance := &storageosv1alpha1.StorageOSCluster{}
+	instance := &storageosv1.StorageOSCluster{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -154,7 +154,7 @@ func (r *ReconcileStorageOSCluster) Reconcile(request reconcile.Request) (reconc
 	return reconcileResult, nil
 }
 
-func (r *ReconcileStorageOSCluster) reconcile(m *storageosv1alpha1.StorageOSCluster) error {
+func (r *ReconcileStorageOSCluster) reconcile(m *storageosv1.StorageOSCluster) error {
 	if m.Spec.Pause {
 		// Do not reconcile, the operator is paused for the cluster.
 		return nil
@@ -251,7 +251,7 @@ func (r *ReconcileStorageOSCluster) reconcile(m *storageosv1alpha1.StorageOSClus
 
 // generateJoinToken performs node selection based on NodeSelectorTerms if
 // specified, and forms a join token by combining the node IPs.
-func (r *ReconcileStorageOSCluster) generateJoinToken(m *storageosv1alpha1.StorageOSCluster) (string, error) {
+func (r *ReconcileStorageOSCluster) generateJoinToken(m *storageosv1.StorageOSCluster) (string, error) {
 	// Get a new list of all the nodes.
 	nodeList := storageos.NodeList()
 	if err := r.client.List(context.Background(), &client.ListOptions{}, nodeList); err != nil {

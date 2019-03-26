@@ -1,4 +1,4 @@
-apiVersion: storageos.com/v1alpha1
+apiVersion: storageos.com/v1
 kind: StorageOSUpgrade
 metadata:
   name: example-storageosupgrade
