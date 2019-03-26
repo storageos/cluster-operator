@@ -24,15 +24,15 @@ func (s *Deployment) Delete() error {
 		return err
 	}
 
-	if err := s.deleteRoleBinding(keyManagementBindingName); err != nil {
+	if err := s.deleteRoleBinding(KeyManagementBindingName); err != nil {
 		return err
 	}
 
-	if err := s.deleteRole(keyManagementRoleName); err != nil {
+	if err := s.deleteRole(KeyManagementRoleName); err != nil {
 		return err
 	}
 
-	if err := s.deleteServiceAccount("storageos-daemonset-sa"); err != nil {
+	if err := s.deleteServiceAccount(DaemonsetSA); err != nil {
 		return err
 	}
 
@@ -41,35 +41,35 @@ func (s *Deployment) Delete() error {
 			return err
 		}
 
-		if err := s.deleteClusterRoleBinding("csi-attacher-binding"); err != nil {
+		if err := s.deleteClusterRoleBinding(CSIAttacherClusterBindingName); err != nil {
 			return err
 		}
 
-		if err := s.deleteClusterRoleBinding("csi-provisioner-binding"); err != nil {
+		if err := s.deleteClusterRoleBinding(CSIProvisionerClusterBindingName); err != nil {
 			return err
 		}
 
-		if err := s.deleteClusterRole("csi-attacher-role"); err != nil {
+		if err := s.deleteClusterRole(CSIAttacherClusterRoleName); err != nil {
 			return err
 		}
 
-		if err := s.deleteClusterRole("csi-provisioner-role"); err != nil {
+		if err := s.deleteClusterRole(CSIProvisionerClusterRoleName); err != nil {
 			return err
 		}
 
-		if err := s.deleteServiceAccount("storageos-statefulset-sa"); err != nil {
+		if err := s.deleteServiceAccount(StatefulsetSA); err != nil {
 			return err
 		}
 
-		if err := s.deleteClusterRoleBinding("k8s-driver-registrar-binding"); err != nil {
+		if err := s.deleteClusterRoleBinding(CSIK8SDriverRegistrarClusterBindingName); err != nil {
 			return err
 		}
 
-		if err := s.deleteClusterRoleBinding("driver-registrar-binding"); err != nil {
+		if err := s.deleteClusterRoleBinding(CSIDriverRegistrarClusterBindingName); err != nil {
 			return err
 		}
 
-		if err := s.deleteClusterRole("driver-registrar-role"); err != nil {
+		if err := s.deleteClusterRole(CSIDriverRegistrarClusterRoleName); err != nil {
 			return err
 		}
 
@@ -80,11 +80,11 @@ func (s *Deployment) Delete() error {
 
 	// Delete role for Pod Fencing.
 	if !s.stos.Spec.DisableFencing {
-		if err := s.deleteClusterRoleBinding(fencingClusterBindingName); err != nil {
+		if err := s.deleteClusterRoleBinding(FencingClusterBindingName); err != nil {
 			return err
 		}
 
-		if err := s.deleteClusterRole(fencingClusterRoleName); err != nil {
+		if err := s.deleteClusterRole(FencingClusterRoleName); err != nil {
 			return err
 		}
 	}

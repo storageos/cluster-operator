@@ -27,12 +27,6 @@ const (
 	daemonsetName   = "storageos-daemonset"
 	statefulsetName = "storageos-statefulset"
 
-	keyManagementRoleName    = "key-management-role"
-	keyManagementBindingName = "key-management-binding"
-
-	fencingClusterRoleName    = "storageos:pod-fencer"
-	fencingClusterBindingName = "storageos:pod-fencer"
-
 	tlsSecretType       = "kubernetes.io/tls"
 	storageosSecretType = "kubernetes.io/storageos"
 
