@@ -15,13 +15,3 @@ operator.
 
 `olm/storageos` contains the files that are submitted to the operatorhub for
 operatorhub release.
-
-
-## examples.json
-
-This file contains json based examples of all the CRD resources. This exists
-here to make it easier to edit the examples in a readable format. These examples
-are added to the `alm-examples` field in an OLM ClusterServiceVersion(CSV)
-object and are used as template for the resources. All the white spaces in this
-file can be removed by using https://www.browserling.com/tools/remove-all-whitespace
-and the result can be added as a single line value for `alm-examples`.
