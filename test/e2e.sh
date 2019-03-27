@@ -121,6 +121,26 @@ install_operatorsdk() {
     echo
 }
 
+# Installs operator-courier tool to lint the OLM CSV bundle.
+install_operatorcourier() {
+    echo "Install operator-courier"
+    sudo apt-get install -y python3.4-venv
+    # Create a python virtual environment.
+    python3 -m venv test-env
+    # Turn off nounset, to avoid errors in venv activation/deactivation due to
+    # unset variables.
+    set +o nounset
+    source ./test-env/bin/activate
+    # Update setuptools to a newer version. operator-courier fails to build with
+    # older versions of setuptools.
+    pip install --upgrade setuptools
+    pip install operator-courier
+    deactivate
+    # Turn on nounset.
+    set -o nounset
+    echo
+}
+
 # Prints log for all pods in the specified namespace.
 # Args:
 #   $1 The namespace
@@ -211,6 +231,14 @@ main() {
     fi
 
     if [ "$2" = "olm" ]; then
+        # Lint the OLM CSV bundle.
+        install_operatorcourier
+        set +o nounset
+        source ./test-env/bin/activate
+        operator-courier verify ./deploy/olm/storageos
+        deactivate
+        set -o nounset
+
         source ./deploy/olm/olm.sh
         # Not using quick install here because the order in which the resources
         # are created is unreliable and results in flaky test setup. Hard to
