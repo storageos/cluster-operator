@@ -3,6 +3,7 @@ package storageos
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"testing"
@@ -294,7 +295,6 @@ func checkSubjectsEquality(t *testing.T, wantSubjects, gotSubjects []rbacv1.Subj
 }
 
 func TestCreateDaemonSet(t *testing.T) {
-	c := fake.NewFakeClientWithScheme(testScheme)
 	clusterName := "my-stos-cluster"
 	stosCluster := &api.StorageOSCluster{
 		TypeMeta: metav1.TypeMeta{
@@ -307,12 +307,31 @@ func TestCreateDaemonSet(t *testing.T) {
 		},
 	}
 
+	// etcd secret containing TLS certs. This exists before storageos cluster
+	// is created.
+	etcdSecret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "etcd-certs",
+			Namespace: "default",
+		},
+		Data: map[string][]byte{
+			tlsEtcdCA:         []byte("someetcdca"),
+			tlsEtcdClientCert: []byte("someetcdclientcert"),
+			tlsEtcdClientKey:  []byte("someetcdclientkey"),
+		},
+	}
+
 	testcases := []struct {
 		name                 string
 		spec                 api.StorageOSClusterSpec
 		wantEnableCSI        bool
 		wantSharedDir        string
 		wantDisableTelemetry bool
+		wantTLSEtcd          bool
 	}{
 		{
 			name: "legacy-daemonset",
@@ -346,9 +365,20 @@ func TestCreateDaemonSet(t *testing.T) {
 			},
 			wantDisableTelemetry: true,
 		},
+		{
+			name: "etcd TLS",
+			spec: api.StorageOSClusterSpec{
+				TLSEtcdSecretRefName:      "etcd-certs",
+				TLSEtcdSecretRefNamespace: "default",
+			},
+			wantTLSEtcd: true,
+		},
 	}
 
 	for _, tc := range testcases {
+		// Create fake client with pre-existing resources.
+		c := fake.NewFakeClientWithScheme(testScheme, etcdSecret)
+
 		stosCluster.Spec = tc.spec
 		deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
 		if err := deploy.createDaemonSet(); err != nil {
@@ -417,6 +447,70 @@ func TestCreateDaemonSet(t *testing.T) {
 		// Telemetry must be set.
 		if !telemetryEnvVarFound {
 			t.Errorf("disableTelemetry env var not set, expected to be set")
+		}
+
+		if tc.wantTLSEtcd {
+			// Check if the TLS certs volume exists in the spec.
+			volumeFound := false
+			for _, vol := range createdDaemonset.Spec.Template.Spec.Volumes {
+				if vol.Name == tlsEtcdCertsVolume {
+					volumeFound = true
+				}
+			}
+			if !volumeFound {
+				t.Error("TLS etcd certs volume not found in daemonset spec")
+			}
+
+			// Check if TLS certs volume mount exists in the node container.
+			volumeMountFound := false
+			for _, volMount := range createdDaemonset.Spec.Template.Spec.Containers[0].VolumeMounts {
+				if volMount.Name == tlsEtcdCertsVolume &&
+					volMount.MountPath == tlsEtcdRootPath {
+					volumeMountFound = true
+				}
+			}
+			if !volumeMountFound {
+				t.Error("TLS etcd certs volume mount not found in the node container")
+			}
+
+			// Check if etcd TLS certs env vars are set for the node container.
+			tlsEtcdCAEnvVarFound := false
+			tlsEtcdClientCertEnvVarFound := false
+			tlsEtcdClientKeyEnvVarFound := false
+
+			for _, env := range createdDaemonset.Spec.Template.Spec.Containers[0].Env {
+				switch env.Name {
+				case tlsEtcdCAEnvVar:
+					tlsEtcdCAEnvVarFound = true
+					// Check the env var value.
+					wantCAPath := filepath.Join(tlsEtcdRootPath, tlsEtcdCA)
+					if env.Value != wantCAPath {
+						t.Errorf("unexpected %q value:\n\t(WNT) %q\n\t(GOT) %q", env.Name, wantCAPath, env.Value)
+					}
+				case tlsEtcdClientCertEnvVar:
+					tlsEtcdClientCertEnvVarFound = true
+					wantCertPath := filepath.Join(tlsEtcdRootPath, tlsEtcdClientCert)
+					if env.Value != wantCertPath {
+						t.Errorf("unexpected %q value:\n\t(WNT) %q\n\t(GOT) %q", env.Name, wantCertPath, env.Value)
+					}
+				case tlsEtcdClientKeyEnvVar:
+					tlsEtcdClientKeyEnvVarFound = true
+					wantKeyPath := filepath.Join(tlsEtcdRootPath, tlsEtcdClientKey)
+					if env.Value != wantKeyPath {
+						t.Errorf("unexpected %q value:\n\t(WNT) %q\n\t(GOT) %q", env.Name, wantKeyPath, env.Value)
+					}
+				}
+			}
+
+			if !tlsEtcdCAEnvVarFound {
+				t.Errorf("%q env var not set, expected to be set", tlsEtcdCAEnvVar)
+			}
+			if !tlsEtcdClientCertEnvVarFound {
+				t.Errorf("%q env var not set, expected to be set", tlsEtcdClientCertEnvVar)
+			}
+			if !tlsEtcdClientKeyEnvVarFound {
+				t.Errorf("%q env var not set, expected to be set", tlsEtcdClientKeyEnvVar)
+			}
 		}
 
 		stosCluster.Spec = api.StorageOSClusterSpec{}
@@ -1135,5 +1229,79 @@ func TestDelete(t *testing.T) {
 	// The namespace should not be deleted.
 	if err := c.Get(context.Background(), nsNameNamespace, createdNamespace); err != nil {
 		t.Fatal("failed to get the created namespace", err)
+	}
+}
+
+// TestDeployTLSEtcdCerts deploys a storageos cluster with etcd TLS certs secret
+// reference, checks if a new secret is created in the namespace where
+// storageos resources are created and verifies that the secret has the same
+// data as the source secret.
+func TestDeployTLSEtcdCerts(t *testing.T) {
+	// etcd secret containing TLS certs. This exists before storageos cluster
+	// is created.
+	etcdSecret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "etcd-certs",
+			Namespace: "default",
+		},
+		Data: map[string][]byte{
+			tlsEtcdCA:         []byte("someetcdca"),
+			tlsEtcdClientCert: []byte("someetcdclientcert"),
+			tlsEtcdClientKey:  []byte("someetcdclientkey"),
+		},
+	}
+
+	stosCluster := &api.StorageOSCluster{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: gvk.GroupVersion().String(),
+			Kind:       gvk.Kind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "teststos",
+			Namespace: "default",
+		},
+		Spec: api.StorageOSClusterSpec{
+			TLSEtcdSecretRefName:      "etcd-certs",
+			TLSEtcdSecretRefNamespace: "default",
+			CSI: api.StorageOSClusterCSI{
+				Enable: true,
+			},
+		},
+	}
+
+	// Create fake client with existing etcd TLS secret.
+	c := fake.NewFakeClientWithScheme(testScheme, etcdSecret)
+	if err := c.Create(context.Background(), stosCluster); err != nil {
+		t.Fatalf("failed to create storageoscluster object: %v", err)
+	}
+
+	// Deploy storageos cluster.
+	deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
+	if err := deploy.Deploy(); err != nil {
+		t.Fatalf("failed to deploy cluster: %v", err)
+	}
+
+	// Get the secret created by the deployment.
+	stosEtcdSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      TLSEtcdSecretName,
+			Namespace: "storageos",
+		},
+	}
+	nsName := types.NamespacedName{
+		Name:      TLSEtcdSecretName,
+		Namespace: "storageos",
+	}
+	if err := c.Get(context.Background(), nsName, stosEtcdSecret); err != nil {
+		t.Fatalf("expected %q secret to exist, but not found", stosEtcdSecret)
+	}
+
+	// Check if the data in the new secret is the same as the source secret.
+	if !reflect.DeepEqual(stosEtcdSecret.Data, etcdSecret.Data) {
+		t.Errorf("unexpected secret data:\n\t(WNT) %v\n\t(GOT) %v", etcdSecret.Data, stosEtcdSecret.Data)
 	}
 }

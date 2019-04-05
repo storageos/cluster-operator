@@ -7,6 +7,8 @@ spec:
   secretRefName: "storageos-api"
   secretRefNamespace: "default"
   namespace: "storageos"
+  # tlsEtcdSecretRefName:
+  # tlsEtcdSecretRefNamespace:
   # disableTelemetry: true
   # images:
   #   nodeContainer:

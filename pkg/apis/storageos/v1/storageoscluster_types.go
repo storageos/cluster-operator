@@ -148,6 +148,14 @@ type StorageOSClusterSpec struct {
 
 	// Disable Telemetry.
 	DisableTelemetry bool `json:"disableTelemetry"`
+
+	// TLSEtcdSecretRefName is the name of the secret object that contains the
+	// etcd TLS certs. This secret is shared with etcd, therefore it's not part
+	// of the main storageos secret.
+	TLSEtcdSecretRefName string `json:"tlsEtcdSecretRefName"`
+
+	// TLSEtcdSecretRefNamespace is the namespace of the etcd TLS secret object.
+	TLSEtcdSecretRefNamespace string `json:"tlsEtcdSecretRefNamespace"`
 }
 
 // StorageOSClusterStatus defines the observed state of StorageOSCluster
