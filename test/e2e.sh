@@ -134,7 +134,7 @@ install_operatorcourier() {
     # Update setuptools to a newer version. operator-courier fails to build with
     # older versions of setuptools.
     pip install --upgrade setuptools
-    pip install operator-courier
+    pip install operator-courier==1.2.1
     deactivate
     # Turn on nounset.
     set -o nounset
