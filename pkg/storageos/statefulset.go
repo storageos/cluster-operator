@@ -134,7 +134,7 @@ func (s *Deployment) createStatefulSet() error {
 
 	podSpec := &sset.Spec.Template.Spec
 
-	s.addNodeAffinity(podSpec)
+	s.addNodeAffinity(podSpec, s.stos.Spec.NodeSelectorTerms)
 
 	if err := s.addTolerations(podSpec); err != nil {
 		return err

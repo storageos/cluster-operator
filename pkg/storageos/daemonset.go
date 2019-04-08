@@ -9,7 +9,49 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
+const (
+	// Names of the storageos daemonset resources.
+	daemonsetName            = "storageos-daemonset"
+	computeOnlyDaemonsetName = "storageos-compute-only"
+)
+
+// createDaemonSet creates storageos storage daemonset.
 func (s *Deployment) createDaemonSet() error {
+	dset, err := s.getBasicDaemonSetConfiguration(daemonsetName)
+	if err != nil {
+		return err
+	}
+
+	s.addNodeAffinity(&dset.Spec.Template.Spec, s.stos.Spec.NodeSelectorTerms)
+
+	return s.createOrUpdateObject(dset)
+}
+
+// createComputeOnlyDaemonSet creates storageos compute only daemonset.
+func (s *Deployment) createComputeOnlyDaemonSet() error {
+	// Check if node selector terms for compute only is specified.
+	if len(s.stos.Spec.ComputeOnlyNodeSelectorTerms) < 1 {
+		return nil
+	}
+
+	dset, err := s.getBasicDaemonSetConfiguration(computeOnlyDaemonsetName)
+	if err != nil {
+		return err
+	}
+
+	podSpec := &dset.Spec.Template.Spec
+	nodeContainer := &podSpec.Containers[0]
+
+	// Pass compute-only label.
+	nodeContainer.Env = s.addStorageOSLabelsEnvVars(nodeContainer.Env, computeOnlyLabelVal)
+
+	s.addNodeAffinity(podSpec, s.stos.Spec.ComputeOnlyNodeSelectorTerms)
+
+	return s.createOrUpdateObject(dset)
+}
+
+// getBasicDaemonSet creates a basic daemonset configuration for storageos.
+func (s *Deployment) getBasicDaemonSetConfiguration(name string) (*appsv1.DaemonSet, error) {
 	ls := labelsForDaemonSet(s.stos.Name)
 	privileged := true
 	mountPropagationBidirectional := corev1.MountPropagationBidirectional
@@ -21,7 +63,7 @@ func (s *Deployment) createDaemonSet() error {
 			Kind:       "DaemonSet",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      daemonsetName,
+			Name:      name,
 			Namespace: s.stos.Spec.GetResourceNS(),
 			Labels: map[string]string{
 				"app": "storageos",
@@ -217,10 +259,8 @@ func (s *Deployment) createDaemonSet() error {
 	podSpec := &dset.Spec.Template.Spec
 	nodeContainer := &podSpec.Containers[0]
 
-	s.addNodeAffinity(podSpec)
-
 	if err := s.addTolerations(podSpec); err != nil {
-		return err
+		return nil, err
 	}
 
 	nodeContainer.Env = s.addKVBackendEnvVars(nodeContainer.Env)
@@ -233,7 +273,7 @@ func (s *Deployment) createDaemonSet() error {
 
 	s.addCSI(podSpec)
 
-	return s.createOrUpdateObject(dset)
+	return dset, nil
 }
 
 func (s *Deployment) deleteDaemonSet(name string) error {

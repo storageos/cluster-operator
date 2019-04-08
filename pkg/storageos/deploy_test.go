@@ -5,6 +5,7 @@ import (
 	"os"
 	"reflect"
 	"strconv"
+	"strings"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -1135,5 +1136,125 @@ func TestDelete(t *testing.T) {
 	// The namespace should not be deleted.
 	if err := c.Get(context.Background(), nsNameNamespace, createdNamespace); err != nil {
 		t.Fatal("failed to get the created namespace", err)
+	}
+}
+
+func TestDeployComputeOnlyNodes(t *testing.T) {
+	nodeSelectorTerms := []corev1.NodeSelectorTerm{
+		{
+			MatchExpressions: []corev1.NodeSelectorRequirement{
+				{
+					Key:      "foo",
+					Operator: corev1.NodeSelectorOpIn,
+					Values:   []string{"baz"},
+				},
+			},
+		},
+	}
+
+	testcases := []struct {
+		name                         string
+		nodeSelectorTerms            []corev1.NodeSelectorTerm
+		computeOnlyNodeSelectorTerms []corev1.NodeSelectorTerm
+		wantComputeOnly              bool
+	}{
+		{
+			name:              "2 daemonsets",
+			nodeSelectorTerms: nodeSelectorTerms,
+			computeOnlyNodeSelectorTerms: []corev1.NodeSelectorTerm{
+				{
+					MatchExpressions: []corev1.NodeSelectorRequirement{
+						{
+							Key:      "storageos.com/deployment",
+							Operator: corev1.NodeSelectorOpIn,
+							Values:   []string{"computeonly"},
+						},
+					},
+				},
+			},
+			wantComputeOnly: true,
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			stosCluster := &api.StorageOSCluster{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gvk.GroupVersion().String(),
+					Kind:       gvk.Kind,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "teststos",
+					Namespace: "default",
+				},
+				Spec: api.StorageOSClusterSpec{
+					CSI: api.StorageOSClusterCSI{
+						Enable: true,
+					},
+					NodeSelectorTerms:            tc.nodeSelectorTerms,
+					ComputeOnlyNodeSelectorTerms: tc.computeOnlyNodeSelectorTerms,
+				},
+			}
+
+			c := fake.NewFakeClientWithScheme(testScheme)
+			if err := c.Create(context.Background(), stosCluster); err != nil {
+				t.Fatalf("failed to create storageoscluster object: %v", err)
+			}
+
+			deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
+			err := deploy.Deploy()
+			if err != nil {
+				t.Error("deployment failed:", err)
+			}
+
+			daemonset1 := &appsv1.DaemonSet{}
+			nsName1 := types.NamespacedName{
+				Name:      daemonsetName,
+				Namespace: defaultNS,
+			}
+
+			if err := c.Get(context.Background(), nsName1, daemonset1); err != nil {
+				t.Fatal("failed to get the created daemonset", err)
+			}
+
+			// Check if storage daemonset contains compute-only label.
+			for _, envvar := range daemonset1.Spec.Template.Spec.Containers[0].Env {
+				if envvar.Name != labelsEnvVar {
+					continue
+				}
+				if strings.Contains(envvar.Value, computeOnlyLabelVal) {
+					t.Errorf("expected %q to not be in node labels", computeOnlyLabelVal)
+				}
+			}
+
+			daemonset2 := &appsv1.DaemonSet{}
+			nsName2 := types.NamespacedName{
+				Name:      computeOnlyDaemonsetName,
+				Namespace: defaultNS,
+			}
+
+			if err := c.Get(context.Background(), nsName2, daemonset2); err != nil {
+				t.Fatal("failed to get the created daemonset", err)
+			}
+
+			// Check if storage daemonset contains compute-only label.
+			foundComputeOnly := false
+			for _, envvar := range daemonset2.Spec.Template.Spec.Containers[0].Env {
+				if envvar.Name != labelsEnvVar {
+					continue
+				}
+				if !strings.Contains(envvar.Value, computeOnlyLabelVal) {
+					t.Errorf("expected %q to be in node labels", computeOnlyLabelVal)
+				} else {
+					foundComputeOnly = true
+				}
+			}
+
+			// Extra check to ensure compute compute only was found. The above
+			// check would be skipped if there's no LABELS env var.
+			if !foundComputeOnly {
+				t.Error("expected to find computeonly label")
+			}
+		})
 	}
 }

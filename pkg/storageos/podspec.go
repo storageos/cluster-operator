@@ -252,11 +252,11 @@ func (s *Deployment) addCSI(podSpec *corev1.PodSpec) {
 
 // addNodeAffinity adds node affinity to the given pod spec from the cluster
 // spec NodeSelectorLabel.
-func (s *Deployment) addNodeAffinity(podSpec *corev1.PodSpec) {
-	if len(s.stos.Spec.NodeSelectorTerms) > 0 {
+func (s Deployment) addNodeAffinity(podSpec *corev1.PodSpec, nsTerms []corev1.NodeSelectorTerm) {
+	if len(nsTerms) > 0 {
 		podSpec.Affinity = &corev1.Affinity{NodeAffinity: &corev1.NodeAffinity{
 			RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
-				NodeSelectorTerms: s.stos.Spec.NodeSelectorTerms,
+				NodeSelectorTerms: nsTerms,
 			},
 		}}
 	}
