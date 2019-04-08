@@ -10,4 +10,4 @@ spec:
     plural: jobs
     singular: job
   scope: Namespaced
-  version: v1alpha1
+  version: v1
