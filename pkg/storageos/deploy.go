@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/blang/semver"
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
@@ -24,7 +25,6 @@ const (
 	daemonsetKind   = "daemonset"
 	statefulsetKind = "statefulset"
 
-	daemonsetName   = "storageos-daemonset"
 	statefulsetName = "storageos-statefulset"
 
 	tlsSecretType       = "kubernetes.io/tls"
@@ -36,6 +36,7 @@ const (
 	hostnameEnvVar                      = "HOSTNAME"
 	adminUsernameEnvVar                 = "ADMIN_USERNAME"
 	adminPasswordEnvVar                 = "ADMIN_PASSWORD"
+	labelsEnvVar                        = "LABELS"
 	joinEnvVar                          = "JOIN"
 	advertiseIPEnvVar                   = "ADVERTISE_IP"
 	namespaceEnvVar                     = "NAMESPACE"
@@ -61,8 +62,9 @@ const (
 	kvBackendEnvVar                     = "KV_BACKEND"
 	debugEnvVar                         = "LOG_LEVEL"
 
-	sysAdminCap = "SYS_ADMIN"
-	debugVal    = "xdebug"
+	sysAdminCap         = "SYS_ADMIN"
+	debugVal            = "xdebug"
+	computeOnlyLabelVal = "storageos.com/deployment=computeonly"
 
 	defaultFSType                            = "ext4"
 	secretNamespaceKey                       = "adminSecretNamespace"
@@ -120,6 +122,12 @@ func (s *Deployment) Deploy() error {
 		return err
 	}
 
+	// Compute-only daemonset.
+	if err := s.createComputeOnlyDaemonSet(); err != nil {
+		return err
+	}
+
+	// Storage daemonset.
 	if err := s.createDaemonSet(); err != nil {
 		return err
 	}
@@ -316,6 +324,37 @@ func getCSICredsEnvVar(envVarName, secretName, key string) corev1.EnvVar {
 			},
 		},
 	}
+}
+
+// addStorageOSLabelsEnvVars checks if the debug mode is set and set the appropriate env var.
+func (s Deployment) addStorageOSLabelsEnvVars(env []corev1.EnvVar, labels string) []corev1.EnvVar {
+	// Return the argument env var if no labels are specified.
+	if len(labels) == 0 {
+		return env
+	}
+
+	// Check if labels env var already exists.
+	labelsExists := false
+	for _, envVar := range env {
+		if envVar.Name == labelsEnvVar {
+			// Append the label with new label entries.
+			// The labels are separated by ",".
+			// e.g.: "storageos.com/deployment=computeonly,country=us,env=prod"
+			envVar.Value = strings.Join([]string{envVar.Value, labels}, ",")
+			labelsExists = true
+			break
+		}
+	}
+
+	// Add new labels env var if it doesn't exists.
+	if !labelsExists {
+		labelsEnvVar := corev1.EnvVar{
+			Name:  labelsEnvVar,
+			Value: labels,
+		}
+		return append(env, labelsEnvVar)
+	}
+	return env
 }
 
 // createOrUpdateObject attempts to create a given object. If the object already

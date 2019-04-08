@@ -21,7 +21,7 @@ limitations under the License.
 package v1
 
 import (
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -112,14 +112,14 @@ func (in *JobSpec) DeepCopyInto(out *JobSpec) {
 	}
 	if in.NodeSelectorTerms != nil {
 		in, out := &in.NodeSelectorTerms, &out.NodeSelectorTerms
-		*out = make([]v1.NodeSelectorTerm, len(*in))
+		*out = make([]corev1.NodeSelectorTerm, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 	if in.Tolerations != nil {
 		in, out := &in.Tolerations, &out.Tolerations
-		*out = make([]v1.Toleration, len(*in))
+		*out = make([]corev1.Toleration, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -344,14 +344,21 @@ func (in *StorageOSClusterSpec) DeepCopyInto(out *StorageOSClusterSpec) {
 	out.KVBackend = in.KVBackend
 	if in.NodeSelectorTerms != nil {
 		in, out := &in.NodeSelectorTerms, &out.NodeSelectorTerms
-		*out = make([]v1.NodeSelectorTerm, len(*in))
+		*out = make([]corev1.NodeSelectorTerm, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.ComputeOnlyNodeSelectorTerms != nil {
+		in, out := &in.ComputeOnlyNodeSelectorTerms, &out.ComputeOnlyNodeSelectorTerms
+		*out = make([]corev1.NodeSelectorTerm, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 	if in.Tolerations != nil {
 		in, out := &in.Tolerations, &out.Tolerations
-		*out = make([]v1.Toleration, len(*in))
+		*out = make([]corev1.Toleration, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
