@@ -12,7 +12,7 @@ spec:
     shortNames:
     - stos
   scope: Namespaced
-  version: v1alpha1
+  version: v1
   additionalPrinterColumns:
   - name: Ready
     type: string
