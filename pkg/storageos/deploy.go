@@ -33,37 +33,6 @@ const (
 	intreeProvisionerName = "kubernetes.io/storageos"
 	csiProvisionerName    = "storageos"
 
-	hostnameEnvVar                      = "HOSTNAME"
-	adminUsernameEnvVar                 = "ADMIN_USERNAME"
-	adminPasswordEnvVar                 = "ADMIN_PASSWORD"
-	joinEnvVar                          = "JOIN"
-	advertiseIPEnvVar                   = "ADVERTISE_IP"
-	namespaceEnvVar                     = "NAMESPACE"
-	disableFencingEnvVar                = "DISABLE_FENCING"
-	disableTelemetryEnvVar              = "DISABLE_TELEMETRY"
-	deviceDirEnvVar                     = "DEVICE_DIR"
-	csiEndpointEnvVar                   = "CSI_ENDPOINT"
-	csiVersionEnvVar                    = "CSI_VERSION"
-	csiRequireCredsCreateEnvVar         = "CSI_REQUIRE_CREDS_CREATE_VOL"
-	csiRequireCredsDeleteEnvVar         = "CSI_REQUIRE_CREDS_DELETE_VOL"
-	csiProvisionCredsUsernameEnvVar     = "CSI_PROVISION_CREDS_USERNAME"
-	csiProvisionCredsPasswordEnvVar     = "CSI_PROVISION_CREDS_PASSWORD"
-	csiRequireCredsCtrlPubEnvVar        = "CSI_REQUIRE_CREDS_CTRL_PUB_VOL"
-	csiRequireCredsCtrlUnpubEnvVar      = "CSI_REQUIRE_CREDS_CTRL_UNPUB_VOL"
-	csiControllerPubCredsUsernameEnvVar = "CSI_CTRL_PUB_CREDS_USERNAME"
-	csiControllerPubCredsPasswordEnvVar = "CSI_CTRL_PUB_CREDS_PASSWORD"
-	csiRequireCredsNodePubEnvVar        = "CSI_REQUIRE_CREDS_NODE_PUB_VOL"
-	csiNodePubCredsUsernameEnvVar       = "CSI_NODE_PUB_CREDS_USERNAME"
-	csiNodePubCredsPasswordEnvVar       = "CSI_NODE_PUB_CREDS_PASSWORD"
-	addressEnvVar                       = "ADDRESS"
-	kubeNodeNameEnvVar                  = "KUBE_NODE_NAME"
-	kvAddrEnvVar                        = "KV_ADDR"
-	kvBackendEnvVar                     = "KV_BACKEND"
-	debugEnvVar                         = "LOG_LEVEL"
-
-	sysAdminCap = "SYS_ADMIN"
-	debugVal    = "xdebug"
-
 	defaultFSType                            = "ext4"
 	secretNamespaceKey                       = "adminSecretNamespace"
 	secretNameKey                            = "adminSecretName"
@@ -117,6 +86,10 @@ func (s *Deployment) Deploy() error {
 	}
 
 	if err := s.createInitSecret(); err != nil {
+		return err
+	}
+
+	if err := s.createTLSEtcdSecret(); err != nil {
 		return err
 	}
 
@@ -263,43 +236,6 @@ func versionSupported(haveVersion, wantVersion string) bool {
 		return true
 	}
 	return false
-}
-
-// addKVBackendEnvVars checks if KVBackend is set and sets the appropriate env vars.
-func (s *Deployment) addKVBackendEnvVars(env []corev1.EnvVar) []corev1.EnvVar {
-	kvStoreEnv := []corev1.EnvVar{}
-	if s.stos.Spec.KVBackend.Address != "" {
-		kvAddressEnv := corev1.EnvVar{
-			Name:  kvAddrEnvVar,
-			Value: s.stos.Spec.KVBackend.Address,
-		}
-		kvStoreEnv = append(kvStoreEnv, kvAddressEnv)
-	}
-
-	if s.stos.Spec.KVBackend.Backend != "" {
-		kvBackendEnv := corev1.EnvVar{
-			Name:  kvBackendEnvVar,
-			Value: s.stos.Spec.KVBackend.Backend,
-		}
-		kvStoreEnv = append(kvStoreEnv, kvBackendEnv)
-	}
-
-	if len(kvStoreEnv) > 0 {
-		return append(env, kvStoreEnv...)
-	}
-	return env
-}
-
-// addDebugEnvVars checks if the debug mode is set and set the appropriate env var.
-func (s *Deployment) addDebugEnvVars(env []corev1.EnvVar) []corev1.EnvVar {
-	if s.stos.Spec.Debug {
-		debugEnvVar := corev1.EnvVar{
-			Name:  debugEnvVar,
-			Value: debugVal,
-		}
-		return append(env, debugEnvVar)
-	}
-	return env
 }
 
 // getCSICredsEnvVar returns a corev1.EnvVar object with value from a secret key

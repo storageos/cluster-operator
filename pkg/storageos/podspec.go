@@ -2,8 +2,27 @@ package storageos
 
 import (
 	"fmt"
+	"path/filepath"
 
 	corev1 "k8s.io/api/core/v1"
+)
+
+const (
+	// Etcd TLS cert file names.
+	tlsEtcdCA         = "etcd-client-ca.crt"
+	tlsEtcdClientCert = "etcd-client.crt"
+	tlsEtcdClientKey  = "etcd-client.key"
+
+	// Node env vars for etcd TLS certs.
+	tlsEtcdCAEnvVar         = "TLS_ETCD_CA"
+	tlsEtcdClientCertEnvVar = "TLS_ETCD_CLIENT_CERT"
+	tlsEtcdClientKeyEnvVar  = "TLS_ETCD_CLIENT_KEY"
+
+	// Etcd cert root path.
+	tlsEtcdRootPath = "/run/storageos/pki"
+
+	// Etcd certs volume name.
+	tlsEtcdCertsVolume = "etcd-certs"
 )
 
 // addSharedDir adds env var and volumes for shared dir when running kubelet in
@@ -275,4 +294,48 @@ func (s *Deployment) addTolerations(podSpec *corev1.PodSpec) error {
 		podSpec.Tolerations = s.stos.Spec.Tolerations
 	}
 	return nil
+}
+
+// addTLSEtcdCerts adds the etcd TLS secret as a secret mount in the given
+// podSpec.
+func (s *Deployment) addTLSEtcdCerts(podSpec *corev1.PodSpec) {
+	if s.stos.Spec.TLSEtcdSecretRefName != "" &&
+		s.stos.Spec.TLSEtcdSecretRefNamespace != "" {
+		// Create a secret volume and append to podSpec volumes.
+		secretVolume := corev1.Volume{
+			Name: tlsEtcdCertsVolume,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: TLSEtcdSecretName,
+				},
+			},
+		}
+		podSpec.Volumes = append(podSpec.Volumes, secretVolume)
+
+		// Get the node container from podSpec and add the secret volume at a
+		// volume mount.
+		nodeContainer := &podSpec.Containers[0]
+		secretVolumeMount := corev1.VolumeMount{
+			Name:      tlsEtcdCertsVolume,
+			MountPath: tlsEtcdRootPath,
+		}
+		nodeContainer.VolumeMounts = append(nodeContainer.VolumeMounts, secretVolumeMount)
+
+		// Pass the cert path to node container as env vars.
+		envvars := []corev1.EnvVar{
+			{
+				Name:  tlsEtcdCAEnvVar,
+				Value: filepath.Join(tlsEtcdRootPath, tlsEtcdCA),
+			},
+			{
+				Name:  tlsEtcdClientCertEnvVar,
+				Value: filepath.Join(tlsEtcdRootPath, tlsEtcdClientCert),
+			},
+			{
+				Name:  tlsEtcdClientKeyEnvVar,
+				Value: filepath.Join(tlsEtcdRootPath, tlsEtcdClientKey),
+			},
+		}
+		nodeContainer.Env = append(nodeContainer.Env, envvars...)
+	}
 }

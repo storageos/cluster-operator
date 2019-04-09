@@ -8,6 +8,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+// TLSEtcdSecretName is the name of secret resource that contains etcd TLS
+// secrets.
+const TLSEtcdSecretName = "storageos-tls-etcd"
+
 func (s *Deployment) deleteSecret(name string) error {
 	return s.deleteObject(s.getSecret(name))
 }
@@ -173,6 +177,7 @@ func (s *Deployment) deleteCSISecrets() error {
 	return nil
 }
 
+// createCredSecret creates a credential type secret with username and password.
 func (s *Deployment) createCredSecret(name string, username, password []byte) error {
 	secret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
@@ -222,4 +227,32 @@ func (s *Deployment) getCSICreds(usernameKey, passwordKey string) (username []by
 	password = secret.Data[passwordKey]
 
 	return username, password, err
+}
+
+// createTLSEtcdSecret creates a new TLS secret in the deployment namespace by
+// copying the secret data from the etcd TLS secret reference so that it can be
+// referred by other resources in the deployment namespace.
+func (s *Deployment) createTLSEtcdSecret() error {
+	if s.stos.Spec.TLSEtcdSecretRefName == "" &&
+		s.stos.Spec.TLSEtcdSecretRefNamespace == "" {
+		// No etcd TLS secret reference specified.
+		return nil
+	}
+
+	// Fetch etcd TLS secret.
+	existingSecret := &corev1.Secret{}
+	nsName := types.NamespacedName{
+		Name:      s.stos.Spec.TLSEtcdSecretRefName,
+		Namespace: s.stos.Spec.TLSEtcdSecretRefNamespace,
+	}
+	if err := s.client.Get(context.Background(), nsName, existingSecret); err != nil {
+		return err
+	}
+
+	// Create new secret with etcd TLS secret data.
+	secret := s.getSecret(TLSEtcdSecretName)
+	secret.Type = existingSecret.Type
+	secret.Data = existingSecret.Data
+
+	return s.createOrUpdateObject(secret)
 }
