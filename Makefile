@@ -4,7 +4,7 @@ GO_ENV = GOOS=linux CGO_ENABLED=0
 SDK_VERSION = v0.3.0
 MACHINE = $(shell uname -m)
 BUILD_IMAGE = golang:1.11.5
-BASE_IMAGE = alpine:3.9
+BASE_IMAGE = storageos/base-image:0.1.0
 
 LDFLAGS += -X github.com/storageos/cluster-operator/pkg/controller/storageosupgrade.operatorImage=$(OPERATOR_IMAGE)
 

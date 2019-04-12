@@ -1,5 +1,5 @@
 ARG BUILD_IMAGE=golang:1.11.5
-ARG BASE_IMAGE=alpine:3.9
+ARG BASE_IMAGE=storageos/base-image:0.1.0
 ARG OPERATOR_IMAGE=storageos/cluster-operator:test
 
 FROM ${BUILD_IMAGE} AS build
@@ -17,7 +17,7 @@ FROM ${BASE_IMAGE}
 LABEL name="StorageOS Cluster Operator" \
       maintainer="support@storageos.com" \
       vendor="StorageOS" \
-      version="0.0.8" \
+      version="1.0.0" \
       release="1" \
       distribution-scope="public" \
       architecture="x86_64" \
@@ -27,8 +27,10 @@ LABEL name="StorageOS Cluster Operator" \
       io.openshift.tags="storageos,storage,operator" \
       summary="Quick and easy StorageOS setup" \
       description="StorageOS cluster operator deploys and configures StorageOS cluster, and assist with maintenance operations."
-RUN apk --no-cache add openssl wget
-# Docker is required by the upgrader.
+
+# Docker is required by the upgrader to pre-load images.  Only `docker pull` is
+# used.  `podman` would be preferred but it's not available in the package repo,
+# and there isn't a binary release that we can easily download into the image.
 RUN \
     wget --no-check-certificate -q https://download.docker.com/linux/static/stable/x86_64/docker-17.03.0-ce.tgz && \
     tar -xvzf docker-17.03.0-ce.tgz && \
