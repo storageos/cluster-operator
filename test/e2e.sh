@@ -213,7 +213,7 @@ main() {
     if [ "$2" = "olm" ]; then
         # Lint the OLM CSV bundle.
         docker run -it --rm -v "$PWD"/deploy/olm/storageos/:/storageos \
-            python:3 bash -c "pip install operator-courier && operator-courier verify /storageos"
+            python:3 bash -c "pip install operator-courier && operator-courier verify --ui_validate_io /storageos"
 
         source ./deploy/olm/olm.sh
         # Not using quick install here because the order in which the resources
