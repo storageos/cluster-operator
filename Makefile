@@ -4,7 +4,7 @@ GO_ENV = GOOS=linux CGO_ENABLED=0
 SDK_VERSION = v0.3.0
 MACHINE = $(shell uname -m)
 BUILD_IMAGE = golang:1.11.5
-BASE_IMAGE = alpine:3.9
+BASE_IMAGE = storageos/base-image:0.1.0
 
 LDFLAGS += -X github.com/storageos/cluster-operator/pkg/controller/storageosupgrade.operatorImage=$(OPERATOR_IMAGE)
 
@@ -23,7 +23,7 @@ build/cluster-operator:
 		./cmd/manager
 
 generate:
-	operator-sdk generate k8s
+	./build/operator-sdk generate k8s
 
 image/cluster-operator: operator-sdk
 	docker build \
@@ -33,7 +33,7 @@ image/cluster-operator: operator-sdk
 		. -f build/Dockerfile -t $(OPERATOR_IMAGE)
 
 local-run: build/upgrader
-	OPERATOR_NAME=cluster-operator operator-sdk up local
+	OPERATOR_NAME=cluster-operator ./build/operator-sdk up local
 	# OPERATOR_NAME=cluster-operator operator-sdk up local --go-ldflags "$(LDFLAGS)"
 
 clean:
