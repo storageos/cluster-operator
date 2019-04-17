@@ -212,13 +212,54 @@ data:
         annotations:
           capabilities: Full Lifecycle
           categories: "Storage"
-          alm-examples: '[{"apiVersion":"storageos.com/v1","kind":"StorageOSCluster","metadata":{"name":"example-storageos","namespace":"default"},"spec":{"secretRefName":"storageos-api","secretRefNamespace":"default"}},{"apiVersion":"storageos.com/v1","kind":"Job","metadata":{"name":"example-job","namespace":"default"},"spec":{"image":"storageos/cluster-operator:latest","args":["/var/lib/storageos"],"mountPath":"/var/lib","hostPath":"/var/lib","completionWord":"done"}},{"apiVersion":"storageos.com/v1","kind":"StorageOSUpgrade","metadata":{"name":"example-upgrade","namespace":"default"},"spec":{"newImage":"storageos/node:latest"}}]'
           description: Cloud-native, persistent storage for containers.
           containerImage: storageos/cluster-operator:test
           repository: https://github.com/storageos/cluster-operator
           createdAt: 2019-03-25T08:00:00Z
           support: StorageOS, Inc
           certified: "false"
+          alm-examples: |-
+            [
+              {
+                "apiVersion": "storageos.com/v1",
+                "kind": "StorageOSCluster",
+                "metadata": {
+                  "name": "example-storageos",
+                  "namespace": "default"
+                },
+                "spec": {
+                  "secretRefName": "storageos-api",
+                  "secretRefNamespace": "default"
+                }
+              },
+              {
+                "apiVersion": "storageos.com/v1",
+                "kind": "Job",
+                "metadata": {
+                  "name": "example-job",
+                  "namespace": "default"
+                },
+                "spec": {
+                  "image": "storageos/cluster-operator:latest",
+                  "args": ["/var/lib/storageos"],
+                  "mountPath": "/var/lib",
+                  "hostPath": "/var/lib",
+                  "completionWord": "done"
+                }
+              },
+              {
+                "apiVersion": "storageos.com/v1",
+                "kind": "StorageOSUpgrade",
+                "metadata": {
+                  "name": "example-upgrade",
+                  "namespace": "default"
+                },
+                "spec": {
+                  "newImage": "storageos/node:latest"
+                }
+              }
+            ]
+
       spec:
         displayName: StorageOS
         description: |
@@ -291,6 +332,19 @@ data:
 
           * `secretRefName` - the name of a secret that contains two keys for the `apiUsername` and `apiPassword` to be used as api credentials ([documentation](https://docs.storageos.com/docs/reference/cluster-operator/examples))
           * `secretRefNamespace` - the namespace where the api credentials secret is stored
+
+          ## Required SCC
+
+          On OpenShift, make sure to install the Security Context Constraint (SCC) in
+          order for the StorageOS DaemonSet and StatefulSet pods to start properly:
+
+          ``` $ oc adm policy add-scc-to-user privileged system:serviceaccount:<namespace>:storageos-daemonset-sa ```
+
+          ``` $ oc adm policy add-scc-to-user privileged system:serviceaccount:<namespace>:storageos-statefulset-sa ```
+
+          By default, the StorageOS cluster is deployed in `storageos` namespace. The
+          service accounts in the above commands should be
+          `:storageos:storageos-daemonset-sa` and `:storageos:storageos-statefulset-sa`.
 
           ## About StorageOS
 
