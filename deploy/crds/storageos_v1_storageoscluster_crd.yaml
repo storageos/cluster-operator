@@ -123,3 +123,7 @@ spec:
                 type: string
             ready:
               type: string
+            members:
+              properties:
+                ready: {}
+                unready: {}

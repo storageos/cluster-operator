@@ -127,6 +127,10 @@ data:
                       type: string
                   ready:
                     type: string
+                  members:
+                    properties:
+                      ready: {}
+                      unready: {}
     - apiVersion: apiextensions.k8s.io/v1beta1
       kind: CustomResourceDefinition
       metadata:
@@ -140,6 +144,33 @@ data:
           singular: job
         scope: Namespaced
         version: v1
+        validation:
+          openAPIV3Schema:
+            properties:
+              apiVersion:
+                type: string
+              kind:
+                type: string
+              metadata: {}
+              spec:
+                properties:
+                  image:
+                    type: string
+                  args: {}
+                  mountPath:
+                    type: string
+                  hostPath:
+                    type: string
+                  completionWord:
+                    type: string
+                  labelSelector:
+                    type: string
+                  nodeSelectorTerms: {}
+                  tolerations: {}
+              status:
+                properties:
+                  completed:
+                    type: boolean
     - apiVersion: apiextensions.k8s.io/v1beta1
       kind: CustomResourceDefinition
       metadata:
@@ -153,6 +184,22 @@ data:
           singular: storageosupgrade
         scope: Namespaced
         version: v1
+        validation:
+          openAPIV3Schema:
+            properties:
+              apiVersion:
+                type: string
+              kind:
+                type: string
+              metadata: {}
+              spec:
+                properties:
+                  newImage:
+                    type: string
+              status:
+                properties:
+                  completed:
+                    type: boolean
 
 
   clusterServiceVersions: |-
