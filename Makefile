@@ -23,7 +23,7 @@ build/cluster-operator:
 		./cmd/manager
 
 generate:
-	operator-sdk generate k8s
+	./build/operator-sdk generate k8s
 
 image/cluster-operator: operator-sdk
 	docker build \
@@ -33,7 +33,7 @@ image/cluster-operator: operator-sdk
 		. -f build/Dockerfile -t $(OPERATOR_IMAGE)
 
 local-run: build/upgrader
-	OPERATOR_NAME=cluster-operator operator-sdk up local
+	OPERATOR_NAME=cluster-operator ./build/operator-sdk up local
 	# OPERATOR_NAME=cluster-operator operator-sdk up local --go-ldflags "$(LDFLAGS)"
 
 clean:

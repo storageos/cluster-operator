@@ -8,7 +8,7 @@ FROM ${BUILD_IMAGE} AS build
 ARG OPERATOR_IMAGE
 WORKDIR /go/src/github.com/storageos/cluster-operator/
 COPY . /go/src/github.com/storageos/cluster-operator/
-RUN cp build/operator-sdk /usr/local/bin/
+RUN make operator-sdk
 RUN make generate
 RUN make build/cluster-operator OPERATOR_IMAGE=$OPERATOR_IMAGE
 RUN make build/upgrader
