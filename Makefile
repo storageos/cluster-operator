@@ -56,3 +56,16 @@ operator-sdk:
 # Install operator on a host. Might fail on containers that don't have sudo.
 install-operator-sdk: operator-sdk
 	sudo cp build/operator-sdk /usr/local/bin/
+
+# Generate metadata bundle for openshift metadata scanner.
+metadata-zip:
+	# Ensure the target path exists.
+	mkdir -p build/_output/
+	# -j strips the parent directories and adds the files at the root. This is
+	# a requirement for the openshift metadata scanner.
+	zip -j build/_output/storageos.zip \
+		deploy/olm/storageos/storageos.package.yaml \
+		deploy/olm/storageos/storageoscluster.crd.yaml \
+		deploy/olm/storageos/storageosjob.crd.yaml \
+		deploy/olm/storageos/storageosupgrade.crd.yaml \
+		deploy/olm/csv-rhel/storageos.clusterserviceversion.yaml
