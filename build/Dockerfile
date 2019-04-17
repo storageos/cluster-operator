@@ -22,11 +22,11 @@ LABEL name="StorageOS Cluster Operator" \
       distribution-scope="public" \
       architecture="x86_64" \
       url="https://docs.storageos.com" \
-      io.k8s.description="StorageOS Cluster Operator creates, configures and helps manage StorageOS cluster on Kubernetes" \
+      io.k8s.description="The StorageOS Cluster Operator installs and manages StorageOS within a cluster." \
       io.k8s.display-name="StorageOS Cluster Operator" \
-      io.openshift.tags="storageos,storage,operator" \
-      summary="Quick and easy StorageOS setup" \
-      description="StorageOS cluster operator deploys and configures StorageOS cluster, and assist with maintenance operations."
+      io.openshift.tags="storageos,storage,operator,pv,pvc,storageclass,persistent,csi" \
+      summary="Highly-available persistent block storage for containerized applications." \
+      description="StorageOS transforms commodity server or cloud based disk capacity into enterprise-class storage to run persistent workloads such as databases in containers. Provides high availability, low latency persistent block storage. No other hardware or software is required."
 
 # Docker is required by the upgrader to pre-load images.  Only `docker pull` is
 # used.  `podman` would be preferred but it's not available in the package repo,
