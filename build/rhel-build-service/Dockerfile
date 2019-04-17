@@ -1,19 +1,20 @@
-ARG BUILD_IMAGE=golang:1.11.5
-ARG BASE_IMAGE=storageos/base-image:0.1.0
-ARG OPERATOR_IMAGE=storageos/cluster-operator:test
+# ARG BUILD_IMAGE=golang:1.11.5
+# ARG BASE_IMAGE=storageos/base-image:0.1.0
+# ARG OPERATOR_IMAGE=storageos/cluster-operator:test
 
-FROM ${BUILD_IMAGE} AS build
+FROM golang:1.11.5 AS build
 # OPERATOR_IMAGE needs to be passed to build/cluster-operator for constructing
 # the ldflags.
-ARG OPERATOR_IMAGE
+# ARG OPERATOR_IMAGE
 WORKDIR /go/src/github.com/storageos/cluster-operator/
 COPY . /go/src/github.com/storageos/cluster-operator/
 RUN make operator-sdk
 RUN make generate
-RUN make build/cluster-operator OPERATOR_IMAGE=$OPERATOR_IMAGE
+# RUN make build/cluster-operator OPERATOR_IMAGE=$OPERATOR_IMAGE
+RUN make build/cluster-operator OPERATOR_IMAGE=registry.connect.redhat.com/storageos/cluster-operator:1.0.0
 RUN make build/upgrader
 
-FROM ${BASE_IMAGE}
+FROM storageos/base-image:0.1.0
 LABEL name="StorageOS Cluster Operator" \
       maintainer="support@storageos.com" \
       vendor="StorageOS" \
