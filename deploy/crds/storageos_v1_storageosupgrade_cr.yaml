@@ -3,4 +3,4 @@ kind: StorageOSUpgrade
 metadata:
   name: example-storageosupgrade
 spec:
-  newImage: storageos/node:1.0.0-rc5
+  newImage: storageos/node:1.1.5
