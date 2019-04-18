@@ -391,9 +391,6 @@ spec:
           as API usage and StorageOS configuration information is collected.
         displayName: Disable Telemetry
         path: disableTelemetry
-      - description:
-        displayName:
-        path: disableFencing
       - description: When Pod Fencing is disabled, StorageOS will not perform
           any interaction with Kubernetes when it detects that a node has gone
           offline. Additionally, the Kubernetes permissions required for Fencing
@@ -447,7 +444,8 @@ spec:
       - description: The job is marked as completed when the completion word is
           found in the pod logs.
         displayName: Source Path
-        path: A label selector can be set to identify Pods created by the job.
+        path: completionWord
+      - description: A label selector can be set to identify Pods created by the job.
         displayName: Label Selector
         path: labelSelector
       - description: Node selector terms can be set to control the placement of
