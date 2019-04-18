@@ -11,14 +11,14 @@ COPY . /go/src/github.com/storageos/cluster-operator/
 RUN make operator-sdk
 RUN make generate
 # RUN make build/cluster-operator OPERATOR_IMAGE=$OPERATOR_IMAGE
-RUN make build/cluster-operator OPERATOR_IMAGE=registry.connect.redhat.com/storageos/cluster-operator:1.0.0
+RUN make build/cluster-operator OPERATOR_IMAGE=registry.connect.redhat.com/storageos/cluster-operator:1.1.0
 RUN make build/upgrader
 
 FROM storageos/base-image:0.1.0
 LABEL name="StorageOS Cluster Operator" \
       maintainer="support@storageos.com" \
       vendor="StorageOS" \
-      version="1.0.0" \
+      version="1.1.0" \
       release="1" \
       distribution-scope="public" \
       architecture="x86_64" \
