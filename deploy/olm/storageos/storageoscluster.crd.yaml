@@ -39,6 +39,8 @@ spec:
               type: string
             namespace:
               type: string
+            disableFencing:
+              type: boolean
             disableTelemetry:
               type: boolean
             images:
@@ -78,6 +80,10 @@ spec:
             secretRefName:
               type: string
             secretRefNamespace:
+              type: string
+            tlsEtcdSecretRefName:
+              type: string
+            tlsEtcdSecretRefNamespace:
               type: string
             sharedDir:
               type: string
