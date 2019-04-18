@@ -228,6 +228,7 @@ data:
                   "namespace": "default"
                 },
                 "spec": {
+                  "namespace": "kube-system",
                   "secretRefName": "storageos-api",
                   "secretRefNamespace": "default"
                 }
@@ -330,8 +331,11 @@ data:
 
           ## Required Parameters
 
-          * `secretRefName` - the name of a secret that contains two keys for the `apiUsername` and `apiPassword` to be used as api credentials ([documentation](https://docs.storageos.com/docs/reference/cluster-operator/examples))
-          * `secretRefNamespace` - the namespace where the api credentials secret is stored
+          * `secretRefName` - the name of a secret that contains two keys for the
+          `apiUsername` and `apiPassword` to be used as api credentials
+          ([documentation](https://docs.storageos.com/docs/reference/cluster-operator/examples))
+          * `secretRefNamespace` - the namespace where the api credentials secret is
+          stored
 
           ## Required SCC
 
@@ -524,14 +528,91 @@ data:
             version: v1
             kind: StorageOSCluster
             displayName: StorageOS Cluster
-            description: StorageOS Cluster installs StorageOS in the cluster. It contains all the configuration for setting up a StorageOS cluster and also shows the status of the running StorageOS cluster.
+            description: StorageOS Cluster installs StorageOS in the cluster. It
+              contains all the configuration for setting up a StorageOS cluster and
+              also shows the status of the running StorageOS cluster.
             specDescriptors:
+            - description: Defines the various container images used in the cluster.
+              displayName: Images
+              path: images
+            - description: The namespace to install the StorageOS cluster into.
+                `kube-system` is recommended so that StorageOS does not get evicted if
+                a node becomes over-allocated.
+              displayName: Namespace
+              path: namespace
             - description: The name of the secret object that stores the api credentials.
               displayName: Cluster Secret
               path: secretRefName
-            - description: The name of the namespace where the secret object that stores the api credentials exists.
+            - description: The name of the namespace where the secret object that
+                stores the api credentials exists.
               displayName: Cluster Secret Namespace
               path: secretRefNamespace
+            - description: The join token is used for cluster discovery.  When used
+                with the Operator, the token will be a comma-separated list of all
+                cluster member IP addresses.  The node that owns the first IP address
+                listed will be responsible for bootsrapping the cluster.
+              displayName: Cluster members
+              path: join
+            - description: KV store configuration to use. Defaults to embedded. `etcd`
+                is recommended for production deployments with the address set to an
+                external etcd instance.
+              displayName: KV Store
+              path: kvBackend
+            - description: Describes the Container Storage Interface (CSI) configuration.
+              displayName: Enable CSI
+              path: csi
+            - description: The cluster Service configuration.
+              displayName: Service configuration
+              path: service
+            - description: The shared directory where storage devices should be
+                created.  This directory must be available to both the StorageOS Node
+                container and the kubelet, and must have mount propagation enabled.
+                When kubelet is running in a container,
+                `/var/lib/kubelet/plugins/kubernetes.io~storageos` should normally be
+                set, otherwise leave empty.
+              displayName: Device directory
+              path: sharedDir
+            - description: Describes the ingress configuration to be configured for
+                the cluster.
+              displayName: Ingress configuration
+              path: ingress
+            - description: The name of the secret object that contains the etcd TLS
+                certificates.
+              displayName: etcd TLS Secret Name
+              path: tlsEtcdSecretRefName
+            - description: The namespace of the secret object that contains the etcd
+                TLS certificates.
+              displayName: etcd TLS Secret Namespace
+              path: tlsEtcdSecretRefNamespace
+            - description: Node selector terms can be set to control the placement of
+                StorageOS pods using node affiinity.
+              displayName: Node Selectors
+              path: nodeSelectorTerms
+            - description: Tolerations can be set to control the placement of
+                StorageOS pods.
+              displayName: Tolerations
+              path: tolerations
+            - description: To disable anonymous usage reporting across the cluster,
+                set to true. Defaults to false. To help improve the product, data such
+                as API usage and StorageOS configuration information is collected.
+              displayName: Disable Telemetry
+              path: disableTelemetry
+            - description:
+              displayName:
+              path: disableFencing
+            - description: When Pod Fencing is disabled, StorageOS will not perform
+                any interaction with Kubernetes when it detects that a node has gone
+                offline. Additionally, the Kubernetes permissions required for Fencing
+                will not be added to the StorageOS role.
+              displayName: Disable Fencing
+              path: disableFencing
+            - description: When enabled, the Operaaor will not perform any actions on
+                the cluster.
+              displayName: Pause Operator
+              path: pause
+            - description: Enables debug logging when set to true.
+              displayName: Enable Debug
+              path: debug
             statusDescriptors:
             - description: Set of nodes that are part of the StorageOS Cluster.
               displayName: Nodes
@@ -553,12 +634,54 @@ data:
             version: v1
             kind: Job
             displayName: StorageOS Job
-            description: StorageOS Job creates special pods that run on all the node and perform an administrative task. This could be used for cluster maintenance tasks.
+            description: StorageOS Job creates special pods that run on all the node
+              and perform an administrative task. This could be used for cluster
+              maintenance tasks.
+            specDescriptors:
+            - description: The container image to run as the job.
+              displayName: Image
+              path: image
+            - description: The arguments to pass to the job container.
+              displayName: Arguments
+              path: args
+            - description: The path in the job container where a volume is mounted.
+              displayName: Target Path
+              path: mountPath
+            - description: The path on the host that is mounted into the job container.
+              displayName: Source path
+              path: hostPath
+            - description: The job is marked as completed when the completion word is
+                found in the pod logs.
+              displayName: Source Path
+              path: A label selector can be set to identify Pods created by the job.
+              displayName: Label Selector
+              path: labelSelector
+            - description: Node selector terms can be set to control the placement of
+                job pods using node affiinity.
+              displayName: Node Selectors
+              path: nodeSelectorTerms
+            - description: Tolerations can be set to control the placement of job pods.
+              displayName: Tolerations
+              path: tolerations
+            statusDescriptors:
+            - description: Set to true if the job completed.
+              displayName: Completed
+              path: completed
           - name: storageosupgrades.storageos.com
             version: v1
             kind: StorageOSUpgrade
             displayName: StorageOS Upgrade
-            description: StorageOS Upgrade automatically upgrades an existing StorageOS cluster as per the upgrade configuration.
+            description: StorageOS Upgrade automatically upgrades an existing
+              StorageOS cluster as per the upgrade configuration.
+            specDescriptors:
+            - description: The StorageOS Node image to upgrade to.
+                e.g. `storageos/node:latest`
+              displayName: New Image
+              path: newImage
+            statusDescriptors:
+            - description: Set to true if the upgrade completed.
+              displayName: Completed
+              path: completed
 
   packages: |-
 
