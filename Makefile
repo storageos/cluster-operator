@@ -59,6 +59,8 @@ install-operator-sdk: operator-sdk
 
 # Generate metadata bundle for openshift metadata scanner.
 metadata-zip:
+	# Remove any existing metadata bundle.
+	rm -f build/_output/storageos.zip
 	# Ensure the target path exists.
 	mkdir -p build/_output/
 	# -j strips the parent directories and adds the files at the root. This is
@@ -69,3 +71,13 @@ metadata-zip:
 		deploy/olm/storageos/storageosjob.crd.yaml \
 		deploy/olm/storageos/storageosupgrade.crd.yaml \
 		deploy/olm/csv-rhel/storageos.clusterserviceversion.yaml
+
+# Lint the OLM metadata bundle.
+olm-lint:
+	docker run -it --rm -v $(PWD)/deploy/olm/storageos/:/storageos \
+		python:3 bash -c "pip install operator-courier && operator-courier verify --ui_validate_io /storageos"
+
+# Create a metadata zip file and lint the bundle.
+metadata-bundle-lint: metadata-zip
+	docker run -it --rm -v $(PWD)/build/_output/:/metadata \
+		python:3 bash -c "pip install operator-courier && unzip /metadata/storageos.zip && operator-courier verify --ui_validate_io ."
