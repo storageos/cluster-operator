@@ -16,7 +16,7 @@ type JobSpec struct {
 	// Image is the container image to run as the job.
 	Image string `json:"image"`
 
-	// Args is an array of strings passed as an argumen to the job container.
+	// Args is an array of strings passed as an argument to the job container.
 	Args []string `json:"args"`
 
 	// MountPath is the path in the job container where a volume is mounted.
