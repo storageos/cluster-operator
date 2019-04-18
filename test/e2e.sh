@@ -212,13 +212,10 @@ main() {
 
     if [ "$2" = "olm" ]; then
         # Lint the OLM CSV bundle.
-        docker run -it --rm -v "$PWD"/deploy/olm/storageos/:/storageos \
-            python:3 bash -c "pip install operator-courier && operator-courier verify --ui_validate_io /storageos"
+        make olm-lint
 
         # Create and lint the bundle for openshift metadata scanner.
-        make metadata-zip
-        docker run -it --rm -v "$PWD"/build/_output/:/metadata \
-            python:3 bash -c "pip install operator-courier && unzip /metadata/storageos.zip && operator-courier verify --ui_validate_io ."
+        make metadata-bundle-lint
 
         source ./deploy/olm/olm.sh
         # Not using quick install here because the order in which the resources
