@@ -65,11 +65,19 @@ jobs:
       name: Publish Container Image
       script:
         - make image/cluster-operator
+        - make metadata-zip
       before_deploy:
         - docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS"
       deploy:
         - provider: script
           script: bash scripts/deploy.sh tagged
+          on:
+            tags: true
+        - provider: releases
+          api_key:
+            secure: # Add encrypted Github API token with repo permission here
+          file: build/_output/storageos-olm-metadata.zip
+          skip_cleanup: true
           on:
             tags: true
         - provider: script
