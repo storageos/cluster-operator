@@ -250,6 +250,8 @@ func (s *Deployment) createDaemonSet() error {
 	podSpec := &dset.Spec.Template.Spec
 	nodeContainer := &podSpec.Containers[0]
 
+	s.addPodPriorityClass(podSpec)
+
 	s.addTLSEtcdCerts(podSpec)
 
 	s.addNodeAffinity(podSpec)
