@@ -23,6 +23,12 @@ const (
 
 	// Etcd certs volume name.
 	tlsEtcdCertsVolume = "etcd-certs"
+
+	// Name of kube-system namespace.
+	kubeSystemNamespace = "kube-system"
+
+	// Name of the critical priority class.
+	criticalPriorityClass = "system-node-critical"
 )
 
 // addSharedDir adds env var and volumes for shared dir when running kubelet in
@@ -337,5 +343,12 @@ func (s *Deployment) addTLSEtcdCerts(podSpec *corev1.PodSpec) {
 			},
 		}
 		nodeContainer.Env = append(nodeContainer.Env, envvars...)
+	}
+}
+
+func (s *Deployment) addPodPriorityClass(podSpec *corev1.PodSpec) {
+	// Set pod priority to critical only when deployed in kube-system namespace.
+	if s.stos.Spec.GetResourceNS() == kubeSystemNamespace {
+		podSpec.PriorityClassName = criticalPriorityClass
 	}
 }

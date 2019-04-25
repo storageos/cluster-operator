@@ -1305,3 +1305,99 @@ func TestDeployTLSEtcdCerts(t *testing.T) {
 		t.Errorf("unexpected secret data:\n\t(WNT) %v\n\t(GOT) %v", etcdSecret.Data, stosEtcdSecret.Data)
 	}
 }
+
+// TestDeployPodPriorityClass tests that the pod priority class is set properly
+// for the daemonset and statefulset pods when deployed in kube-system
+// namespace.
+func TestDeployPodPriorityClass(t *testing.T) {
+	testCases := []struct {
+		name              string
+		resourceNS        string
+		wantPriorityClass bool
+	}{
+		{
+			name:              "have priority class set",
+			resourceNS:        "kube-system",
+			wantPriorityClass: true,
+		},
+		{
+			name:              "no priority class set",
+			resourceNS:        "storageos",
+			wantPriorityClass: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			stosCluster := &api.StorageOSCluster{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gvk.GroupVersion().String(),
+					Kind:       gvk.Kind,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "teststos",
+					Namespace: "default",
+				},
+				Spec: api.StorageOSClusterSpec{
+					CSI: api.StorageOSClusterCSI{
+						Enable: true,
+					},
+					ResourceNS: tc.resourceNS,
+				},
+			}
+
+			c := fake.NewFakeClientWithScheme(testScheme)
+			if err := c.Create(context.Background(), stosCluster); err != nil {
+				t.Fatalf("failed to create storageoscluster object: %v", err)
+			}
+
+			deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
+			if err := deploy.Deploy(); err != nil {
+				t.Fatalf("failed to deploy cluster: %v", err)
+			}
+
+			// Check daemonset pod priority class.
+			createdDaemonset := &appsv1.DaemonSet{}
+
+			nsName := types.NamespacedName{
+				Name:      daemonsetName,
+				Namespace: stosCluster.Spec.GetResourceNS(),
+			}
+
+			if err := c.Get(context.Background(), nsName, createdDaemonset); err != nil {
+				t.Fatal("failed to get the created daemonset", err)
+			}
+
+			daemonsetPC := createdDaemonset.Spec.Template.Spec.PriorityClassName
+			if tc.wantPriorityClass && daemonsetPC != criticalPriorityClass {
+				t.Errorf("unexpected daemonset pod priodity class:\n\t(GOT) %v \n\t(WNT) %v", daemonsetPC, criticalPriorityClass)
+			}
+
+			if !tc.wantPriorityClass && daemonsetPC != "" {
+				t.Errorf("expected daemonset priority class to be not set")
+			}
+
+			// Check statefulset pod priority class.
+			createdStatefulset := &appsv1.StatefulSet{}
+
+			nsNameStatefulSet := types.NamespacedName{
+				Name:      statefulsetName,
+				Namespace: stosCluster.Spec.GetResourceNS(),
+			}
+
+			if err := c.Get(context.Background(), nsNameStatefulSet, createdStatefulset); err != nil {
+				t.Fatal("failed to get the created statefulset", err)
+			}
+
+			statefulsetPC := createdStatefulset.Spec.Template.Spec.PriorityClassName
+			if tc.wantPriorityClass && statefulsetPC != criticalPriorityClass {
+				t.Errorf("unexpected statefulset pod priodity class:\n\t(GOT) %v \n\t(WNT) %v", daemonsetPC, criticalPriorityClass)
+			}
+
+			if !tc.wantPriorityClass && statefulsetPC != "" {
+				t.Errorf("expected statefulset priority class to be not set")
+			}
+		})
+	}
+
+}
