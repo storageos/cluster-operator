@@ -75,7 +75,7 @@ jobs:
             tags: true
         - provider: releases
           api_key:
-            secure: # Add encrypted Github API token with repo permission here
+            secure: mVr6wWr4Tym729atwxNDDI64PjRdocWUMEb4gOM3gOJUo1BjdJ8D0UzzZJvctW8VdDe1SVZGgpLmFGNOBjP9APBjpTl1ZfQvhJ67urlIn3DCoxjFGTB+2+FM0PVV1FX8hQawy/uTtLHOY+4jrVqm2Av2t486613u++/CNkTZeZCW4ydv/lSOCZ3nieX9eCk13/E6bhrHSQxRFD5KgL5ji+5rzuBlJQ12uzEitxRSBRnBPXU19ZPjFOoR2vbxTzI64BfvhQJSzbdNQbwwPFkmZsYuEUHyu3+ZH8N+Rng/wBL4ejt/gOXIfcHjZ5iGPIhJ3lIaVaxI9L6hHsFh3/QI24arI36Wf31XwPav7m6B4irGNBgbJRr2hS0LbPj0nsguzp/yD4vvpKUwlUtib8PwCxen5snZAQFdNB35Y7K+rdY/xkzFPVXktGZuNd9qSiVzs+kwFFzL2qDVgS5Nap7gYpUEY8Rt0urNklwbvPVdO825an8Y/2f1aXG3yT2jVoLi8z+ON1NDjXAEGJAQp9fVA25iCiW/Bbs7LY0O3EvjudUDPHv+70Lb0etpeqmJVJHavMNqC6cTaVkQ76iEzr0SACwBjAXnJBSkaeh+7KDMZJQ85iGJWPz+p4GyJGXxdLej4TGWS/YO6K5p/eNi5cK2Lbx5iSvSrTyndOFymbsLa+Q=
           file: build/_output/storageos-olm-metadata.zip
           skip_cleanup: true
           on:
