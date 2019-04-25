@@ -6,6 +6,10 @@ MACHINE = $(shell uname -m)
 BUILD_IMAGE = golang:1.11.5
 BASE_IMAGE = storageos/base-image:0.1.0
 
+# When this file name is modified, the new name must be added in .travis.yml
+# file as well for publishing the file at release.
+METADATA_FILE = storageos-olm-metadata.zip
+
 LDFLAGS += -X github.com/storageos/cluster-operator/pkg/controller/storageosupgrade.operatorImage=$(OPERATOR_IMAGE)
 
 all: lint unittest build/upgrader build/cluster-operator
@@ -60,12 +64,12 @@ install-operator-sdk: operator-sdk
 # Generate metadata bundle for openshift metadata scanner.
 metadata-zip:
 	# Remove any existing metadata bundle.
-	rm -f build/_output/storageos.zip
+	rm -f build/_output/$(METADATA_FILE)
 	# Ensure the target path exists.
 	mkdir -p build/_output/
 	# -j strips the parent directories and adds the files at the root. This is
 	# a requirement for the openshift metadata scanner.
-	zip -j build/_output/storageos.zip \
+	zip -j build/_output/$(METADATA_FILE) \
 		deploy/olm/storageos/storageos.package.yaml \
 		deploy/olm/storageos/storageoscluster.crd.yaml \
 		deploy/olm/storageos/storageosjob.crd.yaml \
@@ -80,4 +84,4 @@ olm-lint:
 # Create a metadata zip file and lint the bundle.
 metadata-bundle-lint: metadata-zip
 	docker run -it --rm -v $(PWD)/build/_output/:/metadata \
-		python:3 bash -c "pip install operator-courier && unzip /metadata/storageos.zip && operator-courier verify --ui_validate_io ."
+		python:3 bash -c "pip install operator-courier && unzip /metadata/$(METADATA_FILE) && operator-courier verify --ui_validate_io ."
