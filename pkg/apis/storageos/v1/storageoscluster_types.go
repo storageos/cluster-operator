@@ -156,6 +156,18 @@ type StorageOSClusterSpec struct {
 
 	// TLSEtcdSecretRefNamespace is the namespace of the etcd TLS secret object.
 	TLSEtcdSecretRefNamespace string `json:"tlsEtcdSecretRefNamespace"`
+
+	// K8sDistro is the name of the Kubernetes distribution where the operator
+	// is being deployed.  It should be in the format: `name[-1.0]`, where the
+	// version is optional and should only be appended if known.  Suitable names
+	// include: `openshift`, `rancher`, `aks`, `gke`, `eks`, or the deployment
+	// method if using upstream directly, e.g `minishift` or `kubeadm`.
+	//
+	// Setting k8sDistro is optional, and will be used to simplify cluster
+	// configuration by setting appropriate defaults for the distribution.  The
+	// distribution information will also be included in the product telemetry
+	// (if enabled), to help focus development efforts.
+	K8sDistro string `json:"k8sDistro"`
 }
 
 // StorageOSClusterStatus defines the observed state of StorageOSCluster

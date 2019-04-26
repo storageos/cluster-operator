@@ -386,6 +386,11 @@ spec:
           StorageOS pods.
         displayName: Tolerations
         path: tolerations
+      - description: Name of the Kubernetes distribution in use, e.g.
+          `openshift`.  This will be included in the product telemetry (if
+          enabled), to help focus development efforts.
+        displayName: Kubernetes Distribution Name
+        path: k8sDistro
       - description: To disable anonymous usage reporting across the cluster,
           set to true. Defaults to false. To help improve the product, data such
           as API usage and StorageOS configuration information is collected.

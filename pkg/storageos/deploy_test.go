@@ -332,6 +332,7 @@ func TestCreateDaemonSet(t *testing.T) {
 		wantSharedDir        string
 		wantDisableTelemetry bool
 		wantTLSEtcd          bool
+		wantK8sDistro        string
 	}{
 		{
 			name: "legacy-daemonset",
@@ -372,6 +373,13 @@ func TestCreateDaemonSet(t *testing.T) {
 				TLSEtcdSecretRefNamespace: "default",
 			},
 			wantTLSEtcd: true,
+		},
+		{
+			name: "distro",
+			spec: api.StorageOSClusterSpec{
+				K8sDistro: "some-distro-name",
+			},
+			wantK8sDistro: "some-distro-name",
 		},
 	}
 
@@ -511,6 +519,22 @@ func TestCreateDaemonSet(t *testing.T) {
 			if !tlsEtcdClientKeyEnvVarFound {
 				t.Errorf("%q env var not set, expected to be set", tlsEtcdClientKeyEnvVar)
 			}
+		}
+
+		// Check k8sDistro matches if set
+		k8sDistroEnvVarFound := false
+		for _, env := range createdDaemonset.Spec.Template.Spec.Containers[0].Env {
+			if env.Name == k8sDistroEnvVar {
+				k8sDistroEnvVarFound = true
+				if env.Value != tc.wantK8sDistro {
+					t.Errorf("unexpected k8sDistro value:\n\t(WNT) %s\n\t(GOT) %s", tc.wantK8sDistro, env.Value)
+				}
+			}
+		}
+
+		// k8sDistro must be set, but can be empty
+		if !k8sDistroEnvVarFound {
+			t.Errorf("k8sDistro env var not set, expected to be set")
 		}
 
 		stosCluster.Spec = api.StorageOSClusterSpec{}
