@@ -283,6 +283,8 @@ func (r *ReconcileStorageOSCluster) generateJoinToken(m *storageosv1.StorageOSCl
 						ex = selection.Equals
 					case corev1.NodeSelectorOpNotIn:
 						ex = selection.NotEquals
+					default:
+						return "", fmt.Errorf("unsupported node selector term operator %q", exp.Operator)
 					}
 
 					// Create a new Requirement to perform label matching.
@@ -299,6 +301,12 @@ func (r *ReconcileStorageOSCluster) generateJoinToken(m *storageosv1.StorageOSCl
 		}
 	} else {
 		selectedNodes = toleratedNodes
+	}
+
+	// Log when node selector fails to select any node.
+	if len(selectedNodes) == 0 {
+		r.recorder.Event(m, corev1.EventTypeWarning, "FailedCreation", "no compatible nodes available for deployment, check node selector term and pod toleration options")
+		log.Printf("no compatible nodes available for deployment of cluster %s", m.Name)
 	}
 
 	nodeIPs := storageos.GetNodeIPs(selectedNodes)
