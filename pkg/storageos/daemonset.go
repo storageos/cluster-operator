@@ -37,6 +37,7 @@ const (
 	kvAddrEnvVar                        = "KV_ADDR"
 	kvBackendEnvVar                     = "KV_BACKEND"
 	debugEnvVar                         = "LOG_LEVEL"
+	k8sDistroEnvVar                     = "K8S_DISTRO"
 
 	sysAdminCap = "SYS_ADMIN"
 	debugVal    = "xdebug"
@@ -182,6 +183,10 @@ func (s *Deployment) createDaemonSet() error {
 								{
 									Name:  csiVersionEnvVar,
 									Value: s.stos.Spec.GetCSIVersion(CSIV1Supported(s.k8sVersion)),
+								},
+								{
+									Name:  k8sDistroEnvVar,
+									Value: s.stos.Spec.K8sDistro,
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{

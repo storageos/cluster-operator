@@ -7,6 +7,7 @@ spec:
   secretRefName: "storageos-api"
   secretRefNamespace: "default"
   namespace: "storageos"
+  # k8sDistro: openshift
   # tlsEtcdSecretRefName:
   # tlsEtcdSecretRefNamespace:
   # disableTelemetry: true
@@ -61,7 +62,7 @@ spec:
   #       values:
   #       - nodefoo
   # tolerations:
-  #   - key: somekey 
+  #   - key: somekey
   #     operator: "Equal"
   #     value: nodefoo
   #     effect: "NoSchedule"

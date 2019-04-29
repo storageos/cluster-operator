@@ -39,6 +39,8 @@ spec:
               type: string
             namespace:
               type: string
+            k8sDistro:
+              type: string
             disableFencing:
               type: boolean
             disableTelemetry:
