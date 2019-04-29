@@ -25,7 +25,10 @@ func (s *Deployment) updateStorageOSStatus(status *storageosv1.StorageOSClusterS
 	if s.stos.Status.Ready != status.Ready {
 		// Ready contains the node count in the format 3/3.
 		ready := strings.Split(status.Ready, "/")
-		if ready[0] == ready[1] {
+
+		// If the ready/total counts are equal and not zero, the cluster is
+		// healthy. Else, not ready. 0/0 is an unready cluster.
+		if ready[0] == ready[1] && ready[0] != "0" {
 			if s.recorder != nil {
 				s.recorder.Event(s.stos, v1.EventTypeNormal, "ChangedStatus", fmt.Sprintf("%s StorageOS nodes are functional. Cluster healthy", status.Ready))
 			}
@@ -43,10 +46,18 @@ func (s *Deployment) updateStorageOSStatus(status *storageosv1.StorageOSClusterS
 // getStorageOSStatus queries health of all the nodes in the join token and
 // returns the cluster status.
 func (s *Deployment) getStorageOSStatus() (*storageosv1.StorageOSClusterStatus, error) {
-	nodeIPs := strings.Split(s.stos.Spec.Join, ",")
+	var totalNodes, readyNodes int
 
-	totalNodes := len(nodeIPs)
-	readyNodes := 0
+	// Create an empty array because it's used to create cluster status. An
+	// uninitialized array results in error at cluster status validation.
+	// error: status.nodes in body must be of type array: "null"
+	nodeIPs := []string{}
+
+	// Everything is empty if join token is empty.
+	if len(s.stos.Spec.Join) > 0 {
+		nodeIPs = strings.Split(s.stos.Spec.Join, ",")
+		totalNodes = len(nodeIPs)
+	}
 
 	healthStatus := make(map[string]storageosv1.NodeHealth)
 	memberStatus := new(storageosv1.MembersStatus)
