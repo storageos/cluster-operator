@@ -12,7 +12,7 @@ readonly KIND_1_13_LINK="https://docs.google.com/uc?export=download&id=1C_Jrj68Y
 enable_lio() {
     echo "Enable LIO"
     sudo apt -y update
-    sudo apt -y install linux-image-extra-$(uname -r)
+    sudo apt -y install linux-modules-extra-$(uname -r)
     sudo mount --make-shared /sys
     sudo mount --make-shared /
     sudo mount --make-shared /dev
