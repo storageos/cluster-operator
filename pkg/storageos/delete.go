@@ -1,5 +1,7 @@
 package storageos
 
+import "strings"
+
 // Delete deletes all the storageos resources.
 // This explicit delete is implemented instead of depending on the garbage
 // collector because sometimes the garbage collector deletes the resources
@@ -74,6 +76,17 @@ func (s *Deployment) Delete() error {
 		}
 
 		if err := s.deleteCSISecrets(); err != nil {
+			return err
+		}
+	}
+
+	// Delete cluster role for openshift security context constraints.
+	if strings.Contains(s.stos.Spec.K8sDistro, k8sDistroOpenShift) {
+		if err := s.deleteClusterRoleBinding(OpenShiftSCCClusterBindingName); err != nil {
+			return err
+		}
+
+		if err := s.deleteClusterRole(OpenShiftSCCClusterRoleName); err != nil {
 			return err
 		}
 	}

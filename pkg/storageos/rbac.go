@@ -21,6 +21,10 @@ const (
 	CSIDriverRegistrarClusterBindingName    = "storageos:driver-registrar"
 	CSIK8SDriverRegistrarClusterBindingName = "storageos:k8s-driver-registrar"
 
+	// OpenShift Security Context Constraints role and role binding names.
+	OpenShiftSCCClusterRoleName    = "storageos:openshift-scc"
+	OpenShiftSCCClusterBindingName = "storageos:openshift-scc"
+
 	KeyManagementRoleName    = "storageos:key-management"
 	KeyManagementBindingName = "storageos:key-management"
 
@@ -392,4 +396,47 @@ func (s *Deployment) createClusterRoleBindingForAttacher() error {
 		APIGroup: "rbac.authorization.k8s.io",
 	}
 	return s.createClusterRoleBinding(CSIAttacherClusterBindingName, subjects, roleRef)
+}
+
+// createClusterRoleForSCC creates cluster role with api group and resource
+// specific to openshift. This permission is required for by daemonsets and
+// statefulsets.
+func (s *Deployment) createClusterRoleForSCC() error {
+	rules := []rbacv1.PolicyRule{
+		{
+			APIGroups:     []string{"security.openshift.io"},
+			Resources:     []string{"securitycontextconstraints"},
+			Verbs:         []string{"use"},
+			ResourceNames: []string{"privileged"},
+		},
+	}
+	return s.createClusterRole(OpenShiftSCCClusterRoleName, rules)
+}
+
+// createClusterRoleBindingForSCC creates a cluster role binding of the
+// openshift SCC role with daemonset and statefulset service account.
+func (s *Deployment) createClusterRoleBindingForSCC() error {
+	subjects := []rbacv1.Subject{
+		{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      DaemonsetSA,
+			Namespace: s.stos.Spec.GetResourceNS(),
+		},
+	}
+
+	// Add Statefulset service account if CSI is enabled.
+	if s.stos.Spec.CSI.Enable {
+		subjects = append(subjects, rbacv1.Subject{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      StatefulsetSA,
+			Namespace: s.stos.Spec.GetResourceNS(),
+		})
+	}
+
+	roleRef := rbacv1.RoleRef{
+		Kind:     "ClusterRole",
+		Name:     OpenShiftSCCClusterRoleName,
+		APIGroup: "rbac.authorization.k8s.io",
+	}
+	return s.createClusterRoleBinding(OpenShiftSCCClusterBindingName, subjects, roleRef)
 }
