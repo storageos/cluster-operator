@@ -504,6 +504,7 @@ data:
                 - delete
                 - update
                 - get
+                - use
                 resourceNames:
                 - privileged
             deployments:

@@ -107,11 +107,6 @@ run_openshift() {
     curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.11.3/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
     # Change directory to the project directory.
     cd -
-    # Add storageos service account to Security Context Constraint (SCC).
-    # This is openshift specific permission which is required for the operator
-    # to work.
-    oc adm policy add-scc-to-user privileged system:serviceaccount:storageos:storageos-daemonset-sa
-    oc adm policy add-scc-to-user privileged system:serviceaccount:storageos:storageos-statefulset-sa
     echo
 }
 
@@ -186,6 +181,12 @@ main() {
         run_minikube
     elif [ "$1" = "openshift" ]; then
         run_openshift
+        # # TODO: Add node label for master node. This is required by the OLM
+        # # deployments to work in the next version of OLM 0.9.
+        # kubectl label nodes localhost node-role.kubernetes.io/master=
+
+        # Update CR with k8sDistro set to openshift
+        yq w -i deploy/storageos-operators.olm.cr.yaml spec.k8sDistro openshift
     elif [ "$1" = "kind" ]; then
         run_kind
     fi
@@ -257,6 +258,18 @@ main() {
 
         echo "Deleting namespace storageos..."
         kubectl delete ns storageos --ignore-not-found=true
+
+        # TODO: Remove these manual SCC permissions. It works automatically in
+        # the OLM tests and in manual test runs, but fails in CI only with
+        # no statefulset pods created. Try to reproduce it and find what's
+        # causing this issue.
+        if [ "$1" = "openshift" ]; then
+        # Add storageos service account to Security Context Constraint (SCC).
+        # This is openshift specific permission which is required for the operator
+        # to work.
+        oc adm policy add-scc-to-user privileged system:serviceaccount:storageos:storageos-daemonset-sa
+        oc adm policy add-scc-to-user privileged system:serviceaccount:storageos:storageos-statefulset-sa
+        fi
 
         operator-sdk test local ./test/e2e --go-test-flags "-v -tags csi" --namespace storageos-operator
 
