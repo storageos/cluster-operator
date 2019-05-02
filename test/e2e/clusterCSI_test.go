@@ -41,6 +41,7 @@ func TestClusterCSI(t *testing.T) {
 				Effect:   corev1.TaintEffectNoSchedule,
 			},
 		},
+		K8sDistro: "openshift",
 	}
 
 	testStorageOS := testutil.NewStorageOSCluster(namespace, clusterSpec)

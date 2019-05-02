@@ -287,6 +287,18 @@ spec:
           verbs:
           - create
           - delete
+        - apiGroups:
+          - security.openshift.io
+          resources:
+          - securitycontextconstraints
+          verbs:
+          - create
+          - delete
+          - update
+          - get
+          - use
+          resourceNames:
+          - privileged
       deployments:
       - name: storageos-operator
         spec:

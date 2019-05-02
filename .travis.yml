@@ -23,6 +23,7 @@ before_install:
         fi
       fi
   - sudo apt -y update && sudo apt install -y jq
+  - curl -Lo yq https://github.com/mikefarah/yq/releases/download/2.3.0/yq_linux_amd64 && chmod +x yq && sudo mv yq /usr/local/bin/
   - curl -Lo storageos https://github.com/storageos/go-cli/releases/download/1.0.0/storageos_linux_amd64 && chmod +x storageos && sudo mv storageos /usr/local/bin/
 #  - docker run -d -p 2399:2399 quay.io/coreos/etcd:v3.3.10 /usr/local/bin/etcd -advertise-client-urls http://0.0.0.0:2399 -listen-client-urls http://0.0.0.0:2399
 
@@ -37,6 +38,13 @@ jobs:
         - "TEST_CLUSTER=kind"
         - "INSTALL_METHOD=olm"
       name: OLM on KinD (k8s-1.13)
+      script: ./test/e2e.sh $TEST_CLUSTER $INSTALL_METHOD
+    - go: "1.11"
+      sudo: required
+      env:
+        - "TEST_CLUSTER=openshift"
+        - "INSTALL_METHOD=olm"
+      name: OLM on OpenShift (k8s-1.11)
       script: ./test/e2e.sh $TEST_CLUSTER $INSTALL_METHOD
     - &base-test
       go: "1.11"

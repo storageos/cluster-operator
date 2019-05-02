@@ -3,7 +3,6 @@ package util
 import (
 	goctx "context"
 	"fmt"
-	"log"
 	"os/exec"
 	"testing"
 	"time"
@@ -216,7 +215,8 @@ func NodeLabelSyncTest(t *testing.T, kubeclient kubernetes.Interface) {
 	node.SetLabels(labels)
 	_, err = kubeclient.CoreV1().Nodes().Update(&node)
 	if err != nil {
-		t.Fatalf("failed to update node labels: %v", err)
+		t.Errorf("failed to update node labels: %v", err)
+		return
 	}
 
 	// Wait for the node-controller to update storageos node.
@@ -224,10 +224,12 @@ func NodeLabelSyncTest(t *testing.T, kubeclient kubernetes.Interface) {
 
 	out, err := exec.Command("./test/port-forward.sh").Output()
 	if err != nil {
-		log.Fatalf("failed while executing script: %v", err)
+		t.Errorf("failed while executing script: %v", err)
+		return
 	}
 	if string(out) != "0\n" {
-		log.Fatalf("unexpected script output: %v", string(out))
+		t.Errorf("unexpected script output: %v", string(out))
+		return
 	}
 
 	// Cleanup - remove the label from k8s node.
@@ -235,7 +237,8 @@ func NodeLabelSyncTest(t *testing.T, kubeclient kubernetes.Interface) {
 	// Get the latest version of node to update.
 	nodes, err = kubeclient.CoreV1().Nodes().List(metav1.ListOptions{})
 	if err != nil {
-		t.Fatalf("failed to get nodes: %v", err)
+		t.Errorf("failed to get nodes: %v", err)
+		return
 	}
 	node = nodes.Items[0]
 	labels = node.GetLabels()
@@ -243,6 +246,7 @@ func NodeLabelSyncTest(t *testing.T, kubeclient kubernetes.Interface) {
 	node.SetLabels(labels)
 	_, err = kubeclient.CoreV1().Nodes().Update(&node)
 	if err != nil {
-		t.Fatalf("failed to cleanup node labels: %v", err)
+		t.Errorf("failed to cleanup node labels: %v", err)
+		return
 	}
 }

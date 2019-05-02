@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/blang/semver"
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
@@ -65,6 +66,9 @@ const (
 
 	defaultUsername = "storageos"
 	defaultPassword = "storageos"
+
+	// k8s distribution vendor specific keywords.
+	k8sDistroOpenShift = "openshift"
 )
 
 // Deploy deploys storageos by creating all the resources needed to run storageos.
@@ -152,6 +156,17 @@ func (s *Deployment) Deploy() error {
 		}
 
 		if err := s.createStatefulSet(); err != nil {
+			return err
+		}
+	}
+
+	// Add openshift security context constraints.
+	if strings.Contains(s.stos.Spec.K8sDistro, k8sDistroOpenShift) {
+		if err := s.createClusterRoleForSCC(); err != nil {
+			return err
+		}
+
+		if err := s.createClusterRoleBindingForSCC(); err != nil {
 			return err
 		}
 	}
