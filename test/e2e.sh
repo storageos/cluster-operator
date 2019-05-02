@@ -254,24 +254,12 @@ main() {
         # NOTE: Append this test command with `|| true` to debug by inspecting the
         # resource details. Also comment `defer ctx.Cleanup()` in the cluster to
         # avoid resouce cleanup.
-        operator-sdk test local ./test/e2e --go-test-flags "-v -tags intree" --namespace storageos-operator
+        operator-sdk test local ./test/e2e --go-test-flags "-v -tags csi" --namespace storageos-operator
 
         echo "Deleting namespace storageos..."
         kubectl delete ns storageos --ignore-not-found=true
 
-        # TODO: Remove these manual SCC permissions. It works automatically in
-        # the OLM tests and in manual test runs, but fails in CI only with
-        # no statefulset pods created. Try to reproduce it and find what's
-        # causing this issue.
-        if [ "$1" = "openshift" ]; then
-        # Add storageos service account to Security Context Constraint (SCC).
-        # This is openshift specific permission which is required for the operator
-        # to work.
-        oc adm policy add-scc-to-user privileged system:serviceaccount:storageos:storageos-daemonset-sa
-        oc adm policy add-scc-to-user privileged system:serviceaccount:storageos:storageos-statefulset-sa
-        fi
-
-        operator-sdk test local ./test/e2e --go-test-flags "-v -tags csi" --namespace storageos-operator
+        operator-sdk test local ./test/e2e --go-test-flags "-v -tags intree" --namespace storageos-operator
 
         echo "Deleting namespace storageos..."
         kubectl delete ns storageos --ignore-not-found=true
