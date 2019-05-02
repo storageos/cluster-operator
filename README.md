@@ -115,6 +115,7 @@ Parameter | Description | Default
 `images.csiClusterDriverRegistrarContainer` | CSI Cluster Driver Registrar Container image | `quay.io/k8scsi/csi-cluster-driver-registrar:v1.0.1`
 `images.csiExternalProvisionerContainer` | CSI External Provisioner Container image | `storageos/csi-provisioner:v1.0.1`
 `images.csiExternalAttacherContainer` | CSI External Attacher Container image | `quay.io/k8scsi/csi-attacher:v1.0.1`
+`ìmages.csiLivenessProbeContainer` | CSI Liveness Probe Container Image | `quay.io/k8scsi/livenessprobe:v1.0.1`
 `csi.enable` | Enable CSI setup | `false`
 `csi.enableProvisionCreds` | Enable CSI provision credentials | `false`
 `csi.enableControllerPublishCreds` | Enable CSI controller publish credentials | `false`

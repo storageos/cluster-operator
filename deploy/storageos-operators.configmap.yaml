@@ -64,6 +64,8 @@ data:
                         type: string
                       csiExternalAttacherContainer:
                         type: string
+                      csiLivenessProbeContainer:
+                        type: string
                   csi:
                     properties:
                       enable:
