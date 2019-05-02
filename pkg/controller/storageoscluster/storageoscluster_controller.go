@@ -187,6 +187,7 @@ func (r *ReconcileStorageOSCluster) reconcile(m *storageosv1.StorageOSCluster) e
 		m.Spec.Images.CSINodeDriverRegistrarContainer = m.Spec.GetCSINodeDriverRegistrarImage(storageos.CSIV1Supported(r.k8sVersion))
 		if storageos.CSIV1Supported((r.k8sVersion)) {
 			m.Spec.Images.CSIClusterDriverRegistrarContainer = m.Spec.GetCSIClusterDriverRegistrarImage()
+			m.Spec.Images.CSILivenessProbeContainer = m.Spec.GetCSILivenessProbeImage()
 		}
 		m.Spec.Images.CSIExternalProvisionerContainer = m.Spec.GetCSIExternalProvisionerImage(storageos.CSIV1Supported(r.k8sVersion))
 		m.Spec.Images.CSIExternalAttacherContainer = m.Spec.GetCSIExternalAttacherImage(storageos.CSIV1Supported(r.k8sVersion))
