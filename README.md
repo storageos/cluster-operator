@@ -131,6 +131,8 @@ Parameter | Description | Default
 `sharedDir` | Path to be shared with kubelet container when deployed as a pod | `/var/lib/kubelet/plugins/kubernetes.io~storageos`
 `kvBackend.address` | Comma-separated list of addresses of external key-value store. (`1.2.3.4:2379,2.3.4.5:2379`) |
 `kvBackend.backend` | Name of the key-value store to use. Set to `etcd` for external key-value store. | `embedded`
+`tlsEtcdSecretRefName` | Name of the secret object that contains the etcd TLS certs. |
+`tlsEtcdSecretRefNamespace` | Namespace of the secret object that contains the etcd TLS certs. |
 `pause` | Pause the operator for cluster maintenance | `false`
 `debug` | Enable debug mode for all the cluster nodes | `false`
 `disableFencing` | Disable Pod fencing | `false`
