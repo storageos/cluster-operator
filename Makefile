@@ -76,8 +76,15 @@ metadata-zip:
 		deploy/olm/storageos/storageosupgrade.crd.yaml \
 		deploy/olm/csv-rhel/storageos.clusterserviceversion.yaml
 
+metadata-update:
+	# Update all the metadata files in-place.
+	bash scripts/metadata-checker/update-metadata-files.sh
+
 # Lint the OLM metadata bundle.
 olm-lint:
+	# Generate metadata files and verify all the metadata files are up-to-date.
+	bash scripts/metadata-checker/metadata-diff-checker.sh
+	# Verify the OLM metada using operator-courier.
 	docker run -it --rm -v $(PWD)/deploy/olm/storageos/:/storageos \
 		python:3 bash -c "pip install operator-courier && operator-courier verify --ui_validate_io /storageos"
 

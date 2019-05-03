@@ -1,0 +1,5 @@
+metadata.name: storageosoperator.v1.1.0
+metadata.namespace: placeholder
+metadata.annotations.containerImage: storageos/cluster-operator:1.1.0
+spec.version: 1.1.0
+spec.install.spec.deployments[0].spec.template.spec.containers[0].image: storageos/cluster-operator:1.1.0

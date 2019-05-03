@@ -1,0 +1,50 @@
+metadata.name: storageosoperator.v1.1.0
+metadata.namespace: placeholder
+metadata.annotations.containerImage: registry.connect.redhat.com/storageos/cluster-operator:1.1.0
+metadata.annotations.certified: "true"
+metadata.annotations.alm-examples: |-
+  [
+    {
+      "apiVersion": "storageos.com/v1",
+      "kind": "StorageOSCluster",
+      "metadata": {
+        "name": "example-storageos",
+        "namespace": "default"
+      },
+      "spec": {
+        "namespace": "kube-system",
+        "secretRefName": "storageos-api",
+        "secretRefNamespace": "default"
+      }
+    },
+    {
+      "apiVersion": "storageos.com/v1",
+      "kind": "Job",
+      "metadata": {
+        "name": "example-job",
+        "namespace": "default"
+      },
+      "spec": {
+        "image": "registry.connect.redhat.com/storageos/cluster-operator:latest",
+        "args": ["/var/lib/storageos"],
+        "mountPath": "/var/lib",
+        "hostPath": "/var/lib",
+        "completionWord": "done"
+      }
+    },
+    {
+      "apiVersion": "storageos.com/v1",
+      "kind": "StorageOSUpgrade",
+      "metadata": {
+        "name": "example-upgrade",
+        "namespace": "default"
+      },
+      "spec": {
+        "newImage": "registry.connect.redhat.com/storageos/node:latest"
+      }
+    }
+  ]
+
+spec.version: 1.1.0
+spec.install.spec.deployments[0].spec.template.spec.containers[0].image: registry.connect.redhat.com/storageos/cluster-operator:1.1.0
+spec.customresourcedefinitions.owned[2].specDescriptors[0].description: The StorageOS Node image to upgrade to. e.g. `registry.connect.redhat.com/storageos/node:latest`
