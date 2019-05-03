@@ -5,11 +5,11 @@ metadata:
   namespace: placeholder
   annotations:
     capabilities: Full Lifecycle
-    categories: "Storage"
+    categories: Storage
     description: Cloud-native, persistent storage for containers.
     containerImage: registry.connect.redhat.com/storageos/cluster-operator:1.1.0
     repository: https://github.com/storageos/cluster-operator
-    createdAt: 2019-04-17T08:00:00Z
+    createdAt: "2019-04-17T08:00:00Z"
     support: StorageOS, Inc
     certified: "true"
     alm-examples: |-
@@ -54,7 +54,6 @@ metadata:
           }
         }
       ]
-
 spec:
   displayName: StorageOS
   description: |
@@ -151,36 +150,32 @@ spec:
     on any platform while maintaining full control of business requirements
     around availability, data mobility, performance, security, data residency
     compliance and business continuity.
-
-  keywords: ['storageos', 'storage', 'persistent storage', 'open source']
-
+  keywords:
+  - storageos
+  - storage
+  - persistent storage
+  - open source
   version: 1.1.0
-  minKubeVersion: "1.10.0"
+  minKubeVersion: 1.10.0
   maturity: stable
   maintainers:
   - name: StorageOS, Inc
     email: support@storageos.com
-
   provider:
     name: StorageOS, Inc
-
   labels:
     operated-by: storageosoperator
-
   selector:
     matchLabels:
       operated-by: storageosoperator
-
   links:
   - name: Documentation
     url: https://docs.storageos.com/
   - name: StorageOS Operator Source Code
     url: https://github.com/storageos/cluster-operator
-
   icon:
   - base64data: PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAxOS4wLjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0iTGF5ZXJfMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgeD0iMHB4IiB5PSIwcHgiDQoJIHZpZXdCb3g9Ii05MCAyODQuNyA0MzAgNDMwIiBlbmFibGUtYmFja2dyb3VuZD0ibmV3IC05MCAyODQuNyA0MzAgNDMwIiB4bWw6c3BhY2U9InByZXNlcnZlIj4NCjxnPg0KCTxwYXRoIGZpbGw9IiM0RjUyNjMiIGQ9Ik0yNzguNSw0MjAuOWgtNzQuMWwtNS42LTkuN2wxMy42LTIzLjZsLTE4LjEtMzEuM0gxODBsMjcuNS00Ny43YzMtNS4xLDEuMi0xMS43LTMuOS0xNC42DQoJCWMtNS4xLTMtMTEuNy0xLjItMTQuNiwzLjlsLTM0LDU4LjhIOTMuMmwtMzQtNTguOGMtMi45LTUuMS05LjUtNi45LTE0LjYtMy45cy02LjksOS41LTMuOSwxNC42bDI3LjUsNDcuN0g1My45bC0xOC4xLDMxLjMNCgkJbDEzLjYsMjMuNmwtNS42LDkuOGgtNzQuMmwtNDMuMyw3NC45bDQzLjMsNzQuOWg3NC4xbDM0LDU4LjlMNzksNjI5bC0xLjIsMC44bDQ2LjQsNzcuMmw0Ni4yLTc3LjNsMCwwbDM0LTU4LjloNzQuMWw0My4zLTc0LjkNCgkJTDI3OC41LDQyMC45eiBNNTUuNSw0MDAuNWwtNy40LTEyLjhMNjAsMzY3aDE0LjNsMC4zLDAuNUw1NS41LDQwMC41eiBNMTczLjQsMzY3LjVsMC4zLTAuNUgxODhsMTEuOSwyMC42bC03LjQsMTIuOUwxNzMuNCwzNjcuNXoiDQoJCS8+DQoJPHBvbHlnb24gZmlsbD0iI0ZGRkZGRiIgcG9pbnRzPSI0My43LDQ0Mi4zIDQyLjgsNDQyLjMgLTE4LjEsNDQyLjMgLTQ4LjksNDk1LjggLTE4LjEsNTQ5LjMgNDMsNTQ5LjMgNDMuNyw1NDkuMyA3NC42LDQ5NS45IAkiLz4NCgk8cG9seWdvbiBmaWxsPSIjRkZGRkZGIiBwb2ludHM9IjI2Ni4xLDQ0Mi4zIDIwNC4zLDQ0Mi4zIDIwNC4zLDQ0Mi41IDE3My40LDQ5NS44IDIwNC4zLDU0OS4zIDIwNC40LDU0OS4zIDI2Ni4xLDU0OS4zIDI5Nyw0OTUuOCAJDQoJCSIvPg0KCTxwb2x5Z29uIGZpbGw9IiM2MUMyMDIiIHBvaW50cz0iMTU0LjksMzc4LjIgOTMuMSwzNzguMiA5My4xLDM3OC4zIDYyLjMsNDMxLjcgOTMuMSw0ODUuMiA5My4yLDQ4NS4yIDE1NC45LDQ4NS4yIDE4NS44LDQzMS43IAkiLz4NCgk8cG9seWdvbiBmaWxsPSIjNjFDMjAyIiBwb2ludHM9IjE1Mi4xLDYxOC40IDE1Mi4xLDYxOC40IDEyNCw2NjUuMiA5Ni4yLDYxOC45IDk2LjIsNjE4LjkgNjIuMiw1NjAuMSA4OC4zLDUxNC45IDkzLjEsNTA2LjYgDQoJCTE1NC45LDUwNi42IDE4NS44LDU2MC4xIAkiLz4NCjwvZz4NCjxyZWN0IHg9Ii0xMDUiIHk9IjI3MC43IiBmaWxsPSJub25lIiB3aWR0aD0iNDU4IiBoZWlnaHQ9IjQ1OCIvPg0KPC9zdmc+DQo=
     mediatype: image/svg+xml
-
   installModes:
   - type: OwnNamespace
     supported: true
@@ -190,7 +185,6 @@ spec:
     supported: false
   - type: AllNamespaces
     supported: true
-
   install:
     strategy: deployment
     spec:
@@ -204,14 +198,14 @@ spec:
           - storageosupgrades
           - jobs
           verbs:
-          - "*"
+          - '*'
         - apiGroups:
           - apps
           resources:
           - statefulsets
           - daemonsets
           verbs:
-          - "*"
+          - '*'
         - apiGroups:
           - ""
           resources:
@@ -324,7 +318,7 @@ spec:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
                 - name: OPERATOR_NAME
-                  value: "cluster-operator"
+                  value: cluster-operator
                 ports:
                 - containerPort: 8080
                   name: metrics
@@ -334,34 +328,34 @@ spec:
       version: v1
       kind: StorageOSCluster
       displayName: StorageOS Cluster
-      description: StorageOS Cluster installs StorageOS in the cluster. It
-        contains all the configuration for setting up a StorageOS cluster and
-        also shows the status of the running StorageOS cluster.
+      description: StorageOS Cluster installs StorageOS in the cluster. It contains
+        all the configuration for setting up a StorageOS cluster and also shows the
+        status of the running StorageOS cluster.
       specDescriptors:
       - description: Defines the various container images used in the cluster.
         displayName: Images
         path: images
-      - description: The namespace to install the StorageOS cluster into.
-          `kube-system` is recommended so that StorageOS does not get evicted if
-          a node becomes over-allocated.
+      - description: The namespace to install the StorageOS cluster into. `kube-system`
+          is recommended so that StorageOS does not get evicted if a node becomes
+          over-allocated.
         displayName: Namespace
         path: namespace
       - description: The name of the secret object that stores the api credentials.
         displayName: Cluster Secret
         path: secretRefName
-      - description: The name of the namespace where the secret object that
-          stores the api credentials exists.
+      - description: The name of the namespace where the secret object that stores
+          the api credentials exists.
         displayName: Cluster Secret Namespace
         path: secretRefNamespace
-      - description: The join token is used for cluster discovery.  When used
-          with the Operator, the token will be a comma-separated list of all
-          cluster member IP addresses.  The node that owns the first IP address
-          listed will be responsible for bootsrapping the cluster.
+      - description: The join token is used for cluster discovery.  When used with
+          the Operator, the token will be a comma-separated list of all cluster member
+          IP addresses.  The node that owns the first IP address listed will be responsible
+          for bootsrapping the cluster.
         displayName: Cluster members
         path: join
-      - description: KV store configuration to use. Defaults to embedded. `etcd`
-          is recommended for production deployments with the address set to an
-          external etcd instance.
+      - description: KV store configuration to use. Defaults to embedded. `etcd` is
+          recommended for production deployments with the address set to an external
+          etcd instance.
         displayName: KV Store
         path: kvBackend
       - description: Describes the Container Storage Interface (CSI) configuration.
@@ -370,52 +364,50 @@ spec:
       - description: The cluster Service configuration.
         displayName: Service configuration
         path: service
-      - description: The shared directory where storage devices should be
-          created.  This directory must be available to both the StorageOS Node
-          container and the kubelet, and must have mount propagation enabled.
-          When kubelet is running in a container,
-          `/var/lib/kubelet/plugins/kubernetes.io~storageos` should normally be
-          set, otherwise leave empty.
+      - description: The shared directory where storage devices should be created.  This
+          directory must be available to both the StorageOS Node container and the
+          kubelet, and must have mount propagation enabled. When kubelet is running
+          in a container, `/var/lib/kubelet/plugins/kubernetes.io~storageos` should
+          normally be set, otherwise leave empty.
         displayName: Device directory
         path: sharedDir
-      - description: Describes the ingress configuration to be configured for
-          the cluster.
+      - description: Describes the ingress configuration to be configured for the
+          cluster.
         displayName: Ingress configuration
         path: ingress
-      - description: The name of the secret object that contains the etcd TLS
-          certificates.
+      - description: The name of the secret object that contains the etcd TLS certificates.
         displayName: etcd TLS Secret Name
         path: tlsEtcdSecretRefName
-      - description: The namespace of the secret object that contains the etcd
-          TLS certificates.
+      - description: The namespace of the secret object that contains the etcd TLS
+          certificates.
         displayName: etcd TLS Secret Namespace
         path: tlsEtcdSecretRefNamespace
-      - description: Node selector terms can be set to control the placement of
-          StorageOS pods using node affiinity.
+      - description: Node selector terms can be set to control the placement of StorageOS
+          pods using node affiinity.
         displayName: Node Selectors
         path: nodeSelectorTerms
-      - description: Tolerations can be set to control the placement of
-          StorageOS pods.
+      - description: Tolerations can be set to control the placement of StorageOS
+          pods.
         displayName: Tolerations
         path: tolerations
-      - description: Name of the Kubernetes distribution in use, e.g.
-          `openshift`.  This will be included in the product telemetry (if
-          enabled), to help focus development efforts.
+      - description: Name of the Kubernetes distribution in use, e.g. `openshift`.  This
+          will be included in the product telemetry (if enabled), to help focus development
+          efforts.
         displayName: Kubernetes Distribution Name
         path: k8sDistro
-      - description: To disable anonymous usage reporting across the cluster,
-          set to true. Defaults to false. To help improve the product, data such
-          as API usage and StorageOS configuration information is collected.
+      - description: To disable anonymous usage reporting across the cluster, set
+          to true. Defaults to false. To help improve the product, data such as API
+          usage and StorageOS configuration information is collected.
         displayName: Disable Telemetry
         path: disableTelemetry
-      - description: When Pod Fencing is disabled, StorageOS will not perform
-          any interaction with Kubernetes when it detects that a node has gone
-          offline. Additionally, the Kubernetes permissions required for Fencing
-          will not be added to the StorageOS role.
+      - description: When Pod Fencing is disabled, StorageOS will not perform any
+          interaction with Kubernetes when it detects that a node has gone offline.
+          Additionally, the Kubernetes permissions required for Fencing will not be
+          added to the StorageOS role.
         displayName: Disable Fencing
         path: disableFencing
-      - description: When enabled, the Operator will not perform any actions on
-          the cluster.
+      - description: When enabled, the Operaaor will not perform any actions on the
+          cluster.
         displayName: Pause Operator
         path: pause
       - description: Enables debug logging when set to true.
@@ -442,9 +434,9 @@ spec:
       version: v1
       kind: Job
       displayName: StorageOS Job
-      description: StorageOS Job creates special pods that run on all the node
-        and perform an administrative task. This could be used for cluster
-        maintenance tasks.
+      description: StorageOS Job creates special pods that run on all the node and
+        perform an administrative task. This could be used for cluster maintenance
+        tasks.
       specDescriptors:
       - description: The container image to run as the job.
         displayName: Image
@@ -458,15 +450,15 @@ spec:
       - description: The path on the host that is mounted into the job container.
         displayName: Source path
         path: hostPath
-      - description: The job is marked as completed when the completion word is
-          found in the pod logs.
+      - description: The job is marked as completed when the completion word is found
+          in the pod logs.
         displayName: Source Path
         path: completionWord
       - description: A label selector can be set to identify Pods created by the job.
         displayName: Label Selector
         path: labelSelector
-      - description: Node selector terms can be set to control the placement of
-          job pods using node affiinity.
+      - description: Node selector terms can be set to control the placement of job
+          pods using node affiinity.
         displayName: Node Selectors
         path: nodeSelectorTerms
       - description: Tolerations can be set to control the placement of job pods.
@@ -480,11 +472,10 @@ spec:
       version: v1
       kind: StorageOSUpgrade
       displayName: StorageOS Upgrade
-      description: StorageOS Upgrade automatically upgrades an existing
-        StorageOS cluster as per the upgrade configuration.
+      description: StorageOS Upgrade automatically upgrades an existing StorageOS
+        cluster as per the upgrade configuration.
       specDescriptors:
-      - description: The StorageOS Node image to upgrade to.
-          e.g. `registry.connect.redhat.com/storageos/node:latest`
+      - description: The StorageOS Node image to upgrade to. e.g. `registry.connect.redhat.com/storageos/node:latest`
         displayName: New Image
         path: newImage
       statusDescriptors:
