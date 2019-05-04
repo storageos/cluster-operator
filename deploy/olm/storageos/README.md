@@ -9,17 +9,21 @@ releases have the release version in the file name
 be modified because releases are versioned and can't be rereleased. For any
 change, a new CSV with incremented version must be created.
 
+## Release Instructions
+
+Update `metadata.name` with new version number,
+`metadata.annotations.containerImage` and
+`spec.install.spec.deployments[0].spec.template.spec.containers[0].image` with
+the new operator container image, and `spec.version` to the new release version
+number in `deploy/olm/community-changes.yaml`. Run `make metadata-update` to
+generate `storageos.clusterserviceversion.yaml`.
+
+Any other change in the CSV file must be made in
+`deploy/storageos-operators.configmap.yaml` and regenerate all the metadata
+files.
+
 ## Testing
 
 Run `make olm-lint` from the project root to lint all the file in this
 directory. A lint must be performed before submitting a new release to the
 operatorhub.
-
-For e2e tests, ensure that any change in `storageos.clusterserviceversion.yaml`,
-`storageos.package.yaml` and all the crd.yaml files are copied to
-[`/deploy/storageos-operators.configmap`](/deploy/storageos-operators.configmap).
-The configmap is used as a catalog source in the OLM e2e tests.
-
-__NOTE__: With more tooling, we should be able to generate a gRPC catalog source
-using the files in this directory directly, without maintaining a separate
-configmap.

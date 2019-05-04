@@ -23,10 +23,10 @@ for more information.
 
 ## Setup/Development
 
-1. Install [operator-sdk](https://github.com/operator-framework/operator-sdk/tree/master#quick-start).
-2. Run `operator-sdk generate k8s` if there's a change in api type.
-3. Build operator container with `operator-sdk build storageos/cluster-operator:<tag>`
-4. Apply the manifests in `deploy/` to install the operator
+1. Build operator container image with `make image/cluster-operator`. Publish or
+  copy this container image to an existing k8s cluster to make it available
+  for use within the cluster.
+2. Apply the manifests in `deploy/` to install the operator
    * Apply `namespace.yaml` to create the `storageos-operator` namespace.
    * Apply `service_account.yaml`, `role.yaml` and `role_binding.yaml` to create
     a service account and to grant all the permissions.
@@ -53,7 +53,11 @@ make image/cluster-operator OPERATOR_IMAGE=storageos/cluster-operator:test
 
 This builds all the components and copies the binaries into the same container.
 
-After creating a resource, query the resource:
+For any changes related to Operator Lifecycle Manager(OLM), update
+`deploy/storageos-operators.configmap.yaml` and run `make metadata-update` to
+automatically update all the CRD, CSV and package files.
+
+After creating a StorageOSCluster resource, query the resource:
 
 ```bash
 $ kubectl get storageoscluster
