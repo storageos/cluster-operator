@@ -545,32 +545,116 @@ func TestCreateDaemonSet(t *testing.T) {
 	}
 }
 
-func TestCreateStatefulSet(t *testing.T) {
-	c, deploy := setupFakeDeployment()
-	if err := deploy.createStatefulSet(); err != nil {
-		t.Fatal("failed to create statefulset", err)
-	}
-
-	nsName := types.NamespacedName{
-		Name:      "storageos-statefulset",
-		Namespace: defaultNS,
-	}
-	createdStatefulset := &appsv1.StatefulSet{
+func TestCreateCSIHelper(t *testing.T) {
+	clusterName := "my-stos-cluster"
+	stosCluster := &api.StorageOSCluster{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "StatefulSet",
+			APIVersion: gvk.GroupVersion().String(),
+			Kind:       gvk.Kind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "storageos-statefulset",
+			Name:      clusterName,
 			Namespace: defaultNS,
 		},
 	}
-	if err := c.Get(context.Background(), nsName, createdStatefulset); err != nil {
-		t.Fatal("failed to get the created object", err)
+
+	testcases := []struct {
+		name                 string
+		spec                 api.StorageOSClusterSpec
+		wantHelperDeployment bool // CSI helper as k8s Deployment.
+	}{
+		{
+			name: "CSI helpers default",
+			spec: api.StorageOSClusterSpec{
+				CSI: api.StorageOSClusterCSI{
+					Enable: true,
+				},
+			},
+			wantHelperDeployment: false,
+		},
+		{
+			name: "CSI helpers statefulset",
+			spec: api.StorageOSClusterSpec{
+				CSI: api.StorageOSClusterCSI{
+					Enable:           true,
+					HelperDeployment: statefulsetKind,
+				},
+			},
+			wantHelperDeployment: false,
+		},
+		{
+			name: "CSI helpers deployment",
+			spec: api.StorageOSClusterSpec{
+				CSI: api.StorageOSClusterCSI{
+					Enable:           true,
+					HelperDeployment: deploymentKind,
+				},
+			},
+			wantHelperDeployment: true,
+		},
 	}
 
-	// owner := createdStatefulset.GetOwnerReferences()[0]
-	// checkObjectOwner(t, owner, gvk)
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			c := fake.NewFakeClientWithScheme(testScheme)
+			deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
+
+			stosCluster.Spec = tc.spec
+			if err := deploy.createCSIHelper(); err != nil {
+				t.Fatal("failed to create csi helper", err)
+			}
+
+			// Get tolerations for pod toleration checks.
+			var tolerations []corev1.Toleration
+
+			if tc.wantHelperDeployment {
+				// Check for Deployment resource.
+				createdDeployment := &appsv1.Deployment{}
+				nsNameDeployment := types.NamespacedName{
+					Name:      csiHelperName,
+					Namespace: defaultNS,
+				}
+
+				if err := c.Get(context.Background(), nsNameDeployment, createdDeployment); err != nil {
+					t.Fatal("failed to get the created deployment", err)
+				}
+
+				tolerations = createdDeployment.Spec.Template.Spec.Tolerations
+			} else {
+				// Check for StatefulSet resource.
+				createdStatefulset := &appsv1.StatefulSet{}
+				nsNameStatefulSet := types.NamespacedName{
+					Name:      statefulsetName,
+					Namespace: defaultNS,
+				}
+
+				if err := c.Get(context.Background(), nsNameStatefulSet, createdStatefulset); err != nil {
+					t.Fatal("failed to get the created statefulset")
+				}
+
+				tolerations = createdStatefulset.Spec.Template.Spec.Tolerations
+			}
+
+			// Check if the recovery tolerations are applied.
+			foundNotReadyTol := false
+			foundUnreachableTol := false
+			for _, toleration := range tolerations {
+				switch toleration.Key {
+				case nodeNotReadyTolKey:
+					foundNotReadyTol = true
+				case nodeUnreachableTolKey:
+					foundUnreachableTol = true
+				}
+			}
+
+			if !foundNotReadyTol {
+				t.Errorf("pod toleration %q not found in CSI helper", nodeNotReadyTolKey)
+			}
+			if !foundUnreachableTol {
+				t.Errorf("pod toleration %q not found for CSI helper", nodeUnreachableTolKey)
+			}
+		})
+	}
 }
 
 func TestDeployLegacy(t *testing.T) {
@@ -945,57 +1029,91 @@ func TestDeployNodeAffinity(t *testing.T) {
 		},
 	}
 
-	c := fake.NewFakeClientWithScheme(testScheme)
-	if err := c.Create(context.Background(), stosCluster); err != nil {
-		t.Fatalf("failed to create storageoscluster object: %v", err)
-	}
-
-	deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
-	if err := deploy.Deploy(); err != nil {
-		t.Fatalf("failed to deploy cluster: %v", err)
-	}
-
-	createdDaemonset := &appsv1.DaemonSet{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "DaemonSet",
+	testcases := []struct {
+		name                string
+		csiHelperDeployment string
+	}{
+		{
+			name:                "csi helper StatefulSet",
+			csiHelperDeployment: "statefulset",
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      daemonsetName,
-			Namespace: stosCluster.Spec.GetResourceNS(),
+		{
+			name:                "csi helper Deployment",
+			csiHelperDeployment: "deployment",
 		},
 	}
 
-	nsName := types.NamespacedName{
-		Name:      daemonsetName,
-		Namespace: defaultNS,
-	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			stosCluster.Spec.CSI.HelperDeployment = tc.csiHelperDeployment
 
-	if err := c.Get(context.Background(), nsName, createdDaemonset); err != nil {
-		t.Fatal("failed to get the created daemonset", err)
-	}
+			c := fake.NewFakeClientWithScheme(testScheme)
+			if err := c.Create(context.Background(), stosCluster); err != nil {
+				t.Fatalf("failed to create storageoscluster object: %v", err)
+			}
 
-	podSpec := createdDaemonset.Spec.Template.Spec
+			deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
+			if err := deploy.Deploy(); err != nil {
+				t.Fatalf("failed to deploy cluster: %v", err)
+			}
 
-	if !reflect.DeepEqual(podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms, stosCluster.Spec.NodeSelectorTerms) {
-		t.Errorf("unexpected DaemonSet NodeSelectorTerms value:\n\t(GOT) %v\n\t(WNT) %v", stosCluster.Spec.NodeSelectorTerms, podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution)
-	}
+			createdDaemonset := &appsv1.DaemonSet{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "apps/v1",
+					Kind:       "DaemonSet",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      daemonsetName,
+					Namespace: stosCluster.Spec.GetResourceNS(),
+				},
+			}
 
-	createdStatefulset := &appsv1.StatefulSet{}
+			nsName := types.NamespacedName{
+				Name:      daemonsetName,
+				Namespace: defaultNS,
+			}
 
-	nsNameStatefulSet := types.NamespacedName{
-		Name:      statefulsetName,
-		Namespace: defaultNS,
-	}
+			if err := c.Get(context.Background(), nsName, createdDaemonset); err != nil {
+				t.Fatal("failed to get the created daemonset", err)
+			}
 
-	if err := c.Get(context.Background(), nsNameStatefulSet, createdStatefulset); err != nil {
-		t.Fatal("failed to get the created statefulset", err)
-	}
+			podSpec := createdDaemonset.Spec.Template.Spec
 
-	podSpec = createdStatefulset.Spec.Template.Spec
+			if !reflect.DeepEqual(podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms, stosCluster.Spec.NodeSelectorTerms) {
+				t.Errorf("unexpected DaemonSet NodeSelectorTerms value:\n\t(GOT) %v\n\t(WNT) %v", stosCluster.Spec.NodeSelectorTerms, podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution)
+			}
 
-	if !reflect.DeepEqual(podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms, stosCluster.Spec.NodeSelectorTerms) {
-		t.Errorf("unexpected StatefulSet NodeSelectorTerms value:\n\t(GOT) %v\n\t(WNT) %v", stosCluster.Spec.NodeSelectorTerms, podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution)
+			// Fetch and check both the CSI helpers kinds.
+			if tc.csiHelperDeployment == "deployment" {
+				createdDeployment := &appsv1.Deployment{}
+				nsNameDeployment := types.NamespacedName{
+					Name:      csiHelperName,
+					Namespace: defaultNS,
+				}
+
+				if err := c.Get(context.Background(), nsNameDeployment, createdDeployment); err != nil {
+					t.Fatal("failed to get the created CSI helper deployment", err)
+				}
+
+				podSpec = createdDeployment.Spec.Template.Spec
+			} else {
+				createdStatefulset := &appsv1.StatefulSet{}
+				nsNameStatefulSet := types.NamespacedName{
+					Name:      statefulsetName,
+					Namespace: defaultNS,
+				}
+
+				if err := c.Get(context.Background(), nsNameStatefulSet, createdStatefulset); err != nil {
+					t.Fatal("failed to get the created CSI helper statefulset", err)
+				}
+
+				podSpec = createdStatefulset.Spec.Template.Spec
+			}
+
+			if !reflect.DeepEqual(podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms, stosCluster.Spec.NodeSelectorTerms) {
+				t.Errorf("unexpected StatefulSet NodeSelectorTerms value:\n\t(GOT) %v\n\t(WNT) %v", stosCluster.Spec.NodeSelectorTerms, podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution)
+			}
+		})
 	}
 }
 
@@ -1182,77 +1300,125 @@ func TestDelete(t *testing.T) {
 			Name:      "teststos",
 			Namespace: "default",
 		},
-		Spec: api.StorageOSClusterSpec{
-			CSI: api.StorageOSClusterCSI{
-				Enable: true,
+	}
+
+	testcases := []struct {
+		name string
+		spec api.StorageOSClusterSpec
+	}{
+		{
+			name: "delete daemonset and CSI helper statefulset",
+			spec: api.StorageOSClusterSpec{
+				CSI: api.StorageOSClusterCSI{
+					Enable:           true,
+					HelperDeployment: "statefulset",
+				},
+			},
+		},
+		{
+			name: "delete daemonset and CSI helper deployment",
+			spec: api.StorageOSClusterSpec{
+				CSI: api.StorageOSClusterCSI{
+					Enable:           true,
+					HelperDeployment: "deployment",
+				},
 			},
 		},
 	}
 
-	c := fake.NewFakeClientWithScheme(testScheme)
-	if err := c.Create(context.Background(), stosCluster); err != nil {
-		t.Fatalf("failed to create storageoscluster object: %v", err)
-	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			stosCluster.Spec = tc.spec
 
-	createdNamespace := &corev1.Namespace{}
-	nsNameNamespace := types.NamespacedName{
-		Name: defaultNS,
-	}
+			c := fake.NewFakeClientWithScheme(testScheme)
+			if err := c.Create(context.Background(), stosCluster); err != nil {
+				t.Fatalf("failed to create storageoscluster object: %v", err)
+			}
 
-	// The namespace should not exist.
-	if err := c.Get(context.Background(), nsNameNamespace, createdNamespace); err == nil {
-		t.Fatal("expected the namespace to not exist initially", err)
-	}
+			createdNamespace := &corev1.Namespace{}
+			nsNameNamespace := types.NamespacedName{
+				Name: defaultNS,
+			}
 
-	deploy := NewDeployment(c, stosCluster, nil, testScheme, "1.13.0", false)
-	if err := deploy.Deploy(); err != nil {
-		t.Fatalf("failed to deploy cluster: %v", err)
-	}
+			// The namespace should not exist.
+			if err := c.Get(context.Background(), nsNameNamespace, createdNamespace); err == nil {
+				t.Fatal("expected the namespace to not exist initially", err)
+			}
 
-	// Check if the namespace, daemonset and statefulset have been created.
-	if err := c.Get(context.Background(), nsNameNamespace, createdNamespace); err != nil {
-		t.Fatal("failed to get the created namespace", err)
-	}
+			deploy := NewDeployment(c, stosCluster, nil, testScheme, "1.13.0", false)
+			if err := deploy.Deploy(); err != nil {
+				t.Fatalf("failed to deploy cluster: %v", err)
+			}
 
-	createdDaemonset := &appsv1.DaemonSet{}
+			// Check if the namespace, daemonset and statefulset have been created.
+			if err := c.Get(context.Background(), nsNameNamespace, createdNamespace); err != nil {
+				t.Fatal("failed to get the created namespace", err)
+			}
 
-	nsNameDaemonSet := types.NamespacedName{
-		Name:      daemonsetName,
-		Namespace: defaultNS,
-	}
+			createdDaemonset := &appsv1.DaemonSet{}
+			nsNameDaemonSet := types.NamespacedName{
+				Name:      daemonsetName,
+				Namespace: defaultNS,
+			}
 
-	if err := c.Get(context.Background(), nsNameDaemonSet, createdDaemonset); err != nil {
-		t.Fatal("failed to get the created daemonset", err)
-	}
+			if err := c.Get(context.Background(), nsNameDaemonSet, createdDaemonset); err != nil {
+				t.Fatal("failed to get the created daemonset", err)
+			}
 
-	createdStatefulset := &appsv1.StatefulSet{}
+			// Check creation and deletion of both CSI helper Deployment and
+			// StatefulSet.
 
-	nsNameStatefulSet := types.NamespacedName{
-		Name:      statefulsetName,
-		Namespace: defaultNS,
-	}
+			var createdCSIHelperDeployment *appsv1.Deployment
+			var createdCSIHelperStatefulSet *appsv1.StatefulSet
 
-	if err := c.Get(context.Background(), nsNameStatefulSet, createdStatefulset); err != nil {
-		t.Fatal("failed to get the created statefulset", err)
-	}
+			nsNameDeployment := types.NamespacedName{
+				Name:      csiHelperName,
+				Namespace: defaultNS,
+			}
 
-	// Delete the deployment.
-	if err := deploy.Delete(); err != nil {
-		t.Fatalf("failed to delete cluster: %v", err)
-	}
+			nsNameStatefulSet := types.NamespacedName{
+				Name:      statefulsetName,
+				Namespace: defaultNS,
+			}
 
-	// Daemonset and statefulset should have been deleted.
-	if err := c.Get(context.Background(), nsNameDaemonSet, createdDaemonset); err == nil {
-		t.Fatal("expected the daemonset to be deleted, but it still exists")
-	}
+			if tc.spec.GetCSIHelperDeployment() == "deployment" {
+				createdCSIHelperDeployment = &appsv1.Deployment{}
+				if err := c.Get(context.Background(), nsNameDeployment, createdCSIHelperDeployment); err != nil {
+					t.Fatal("failed to get the created statefulset", err)
+				}
+			} else {
+				createdCSIHelperStatefulSet = &appsv1.StatefulSet{}
+				if err := c.Get(context.Background(), nsNameStatefulSet, createdCSIHelperStatefulSet); err != nil {
+					t.Fatal("failed to get the created statefulset", err)
+				}
+			}
 
-	if err := c.Get(context.Background(), nsNameStatefulSet, createdStatefulset); err == nil {
-		t.Fatal("expected the statefulset to be deleted, but it still exists")
-	}
+			// Delete the deployment.
+			if err := deploy.Delete(); err != nil {
+				t.Fatalf("failed to delete cluster: %v", err)
+			}
 
-	// The namespace should not be deleted.
-	if err := c.Get(context.Background(), nsNameNamespace, createdNamespace); err != nil {
-		t.Fatal("failed to get the created namespace", err)
+			// Daemonset and statefulset should have been deleted.
+			if err := c.Get(context.Background(), nsNameDaemonSet, createdDaemonset); err == nil {
+				t.Fatal("expected the daemonset to be deleted, but it still exists")
+			}
+
+			// Check CSI helper deletion.
+			if tc.spec.GetCSIHelperDeployment() == "deployment" {
+				if err := c.Get(context.Background(), nsNameDeployment, createdCSIHelperDeployment); err == nil {
+					t.Fatal("expected the CSI helper deployment to be deleted, but it still exists")
+				}
+			} else {
+				if err := c.Get(context.Background(), nsNameStatefulSet, createdCSIHelperStatefulSet); err == nil {
+					t.Fatal("expected the CSI helper statefulset to be deleted, but it still exists")
+				}
+			}
+
+			// The namespace should not be deleted.
+			if err := c.Get(context.Background(), nsNameNamespace, createdNamespace); err != nil {
+				t.Fatal("failed to get the created namespace", err)
+			}
+		})
 	}
 }
 
@@ -1335,14 +1501,22 @@ func TestDeployTLSEtcdCerts(t *testing.T) {
 // namespace.
 func TestDeployPodPriorityClass(t *testing.T) {
 	testCases := []struct {
-		name              string
-		resourceNS        string
-		wantPriorityClass bool
+		name                string
+		resourceNS          string
+		csiHelperDeployment string
+		wantPriorityClass   bool
 	}{
 		{
-			name:              "have priority class set",
-			resourceNS:        "kube-system",
-			wantPriorityClass: true,
+			name:                "have priority class set | CSI StatefulSet",
+			resourceNS:          "kube-system",
+			csiHelperDeployment: "statefulset",
+			wantPriorityClass:   true,
+		},
+		{
+			name:                "have priority class set | CSI Deployment",
+			resourceNS:          "kube-system",
+			csiHelperDeployment: "deployment",
+			wantPriorityClass:   true,
 		},
 		{
 			name:              "no priority class set",
@@ -1364,7 +1538,8 @@ func TestDeployPodPriorityClass(t *testing.T) {
 				},
 				Spec: api.StorageOSClusterSpec{
 					CSI: api.StorageOSClusterCSI{
-						Enable: true,
+						Enable:           true,
+						HelperDeployment: tc.csiHelperDeployment,
 					},
 					ResourceNS: tc.resourceNS,
 				},
@@ -1401,25 +1576,41 @@ func TestDeployPodPriorityClass(t *testing.T) {
 				t.Errorf("expected daemonset priority class to be not set")
 			}
 
-			// Check statefulset pod priority class.
-			createdStatefulset := &appsv1.StatefulSet{}
+			// Check pod priority class for both the kinds of CSI helpers.
+			var csiHelperPC string
 
-			nsNameStatefulSet := types.NamespacedName{
-				Name:      statefulsetName,
-				Namespace: stosCluster.Spec.GetResourceNS(),
+			if stosCluster.Spec.GetCSIHelperDeployment() == "deployment" {
+				createdDeployment := &appsv1.Deployment{}
+				nsNameDeployment := types.NamespacedName{
+					Name:      csiHelperName,
+					Namespace: stosCluster.Spec.GetResourceNS(),
+				}
+
+				if err := c.Get(context.Background(), nsNameDeployment, createdDeployment); err != nil {
+					t.Fatal("failed to get the created CSI helper deployment", err)
+				}
+
+				csiHelperPC = createdDeployment.Spec.Template.Spec.PriorityClassName
+			} else {
+				createdStatefulset := &appsv1.StatefulSet{}
+				nsNameStatefulSet := types.NamespacedName{
+					Name:      statefulsetName,
+					Namespace: stosCluster.Spec.GetResourceNS(),
+				}
+
+				if err := c.Get(context.Background(), nsNameStatefulSet, createdStatefulset); err != nil {
+					t.Fatal("failed to get the created CSI helper statefulset", err)
+				}
+
+				csiHelperPC = createdStatefulset.Spec.Template.Spec.PriorityClassName
 			}
 
-			if err := c.Get(context.Background(), nsNameStatefulSet, createdStatefulset); err != nil {
-				t.Fatal("failed to get the created statefulset", err)
+			if tc.wantPriorityClass && csiHelperPC != criticalPriorityClass {
+				t.Errorf("unexpected CSI helper pod priodity class:\n\t(GOT) %v \n\t(WNT) %v", daemonsetPC, criticalPriorityClass)
 			}
 
-			statefulsetPC := createdStatefulset.Spec.Template.Spec.PriorityClassName
-			if tc.wantPriorityClass && statefulsetPC != criticalPriorityClass {
-				t.Errorf("unexpected statefulset pod priodity class:\n\t(GOT) %v \n\t(WNT) %v", daemonsetPC, criticalPriorityClass)
-			}
-
-			if !tc.wantPriorityClass && statefulsetPC != "" {
-				t.Errorf("expected statefulset priority class to be not set")
+			if !tc.wantPriorityClass && csiHelperPC != "" {
+				t.Errorf("expected CSI helper priority class to be not set")
 			}
 		})
 	}
