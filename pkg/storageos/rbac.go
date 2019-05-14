@@ -10,6 +10,7 @@ import (
 const (
 	DaemonsetSA   = "storageos-daemonset-sa"
 	StatefulsetSA = "storageos-statefulset-sa"
+	CSIHelperSA   = "storageos-csi-helper-sa"
 
 	CSIProvisionerClusterRoleName    = "storageos:csi-provisioner"
 	CSIProvisionerClusterBindingName = "storageos:csi-provisioner"

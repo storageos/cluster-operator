@@ -51,6 +51,7 @@ const (
 	DefaultCSIKubeletRegistrationPath  = "/storageos/csi.sock"
 	DefaultCSIDriverRegistrationMode   = "node-register"
 	DefaultCSIDriverRequiresAttachment = "true"
+	DefaultCSIHelperDeployment         = "statefulset"
 )
 
 func getDefaultCSIEndpoint(pluginRegistrationPath string) string {
@@ -426,6 +427,14 @@ func (s StorageOSClusterSpec) GetCSIVersion(csiv1 bool) string {
 	return "v0"
 }
 
+// GetCSIHelperDeployment returns the CSI helper deployment strategy value.
+func (s StorageOSClusterSpec) GetCSIHelperDeployment() string {
+	if s.CSI.HelperDeployment != "" {
+		return s.CSI.HelperDeployment
+	}
+	return DefaultCSIHelperDeployment
+}
+
 // ContainerImages contains image names of all the containers used by the operator.
 type ContainerImages struct {
 	NodeContainer                      string `json:"nodeContainer"`
@@ -453,6 +462,7 @@ type StorageOSClusterCSI struct {
 	KubeletRegistrationPath      string `json:"kubeletRegistrationPath"`
 	DriverRegistrationMode       string `json:"driverRegisterationMode"`
 	DriverRequiresAttachment     string `json:"driverRequiresAttachment"`
+	HelperDeployment             string `json:"helperDeployment"`
 }
 
 // StorageOSClusterService contains Service configurations.

@@ -24,9 +24,11 @@ const (
 	appName         = "storageos"
 	daemonsetKind   = "daemonset"
 	statefulsetKind = "statefulset"
+	deploymentKind  = "deployment"
 
 	daemonsetName   = "storageos-daemonset"
 	statefulsetName = "storageos-statefulset"
+	csiHelperName   = "storageos-csi-helper"
 
 	tlsSecretType       = "kubernetes.io/tls"
 	storageosSecretType = "kubernetes.io/storageos"
