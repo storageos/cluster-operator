@@ -78,6 +78,8 @@ data:
                         type: boolean
                       enableNodePublishCreds:
                         type: boolean
+                      helperDeployment:
+                        type: string
                   service:
                     properties:
                       name:
@@ -346,19 +348,6 @@ data:
           * `secretRefNamespace` - the namespace where the api credentials secret is
           stored
 
-          ## Required SCC
-
-          On OpenShift, make sure to install the Security Context Constraint (SCC) in
-          order for the StorageOS DaemonSet and StatefulSet pods to start properly:
-
-          ``` $ oc adm policy add-scc-to-user privileged system:serviceaccount:<namespace>:storageos-daemonset-sa ```
-
-          ``` $ oc adm policy add-scc-to-user privileged system:serviceaccount:<namespace>:storageos-statefulset-sa ```
-
-          By default, the StorageOS cluster is deployed in `storageos` namespace. The
-          service accounts in the above commands should be
-          `:storageos:storageos-daemonset-sa` and `:storageos:storageos-statefulset-sa`.
-
           ## About StorageOS
 
           StorageOS gives users total control of their own storage environment –
@@ -425,6 +414,7 @@ data:
                 resources:
                 - statefulsets
                 - daemonsets
+                - deployments
                 verbs:
                 - "*"
               - apiGroups:

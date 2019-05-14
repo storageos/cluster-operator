@@ -33,6 +33,7 @@ spec:
   #   kubeletRegistrationPath: /var/lib/kubelet/plugins/storageos/csi.sock
   #   driverRegisterationMode: node-register
   #   DriverRequiresAttachment: "true"
+  #   helperDeployment: "deployment"
   # service:
   #   name: "storageos"
   #   type: "ClusterIP"

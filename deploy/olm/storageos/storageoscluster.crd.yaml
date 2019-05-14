@@ -69,6 +69,8 @@ spec:
                   type: boolean
                 enableNodePublishCreds:
                   type: boolean
+                helperDeployment:
+                  type: string
             service:
               properties:
                 name:
