@@ -191,6 +191,7 @@ func (r *ReconcileStorageOSCluster) reconcile(m *storageosv1.StorageOSCluster) e
 		}
 		m.Spec.Images.CSIExternalProvisionerContainer = m.Spec.GetCSIExternalProvisionerImage(storageos.CSIV1Supported(r.k8sVersion))
 		m.Spec.Images.CSIExternalAttacherContainer = m.Spec.GetCSIExternalAttacherImage(storageos.CSIV1Supported(r.k8sVersion))
+		m.Spec.CSI.HelperDeployment = m.Spec.GetCSIHelperDeployment()
 	}
 
 	if m.Spec.Ingress.Enable {

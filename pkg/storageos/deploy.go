@@ -137,7 +137,7 @@ func (s *Deployment) Deploy() error {
 			return err
 		}
 
-		if err := s.createServiceAccountForStatefulSet(); err != nil {
+		if err := s.createServiceAccountForCSIHelper(); err != nil {
 			return err
 		}
 
@@ -157,7 +157,7 @@ func (s *Deployment) Deploy() error {
 			return err
 		}
 
-		if err := s.createStatefulSet(); err != nil {
+		if err := s.createCSIHelper(); err != nil {
 			return err
 		}
 	}
@@ -300,14 +300,6 @@ func (s *Deployment) deleteObject(obj runtime.Object) error {
 		return err
 	}
 	return nil
-}
-
-func labelsForDaemonSet(name string) map[string]string {
-	return map[string]string{"app": appName, "storageos_cr": name, "kind": daemonsetKind}
-}
-
-func labelsForStatefulSet(name string) map[string]string {
-	return map[string]string{"app": appName, "storageos_cr": name, "kind": statefulsetKind}
 }
 
 func addOwnerRefToObject(obj metav1.Object, ownerRef metav1.OwnerReference) {

@@ -60,12 +60,27 @@ func (s *Deployment) getServiceAccount(name string) *corev1.ServiceAccount {
 	}
 }
 
+// getCSIHelperServiceAccountName returns the service account name of CSI helper
+// based on the cluster configuration.
+func (s *Deployment) getCSIHelperServiceAccountName() string {
+	switch s.stos.Spec.GetCSIHelperDeployment() {
+	case deploymentKind:
+		return CSIHelperSA
+	default:
+		return StatefulsetSA
+	}
+}
+
+// createServiceAccountForDaemonSet creates a service account fot the DaemonSet
+// pods.
 func (s *Deployment) createServiceAccountForDaemonSet() error {
 	return s.createServiceAccount(DaemonsetSA)
 }
 
-func (s *Deployment) createServiceAccountForStatefulSet() error {
-	return s.createServiceAccount(StatefulsetSA)
+// createServiceAccountForCSIHelper creates service account for the appropriate
+// CSI helper kind based on the cluster config.
+func (s *Deployment) createServiceAccountForCSIHelper() error {
+	return s.createServiceAccount(s.getCSIHelperServiceAccountName())
 }
 
 func (s *Deployment) createRoleForKeyMgmt() error {
@@ -355,7 +370,7 @@ func (s *Deployment) createClusterRoleBindingForK8SDriverRegistrar() error {
 	subjects := []rbacv1.Subject{
 		{
 			Kind:      "ServiceAccount",
-			Name:      StatefulsetSA,
+			Name:      s.getCSIHelperServiceAccountName(),
 			Namespace: s.stos.Spec.GetResourceNS(),
 		},
 	}
@@ -371,7 +386,7 @@ func (s *Deployment) createClusterRoleBindingForProvisioner() error {
 	subjects := []rbacv1.Subject{
 		{
 			Kind:      "ServiceAccount",
-			Name:      StatefulsetSA,
+			Name:      s.getCSIHelperServiceAccountName(),
 			Namespace: s.stos.Spec.GetResourceNS(),
 		},
 	}
@@ -387,7 +402,7 @@ func (s *Deployment) createClusterRoleBindingForAttacher() error {
 	subjects := []rbacv1.Subject{
 		{
 			Kind:      "ServiceAccount",
-			Name:      StatefulsetSA,
+			Name:      s.getCSIHelperServiceAccountName(),
 			Namespace: s.stos.Spec.GetResourceNS(),
 		},
 	}
@@ -429,7 +444,7 @@ func (s *Deployment) createClusterRoleBindingForSCC() error {
 	if s.stos.Spec.CSI.Enable {
 		subjects = append(subjects, rbacv1.Subject{
 			Kind:      rbacv1.ServiceAccountKind,
-			Name:      StatefulsetSA,
+			Name:      s.getCSIHelperServiceAccountName(),
 			Namespace: s.stos.Spec.GetResourceNS(),
 		})
 	}
