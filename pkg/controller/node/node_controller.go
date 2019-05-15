@@ -27,6 +27,7 @@ import (
 // Node controller errors.
 var (
 	ErrCurrentClusterNotFound = errors.New("current cluster not found")
+	ErrNoAPIClient            = errors.New("api client not available")
 )
 
 // Add creates a new Node Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -99,19 +100,18 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 		return reconcileResult, err
 	}
 
-	// Set a storageos cluster client.
-	if r.stosClient != nil {
-		// Compare the cluster names, generations and UUIDs to check if it's
-		// the same cluster. Update the client if client cluster name,
-		// generation or UID are different from current cluster.
-		if r.stosClient.clusterName != cluster.GetName() ||
-			r.stosClient.clusterGeneration != cluster.GetGeneration() ||
-			r.stosClient.clusterUID != cluster.GetUID() {
-			r.setClientForCluster(cluster)
+	// Compare the cluster names, generations and UUIDs to check if it's
+	// the same cluster. Update the client if client cluster name,
+	// generation or UID are different from current cluster.
+	if r.stosClient == nil ||
+		r.stosClient.clusterName != cluster.GetName() ||
+		r.stosClient.clusterGeneration != cluster.GetGeneration() ||
+		r.stosClient.clusterUID != cluster.GetUID() {
+
+		if err := r.setClientForCluster(cluster); err != nil {
+			log.Println("failed to configure api client:", err)
+			return reconcileResult, err
 		}
-	} else {
-		// No previous client. Create a new client.
-		r.setClientForCluster(cluster)
 	}
 
 	// Sync labels to StorageOS node object.
@@ -128,6 +128,10 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 func (r *ReconcileNode) syncLabels(name string, labels map[string]string) error {
 	if len(name) == 0 || len(labels) == 0 {
 		return nil
+	}
+
+	if r.stosClient == nil {
+		return ErrNoAPIClient
 	}
 
 	// Get StorageOS node
