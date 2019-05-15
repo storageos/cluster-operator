@@ -39,7 +39,7 @@ func (s *Deployment) Delete() error {
 	}
 
 	if s.stos.Spec.CSI.Enable {
-		if err := s.deleteStatefulSet(statefulsetName); err != nil {
+		if err := s.deleteCSIHelper(); err != nil {
 			return err
 		}
 
@@ -59,7 +59,7 @@ func (s *Deployment) Delete() error {
 			return err
 		}
 
-		if err := s.deleteServiceAccount(StatefulsetSA); err != nil {
+		if err := s.deleteServiceAccount(s.getCSIHelperServiceAccountName()); err != nil {
 			return err
 		}
 

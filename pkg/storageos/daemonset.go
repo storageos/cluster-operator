@@ -44,7 +44,7 @@ const (
 )
 
 func (s *Deployment) createDaemonSet() error {
-	ls := labelsForDaemonSet(s.stos.Name)
+	ls := podLabelsForDaemonSet(s.stos.Name)
 	privileged := true
 	mountPropagationBidirectional := corev1.MountPropagationBidirectional
 	allowPrivilegeEscalation := true
@@ -333,4 +333,14 @@ func (s *Deployment) addDebugEnvVars(env []corev1.EnvVar) []corev1.EnvVar {
 		return append(env, debugEnvVar)
 	}
 	return env
+}
+
+// podLabelsForDaemonSet takes the name of a cluster custom resource and returns
+// labels for the pods of StorageOS node DaemonSet.
+func podLabelsForDaemonSet(name string) map[string]string {
+	return map[string]string{
+		"app":          appName,
+		"storageos_cr": name,
+		"kind":         daemonsetKind,
+	}
 }

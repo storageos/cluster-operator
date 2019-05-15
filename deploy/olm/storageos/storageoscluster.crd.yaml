@@ -69,6 +69,8 @@ spec:
                   type: boolean
                 enableNodePublishCreds:
                   type: boolean
+                deploymentStrategy:
+                  type: string
             service:
               properties:
                 name:

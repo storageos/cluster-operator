@@ -173,6 +173,23 @@ print_pod_details_and_logs() {
     done
 }
 
+# Cleanup the resources created by the operator-sdk e2e test.
+operator-sdk-e2e-cleanup() {
+    echo "Deleting namespace storageos..."
+    kubectl delete ns storageos --ignore-not-found=true
+
+    # Delete all the cluster roles.
+    kubectl delete clusterrole storageos:csi-attacher \
+        storageos:csi-provisioner storageos:driver-registrar \
+        storageos:openshift-scc storageos:pod-fencer --ignore-not-found=true
+
+    # Delete all the cluster role bindings.
+    kubectl delete clusterrolebinding storageos:csi-attacher \
+        storageos:csi-provisioner storageos:driver-registrar \
+        storageos:k8s-driver-registrar storageos:openshift-scc \
+        storageos:pod-fencer --ignore-not-found=true
+}
+
 main() {
     enable_lio
 
@@ -229,7 +246,14 @@ main() {
         sleep 10
 
         install_storageos_operator
+
+        # Install storageos with default configurations.
         install_storageos
+        uninstall_storageos
+
+        # Install storageos with CSI helpers as Deployment.
+        install_storageos_csi_deployment
+        uninstall_storageos
     else
         # Add taint on the node.
         kubectl taint nodes $NODE_NAME key=value:NoSchedule
@@ -244,8 +268,9 @@ main() {
         #
         # Tags are passed to test local command to run e2e test packages only with
         # specific config.
-        # Tag "intree" would run k8s intree plugin test setup.
-        # Tag "csi" would run csi test setup.
+        # Tag "intree" will run k8s intree plugin test setup.
+        # Tag "csi" will run csi test setup with csi helpers as statefulset.
+        # Tag "csi-deployment" will run csi test setup with csi helpers as deployment.
         # The cluster-operator container image used in the e2e setup is based on the
         # operator container image in the manifest file deploy/operator.yaml. The
         # deploy manifests are combined and applied to deploy the operator before
@@ -255,14 +280,13 @@ main() {
         # resource details. Also comment `defer ctx.Cleanup()` in the cluster to
         # avoid resouce cleanup.
         operator-sdk test local ./test/e2e --go-test-flags "-v -tags csi" --namespace storageos-operator
+        operator-sdk-e2e-cleanup
 
-        echo "Deleting namespace storageos..."
-        kubectl delete ns storageos --ignore-not-found=true
+        operator-sdk test local ./test/e2e --go-test-flags "-v -tags csideployment" --namespace storageos-operator
+        operator-sdk-e2e-cleanup
 
         operator-sdk test local ./test/e2e --go-test-flags "-v -tags intree" --namespace storageos-operator
-
-        echo "Deleting namespace storageos..."
-        kubectl delete ns storageos --ignore-not-found=true
+        operator-sdk-e2e-cleanup
 
         # echo "**** Resource details for storageos-operator namespace ****"
         # print_pod_details_and_logs storageos-operator

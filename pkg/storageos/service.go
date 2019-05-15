@@ -11,6 +11,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
+// createService creates a service for storageos app with a label selector
+// "kind" and value "daemonset" in order to select only the storageos node pods
+// under the service. Any other value for "kind" will not be included in the
+// service.
 func (s *Deployment) createService() error {
 	svc := s.getService(s.stos.Spec.GetServiceName())
 	svc.Spec = corev1.ServiceSpec{
