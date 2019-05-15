@@ -32,8 +32,8 @@ func TestClusterCSIDeployment(t *testing.T) {
 		SecretRefNamespace: "default",
 		ResourceNS:         resourceNS,
 		CSI: storageos.StorageOSClusterCSI{
-			Enable:           true,
-			HelperDeployment: "deployment",
+			Enable:             true,
+			DeploymentStrategy: "deployment",
 		},
 		Tolerations: []corev1.Toleration{
 			{

@@ -19,7 +19,7 @@ func (s *Deployment) createCSIHelper() error {
 
 	// NOTE: StatefulSet is default for backwards compatibility. In the next
 	// major release, Deployment will be the default.
-	switch s.stos.Spec.GetCSIHelperDeployment() {
+	switch s.stos.Spec.GetCSIDeploymentStrategy() {
 	case deploymentKind:
 		helperDeployment := s.csiHelperDeployment(replicas)
 		return s.createOrUpdateObject(helperDeployment)
@@ -286,7 +286,7 @@ func (s Deployment) getCSIHelperDeployment(name string) *appsv1.Deployment {
 func (s Deployment) deleteCSIHelper() error {
 	// The names of CSI helpers are fixed. Using the appropriate names for the
 	// different kinds.
-	switch s.stos.Spec.GetCSIHelperDeployment() {
+	switch s.stos.Spec.GetCSIDeploymentStrategy() {
 	case deploymentKind:
 		return s.deleteObject(s.getCSIHelperDeployment(csiHelperName))
 	default:

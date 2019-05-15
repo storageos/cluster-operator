@@ -576,8 +576,8 @@ func TestCreateCSIHelper(t *testing.T) {
 			name: "CSI helpers statefulset",
 			spec: api.StorageOSClusterSpec{
 				CSI: api.StorageOSClusterCSI{
-					Enable:           true,
-					HelperDeployment: statefulsetKind,
+					Enable:             true,
+					DeploymentStrategy: statefulsetKind,
 				},
 			},
 			wantHelperDeployment: false,
@@ -586,8 +586,8 @@ func TestCreateCSIHelper(t *testing.T) {
 			name: "CSI helpers deployment",
 			spec: api.StorageOSClusterSpec{
 				CSI: api.StorageOSClusterCSI{
-					Enable:           true,
-					HelperDeployment: deploymentKind,
+					Enable:             true,
+					DeploymentStrategy: deploymentKind,
 				},
 			},
 			wantHelperDeployment: true,
@@ -1030,22 +1030,22 @@ func TestDeployNodeAffinity(t *testing.T) {
 	}
 
 	testcases := []struct {
-		name                string
-		csiHelperDeployment string
+		name                  string
+		csiDeploymentStrategy string
 	}{
 		{
-			name:                "csi helper StatefulSet",
-			csiHelperDeployment: "statefulset",
+			name: "csi helper StatefulSet",
+			csiDeploymentStrategy: "statefulset",
 		},
 		{
-			name:                "csi helper Deployment",
-			csiHelperDeployment: "deployment",
+			name: "csi helper Deployment",
+			csiDeploymentStrategy: "deployment",
 		},
 	}
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			stosCluster.Spec.CSI.HelperDeployment = tc.csiHelperDeployment
+			stosCluster.Spec.CSI.DeploymentStrategy = tc.csiDeploymentStrategy
 
 			c := fake.NewFakeClientWithScheme(testScheme)
 			if err := c.Create(context.Background(), stosCluster); err != nil {
@@ -1084,7 +1084,7 @@ func TestDeployNodeAffinity(t *testing.T) {
 			}
 
 			// Fetch and check both the CSI helpers kinds.
-			if tc.csiHelperDeployment == "deployment" {
+			if tc.csiDeploymentStrategy == "deployment" {
 				createdDeployment := &appsv1.Deployment{}
 				nsNameDeployment := types.NamespacedName{
 					Name:      csiHelperName,
@@ -1310,8 +1310,8 @@ func TestDelete(t *testing.T) {
 			name: "delete daemonset and CSI helper statefulset",
 			spec: api.StorageOSClusterSpec{
 				CSI: api.StorageOSClusterCSI{
-					Enable:           true,
-					HelperDeployment: "statefulset",
+					Enable:             true,
+					DeploymentStrategy: "statefulset",
 				},
 			},
 		},
@@ -1319,8 +1319,8 @@ func TestDelete(t *testing.T) {
 			name: "delete daemonset and CSI helper deployment",
 			spec: api.StorageOSClusterSpec{
 				CSI: api.StorageOSClusterCSI{
-					Enable:           true,
-					HelperDeployment: "deployment",
+					Enable:             true,
+					DeploymentStrategy: "deployment",
 				},
 			},
 		},
@@ -1381,7 +1381,7 @@ func TestDelete(t *testing.T) {
 				Namespace: defaultNS,
 			}
 
-			if tc.spec.GetCSIHelperDeployment() == "deployment" {
+			if tc.spec.GetCSIDeploymentStrategy() == "deployment" {
 				createdCSIHelperDeployment = &appsv1.Deployment{}
 				if err := c.Get(context.Background(), nsNameDeployment, createdCSIHelperDeployment); err != nil {
 					t.Fatal("failed to get the created statefulset", err)
@@ -1404,7 +1404,7 @@ func TestDelete(t *testing.T) {
 			}
 
 			// Check CSI helper deletion.
-			if tc.spec.GetCSIHelperDeployment() == "deployment" {
+			if tc.spec.GetCSIDeploymentStrategy() == "deployment" {
 				if err := c.Get(context.Background(), nsNameDeployment, createdCSIHelperDeployment); err == nil {
 					t.Fatal("expected the CSI helper deployment to be deleted, but it still exists")
 				}
@@ -1501,22 +1501,22 @@ func TestDeployTLSEtcdCerts(t *testing.T) {
 // namespace.
 func TestDeployPodPriorityClass(t *testing.T) {
 	testCases := []struct {
-		name                string
-		resourceNS          string
-		csiHelperDeployment string
-		wantPriorityClass   bool
+		name                  string
+		resourceNS            string
+		csiDeploymentStrategy string
+		wantPriorityClass     bool
 	}{
 		{
-			name:                "have priority class set | CSI StatefulSet",
-			resourceNS:          "kube-system",
-			csiHelperDeployment: "statefulset",
-			wantPriorityClass:   true,
+			name:                  "have priority class set | CSI StatefulSet",
+			resourceNS:            "kube-system",
+			csiDeploymentStrategy: "statefulset",
+			wantPriorityClass:     true,
 		},
 		{
-			name:                "have priority class set | CSI Deployment",
-			resourceNS:          "kube-system",
-			csiHelperDeployment: "deployment",
-			wantPriorityClass:   true,
+			name:                  "have priority class set | CSI Deployment",
+			resourceNS:            "kube-system",
+			csiDeploymentStrategy: "deployment",
+			wantPriorityClass:     true,
 		},
 		{
 			name:              "no priority class set",
@@ -1538,8 +1538,8 @@ func TestDeployPodPriorityClass(t *testing.T) {
 				},
 				Spec: api.StorageOSClusterSpec{
 					CSI: api.StorageOSClusterCSI{
-						Enable:           true,
-						HelperDeployment: tc.csiHelperDeployment,
+						Enable:             true,
+						DeploymentStrategy: tc.csiDeploymentStrategy,
 					},
 					ResourceNS: tc.resourceNS,
 				},
@@ -1579,7 +1579,7 @@ func TestDeployPodPriorityClass(t *testing.T) {
 			// Check pod priority class for both the kinds of CSI helpers.
 			var csiHelperPC string
 
-			if stosCluster.Spec.GetCSIHelperDeployment() == "deployment" {
+			if stosCluster.Spec.GetCSIDeploymentStrategy() == "deployment" {
 				createdDeployment := &appsv1.Deployment{}
 				nsNameDeployment := types.NamespacedName{
 					Name:      csiHelperName,

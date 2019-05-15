@@ -76,10 +76,10 @@ install_storageos_csi_deployment() {
     # Create the api secret.
     yq r -d1 deploy/storageos-operators.olm.cr.yaml | kubectl apply -f -
 
-    # Read the cluster manifest, set csi.helperDeployment to "deployment" and
+    # Read the cluster manifest, set csi.deploymentStrategy to "deployment" and
     # create.
     yq r -d0 deploy/storageos-operators.olm.cr.yaml | \
-        yq w - spec.csi.helperDeployment deployment | kubectl apply -f -
+        yq w - spec.csi.deploymentStrategy deployment | kubectl apply -f -
     sleep 5
 
     kubectl -n storageos get all

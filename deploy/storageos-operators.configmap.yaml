@@ -78,7 +78,7 @@ data:
                         type: boolean
                       enableNodePublishCreds:
                         type: boolean
-                      helperDeployment:
+                      deploymentStrategy:
                         type: string
                   service:
                     properties:

@@ -63,7 +63,7 @@ func (s *Deployment) getServiceAccount(name string) *corev1.ServiceAccount {
 // getCSIHelperServiceAccountName returns the service account name of CSI helper
 // based on the cluster configuration.
 func (s *Deployment) getCSIHelperServiceAccountName() string {
-	switch s.stos.Spec.GetCSIHelperDeployment() {
+	switch s.stos.Spec.GetCSIDeploymentStrategy() {
 	case deploymentKind:
 		return CSIHelperSA
 	default:
