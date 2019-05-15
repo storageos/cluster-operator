@@ -51,6 +51,7 @@ install_storageos_operator() {
     echo
 }
 
+# Install storageos with default CSI helpers(StatefulSet).
 install_storageos() {
     echo "Install StorageOS"
 
@@ -68,9 +69,37 @@ install_storageos() {
     echo "Statefulset ready!"
 }
 
+# Install storageos with CSI helpers as Deployment.
+install_storageos_csi_deployment() {
+    echo "Install StorageOS with CSI "
+
+    # Create the api secret.
+    yq r -d1 deploy/storageos-operators.olm.cr.yaml | kubectl apply -f -
+
+    # Read the cluster manifest, set csi.helperDeployment to "deployment" and
+    # create.
+    yq r -d0 deploy/storageos-operators.olm.cr.yaml | \
+        yq w - spec.csi.helperDeployment deployment | kubectl apply -f -
+    sleep 5
+
+    kubectl -n storageos get all
+
+    echo "Waiting for storageos daemonset to be ready"
+    until kubectl -n storageos get daemonset storageos-daemonset --no-headers -o go-template='{{.status.numberReady}}' | grep -q 1; do sleep 5; done
+    echo "Daemonset ready!"
+
+    echo "Waiting for storageos CSI helper Deployment to be ready"
+    until kubectl -n storageos get deployment storageos-csi-helper --no-headers -o go-template='{{.status.readyReplicas}}' | grep -q 1; do sleep 5; done
+    echo "CSI helper Deployment ready!"
+}
+
 uninstall_storageos() {
     echo "Uninstalling StorageOS"
     kubectl delete -f deploy/storageos-operators.olm.cr.yaml
+    # Allow the resources to be deleted by the operator.
+    sleep 10
+    # Delete namespace to ensure nothing is left behind.
+    kubectl delete ns storageos --ignore-not-found=true
     echo
 }
 

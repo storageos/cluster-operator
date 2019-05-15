@@ -246,7 +246,14 @@ main() {
         sleep 10
 
         install_storageos_operator
+
+        # Install storageos with default configurations.
         install_storageos
+        uninstall_storageos
+
+        # Install storageos with CSI helpers as Deployment.
+        install_storageos_csi_deployment
+        uninstall_storageos
     else
         # Add taint on the node.
         kubectl taint nodes $NODE_NAME key=value:NoSchedule
