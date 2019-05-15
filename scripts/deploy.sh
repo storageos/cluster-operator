@@ -13,7 +13,7 @@ if [ "$1" = "tagged" ]; then
     docker push "${IMAGE_NAME}:latest" && docker push "${IMAGE_NAME}:${TRAVIS_TAG}"
 
     # Trigger a rhel container service build.
-    curl -X POST -k -H 'Content-Type: application/json' -i https://connect.redhat.com/api/v2/projects/$RH_PID/build --data '{"tag": "'"${IMAGE_TAG}"'"}'
+    curl -X POST -k -H 'Content-Type: application/json' -i https://connect.redhat.com/api/v2/projects/$RH_PID/build --data '{"tag": "'"${TRAVIS_TAG}"'"}'
 
     # Create a PR to community-operator repo.
     docker run --rm -ti \
@@ -21,7 +21,7 @@ if [ "$1" = "tagged" ]; then
         -e GH_USER=$GH_USER \
         -e GH_EMAIL=$GH_EMAIL \
         -e GH_TOKEN=$API_TOKEN \
-        -e VERSION=$IMAGE_TAG \
+        -e VERSION=$TRAVIS_TAG \
         -e TARGET_REPO="https://github.com/operator-framework/community-operators/" \
         -e COMMUNITY_REPO_PATH="/go/src/github.com/operator-framework/community-operators/" \
         -e COMMUNITY_PKG_PATH="upstream-community-operators/storageos/" \
