@@ -140,9 +140,19 @@ func DeployCluster(t *testing.T, ctx *framework.TestCtx, cluster *storageos.Stor
 	}
 
 	if cluster.Spec.CSI.Enable {
-		err = WaitForStatefulSet(t, f.KubeClient, cluster.Spec.GetResourceNS(), "storageos-statefulset", RetryInterval, Timeout*2)
-		if err != nil {
-			t.Fatal(err)
+		// Wait for the appropriate CSI helper based on the kind of helper
+		// deployment.
+		switch cluster.Spec.GetCSIHelperDeployment() {
+		case "deployment":
+			err = e2eutil.WaitForDeployment(t, f.KubeClient, cluster.Spec.GetResourceNS(), "storageos-csi-helper", 1, RetryInterval, Timeout*2)
+			if err != nil {
+				t.Fatal(err)
+			}
+		case "statefulset":
+			err = WaitForStatefulSet(t, f.KubeClient, cluster.Spec.GetResourceNS(), "storageos-statefulset", RetryInterval, Timeout*2)
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 

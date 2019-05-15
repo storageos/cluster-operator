@@ -124,6 +124,7 @@ Parameter | Description | Default
 `csi.enableProvisionCreds` | Enable CSI provision credentials | `false`
 `csi.enableControllerPublishCreds` | Enable CSI controller publish credentials | `false`
 `csi.enableNodePublishCreds` | Enable CSI node publish credentials | `false`
+`csi.helperDeployment` | CSI helper deployment strategy (`statefulset` or `deployment`) | `statefulset`
 `service.name` | Name of the Service used by the cluster | `storageos`
 `service.type` | Type of the Service used by the cluster | `ClusterIP`
 `service.externalPort` | External port of the Service used by the cluster | `5705`
