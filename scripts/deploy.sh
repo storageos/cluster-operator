@@ -18,9 +18,9 @@ if [ "$1" = "tagged" ]; then
     # Create a PR to community-operator repo.
     docker run --rm -ti \
         -v $PWD:/go/src/github.com/storageos/cluster-operator \
-        -e GH_USER=$GH_USER \
-        -e GH_EMAIL=$GH_EMAIL \
-        -e GH_TOKEN=$API_TOKEN \
+        -e GITHUB_USER=$GH_USER \
+        -e GITHUB_EMAIL=$GH_EMAIL \
+        -e GITHUB_TOKEN=$API_TOKEN \
         -e VERSION=$TRAVIS_TAG \
         -e TARGET_REPO="https://github.com/operator-framework/community-operators/" \
         -e COMMUNITY_REPO_PATH="/go/src/github.com/operator-framework/community-operators/" \

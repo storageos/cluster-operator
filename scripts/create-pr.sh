@@ -5,9 +5,9 @@ set -e
 
 # Env vars definitions:-
 # 
-# GH_USER: github username
-# GH_EMAIL: github user email
-# GH_TOKEN: github user API token with repo access permission only
+# GITHUB_USER: github username
+# GITHUB_EMAIL: github user email
+# GITHUB_TOKEN: github user API token with repo access permission only
 # VERSION: release version
 # TARGET_REPO: upstream community operator repo
 # COMMUNITY_REPO_PATH: community operator repo path
@@ -25,13 +25,13 @@ declare -a metadatafiles=(
 
 # Setup netrc.
 echo "machine github.com
-  login $GH_USER
-  password $GH_TOKEN
+  login $GITHUB_USER
+  password $GITHUB_TOKEN
 " > ~/.netrc
 
 # Configure git.
-git config --global user.email "$GH_EMAIL"
-git config --global user.name "$GH_USER"
+git config --global user.email "$GITHUB_EMAIL"
+git config --global user.name "$GITHUB_USER"
 
 # Clone community hub repo.
 git clone $TARGET_REPO $COMMUNITY_REPO_PATH
@@ -48,7 +48,7 @@ done
 # Create branch, commit and create a PR.
 MESSAGE="Update StorageOS Operator to version ${VERSION}"
 pushd $COMMUNITY_REPO_PATH
-hub remote add fork https://github.com/$GH_USER/community-operators
+hub remote add fork https://github.com/$GITHUB_USER/community-operators
 git checkout -b $VERSION
 git add *
 git commit -m "$MESSAGE"
