@@ -470,3 +470,4 @@ spec:
       - description: Set to true if the upgrade completed.
         displayName: Completed
         path: completed
+  replaces: storageosoperator.v1.1.0
