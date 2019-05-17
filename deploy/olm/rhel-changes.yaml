@@ -48,3 +48,4 @@ metadata.annotations.alm-examples: |-
 spec.version: 1.2.0
 spec.install.spec.deployments[0].spec.template.spec.containers[0].image: registry.connect.redhat.com/storageos/cluster-operator:1.2.0
 spec.customresourcedefinitions.owned[2].specDescriptors[0].description: The StorageOS Node image to upgrade to. e.g. `registry.connect.redhat.com/storageos/node:latest`
+spec.replaces: storageosoperator.v1.1.0
