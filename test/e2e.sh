@@ -18,15 +18,14 @@ enable_lio() {
 run_kind() {
     echo "Download kind binary..."
     # docker run --rm -it -v "$(pwd)":/go/bin golang go get sigs.k8s.io/kind && sudo mv kind /usr/local/bin/
-    wget -O kind 'https://docs.google.com/uc?export=download&id=1C_Jrj68Y685N5KcOqDQtfjeAZNW2UvNB' --no-check-certificate && chmod +x kind && sudo mv kind /usr/local/bin/
-
+    wget -O kind 'https://docs.google.com/uc?export=download&id=1-oy-ui0ZE_T3Fglz1c8ZgnW8U-A4yS8u' --no-check-certificate && chmod +x kind && sudo mv kind /usr/local/bin/
     echo "Download kubectl..."
-    curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/"${K8S_VERSION}"/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+    curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.14.2/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
     echo
 
     echo "Create Kubernetes cluster with kind..."
     # kind create cluster --image=kindest/node:"$K8S_VERSION"
-    kind create cluster --image storageos/kind-node:v1.13.2
+    kind create cluster --image storageos/kind-node:v1.14.2
 
     echo "Export kubeconfig..."
     # shellcheck disable=SC2155
@@ -222,10 +221,14 @@ main() {
     # Move the operator container inside Kind container so that the image is
     # available to the docker in docker environment.
     if [ "$1" = "kind" ]; then
-        x=$(docker ps -f name=kind-1-control-plane -q)
+        x=$(docker ps -f name=kind-control-plane -q)
         docker save storageos/cluster-operator:test > cluster-operator.tar
         docker cp cluster-operator.tar $x:/cluster-operator.tar
-        docker exec $x bash -c "docker load < /cluster-operator.tar"
+        # Docker load image from tar archive (KinD with docker).
+        #   docker exec $x bash -c "docker load < /cluster-operator.tar"
+        #
+        # containerd load image from tar archive (KinD with containerd).
+        docker exec $x bash -c "ctr -n k8s.io images import --base-name docker.io/storageos/cluster-operator:test /cluster-operator.tar"
     fi
 
     if [ "$2" = "olm" ]; then
