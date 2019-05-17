@@ -37,7 +37,7 @@ jobs:
       env:
         - "TEST_CLUSTER=kind"
         - "INSTALL_METHOD=olm"
-      name: OLM on KinD (k8s-1.14)
+      name: OLM on KinD (k8s-1.13)
       script: ./test/e2e.sh $TEST_CLUSTER $INSTALL_METHOD
     - go: "1.11"
       sudo: required
