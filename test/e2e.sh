@@ -3,6 +3,11 @@
 set -Eeuxo pipefail
 
 readonly REPO_ROOT="${REPO_ROOT:-$(git rev-parse --show-toplevel)}"
+readonly K8S_1_14="v1.14.2"
+readonly K8S_1_13="v1.13.2"
+# Two different versions of KinD due to a breaking change between the versions.
+readonly KIND_1_14_LINK="https://docs.google.com/uc?export=download&id=1-oy-ui0ZE_T3Fglz1c8ZgnW8U-A4yS8u"
+readonly KIND_1_13_LINK="https://docs.google.com/uc?export=download&id=1C_Jrj68Y685N5KcOqDQtfjeAZNW2UvNB"
 
 enable_lio() {
     echo "Enable LIO"
@@ -17,21 +22,27 @@ enable_lio() {
 
 run_kind() {
     echo "Download kind binary..."
-    # docker run --rm -it -v "$(pwd)":/go/bin golang go get sigs.k8s.io/kind && sudo mv kind /usr/local/bin/
-    wget -O kind 'https://docs.google.com/uc?export=download&id=1C_Jrj68Y685N5KcOqDQtfjeAZNW2UvNB' --no-check-certificate && chmod +x kind && sudo mv kind /usr/local/bin/
 
+    if [ "$1" == "$K8S_1_13" ]; then
+        KIND_LINK=$KIND_1_13_LINK
+    else
+        KIND_LINK=$KIND_1_14_LINK
+    fi
+
+    # docker run --rm -it -v "$(pwd)":/go/bin golang go get sigs.k8s.io/kind && sudo mv kind /usr/local/bin/
+    wget -O kind $KIND_LINK --no-check-certificate && chmod +x kind && sudo mv kind /usr/local/bin/
     echo "Download kubectl..."
-    curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/"${K8S_VERSION}"/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+    curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/$1/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
     echo
 
     echo "Create Kubernetes cluster with kind..."
     # kind create cluster --image=kindest/node:"$K8S_VERSION"
-    kind create cluster --image storageos/kind-node:v1.13.2
+    kind create cluster --image storageos/kind-node:$1 --name kind-1
 
     echo "Export kubeconfig..."
     # shellcheck disable=SC2155
-    export KUBECONFIG="$(kind get kubeconfig-path)"
-    cp $(kind get kubeconfig-path) ~/.kube/config
+    export KUBECONFIG="$(kind get kubeconfig-path --name="kind-1")"
+    cp $(kind get kubeconfig-path --name="kind-1") ~/.kube/config
     echo
 
     echo "Get cluster info..."
@@ -198,14 +209,21 @@ main() {
         run_minikube
     elif [ "$1" = "openshift" ]; then
         run_openshift
-        # # TODO: Add node label for master node. This is required by the OLM
-        # # deployments to work in the next version of OLM 0.9.
-        # kubectl label nodes localhost node-role.kubernetes.io/master=
 
         # Update CR with k8sDistro set to openshift
         yq w -i deploy/storageos-operators.olm.cr.yaml spec.k8sDistro openshift
     elif [ "$1" = "kind" ]; then
-        run_kind
+        # OLM installation fails on k8s 1.14 with error "failed to connect
+        # service" in CI only. Works fine locally.
+        # Refer: https://github.com/operator-framework/operator-lifecycle-manager/issues/740
+        # Using k8s 1.13 with old KinD for OLM until that's fixed.
+        # New KinD with k8s 1.14 uses containerd and has an incompatible node
+        # image.
+        if [ "$2" = "olm" ]; then
+            run_kind $K8S_1_13
+        else
+            run_kind $K8S_1_14
+        fi
     fi
 
     install_operatorsdk
@@ -225,7 +243,15 @@ main() {
         x=$(docker ps -f name=kind-1-control-plane -q)
         docker save storageos/cluster-operator:test > cluster-operator.tar
         docker cp cluster-operator.tar $x:/cluster-operator.tar
-        docker exec $x bash -c "docker load < /cluster-operator.tar"
+
+        if [ "$2" = "olm" ]; then
+            # kind-olm runs on old KinD with docker.
+            # Docker load image from tar archive (KinD with docker).
+            docker exec $x bash -c "docker load < /cluster-operator.tar"
+        else
+            # containerd load image from tar archive (KinD with containerd).
+            docker exec $x bash -c "ctr -n k8s.io images import --base-name docker.io/storageos/cluster-operator:test /cluster-operator.tar"
+        fi
     fi
 
     if [ "$2" = "olm" ]; then
@@ -236,14 +262,10 @@ main() {
         make metadata-bundle-lint
 
         source ./deploy/olm/olm.sh
-        # Not using quick install here because the order in which the resources
-        # are created is unreliable and results in flaky test setup. Hard to
-        # reproduce it locally. The errors are mostly due to the CRD being
-        # used before it's created.
-        install_olm
+        olm_quick_install
 
         # Wait for all the OLM resources to be created and ready.
-        sleep 10
+        sleep 20
 
         install_storageos_operator
 

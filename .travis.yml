@@ -63,7 +63,7 @@ jobs:
       env:
         - "TEST_CLUSTER=kind"
         - "INSTALL_METHOD=none"
-      name: KinD (k8s-1.13)
+      name: KinD (k8s-1.14)
     - stage: deploy
       go: "1.11"
       sudo: required
