@@ -259,6 +259,8 @@ type doOptions struct {
 	forceJSON   bool
 	force       bool
 	unversioned bool
+
+	retryOn []int // http.status codes
 }
 
 func (c *Client) do(method, urlpath string, doOptions doOptions) (*http.Response, error) {
@@ -338,6 +340,7 @@ func (c *Client) do(method, urlpath string, doOptions doOptions) (*http.Response
 
 		resp, err := httpClient.Do(req.WithContext(ctx))
 		if err != nil {
+
 			// If it is a custom error, return it. It probably knows more than us
 			if serror.IsStorageOSError(err) {
 				switch serror.ErrorKind(err) {
@@ -366,6 +369,17 @@ func (c *Client) do(method, urlpath string, doOptions doOptions) (*http.Response
 			}
 		}
 
+		var shouldretry bool
+		if doOptions.retryOn != nil {
+			for _, code := range doOptions.retryOn {
+				if resp.StatusCode == code {
+					failedAddresses[address] = struct{}{}
+					shouldretry = true
+				}
+
+			}
+		}
+
 		// If we get to the point of response, we should move any failed
 		// addresses to the back.
 		failed := len(failedAddresses)
@@ -386,6 +400,10 @@ func (c *Client) do(method, urlpath string, doOptions doOptions) (*http.Response
 			// Bring in the new order
 			c.addresses = newOrder
 			c.addressLock.Unlock()
+		}
+
+		if shouldretry {
+			continue
 		}
 
 		if resp.StatusCode < 200 || resp.StatusCode >= 400 {

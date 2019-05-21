@@ -1,8 +1,8 @@
-# ARG BUILD_IMAGE=golang:1.11.5
+# ARG BUILD_IMAGE=golang:1.12.5
 # ARG BASE_IMAGE=storageos/base-image:0.1.0
 # ARG OPERATOR_IMAGE=storageos/cluster-operator:test
 
-FROM golang:1.11.5 AS build
+FROM golang:1.12.5 AS build
 # OPERATOR_IMAGE needs to be passed to build/cluster-operator for constructing
 # the ldflags.
 # ARG OPERATOR_IMAGE
