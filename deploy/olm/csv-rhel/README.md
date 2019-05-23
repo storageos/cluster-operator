@@ -20,6 +20,9 @@ Any other change in the CSV file must be made in
 `deploy/storageos-operators.configmap.yaml` and regenerate all the metadata
 files.
 
+__NOTE__: The above step is incorporated in the `make release` command. All the
+steps are automated to update and generate appropriate files.
+
 2. Run `make metadata-zip` from the root of the project to generate a metadata
 zip file at `/build/_output/storageos-olm-metadata.zip`. This file can be
 directly uploaded to the rhel operator metadata scanner for a new release.

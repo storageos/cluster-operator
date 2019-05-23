@@ -14,10 +14,19 @@ The release requires
 `deploy/olm/csv-rhel/storageos.v<version>.clusterserviceversion.yaml` and
 `deploy/olm/storageos/storageos.v<version>.clusterserviceversion.yaml` to be
 checked-in before `version` is tagged. These files should have the container
-image set to tag `version`. Update `community-changes.yaml`, `rhel-changes.yaml`
-and `package-changes.yaml` files with the new versions and run
-`make metadata-update` from project root to automatically update all the CSV and
-package files with new versions and images. Once tagged, these containers are
+image set to tag `version`.
+
+To create the CSV files and update all the associated files with the new release
+version, run `NEW_VERSION=<version> make release`. This will run
+`release-gen.sh`, updating all the intermediate files(`*-changes.yaml`) that are
+used to process and update the CSV files, update the CSV `createdAt` property to
+the current UTC time, run `update-metadata-files.sh` to update all the OLM
+metadata files, and copy the latest CSVs from community and rhel to create
+`deploy/olm/csv-rhel/storageos.v<version>.clusterserviceversion.yaml` and
+`deploy/olm/storageos/storageos.v<version>.clusterserviceversion.yaml` files.
+These changes can then be checked into the repo and a new release can be tagged.
+
+Once tagged, these containers are
 published using `scripts/deploy.sh`. rhel build is triggered at the same time to
 publish a new container in rhel container registry. The metadata zip for rhel
 release is generated and attached to the github release automatically. This file

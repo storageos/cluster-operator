@@ -18,6 +18,9 @@ the new operator container image, and `spec.version` to the new release version
 number in `deploy/olm/community-changes.yaml`. Run `make metadata-update` to
 generate `storageos.clusterserviceversion.yaml`.
 
+__NOTE__: The above step is incorporated in the `make release` command. All the
+steps are automated to update and generate appropriate files.
+
 Any other change in the CSV file must be made in
 `deploy/storageos-operators.configmap.yaml` and regenerate all the metadata
 files.
