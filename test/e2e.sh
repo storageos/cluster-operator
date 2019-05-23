@@ -12,7 +12,7 @@ readonly KIND_1_13_LINK="https://docs.google.com/uc?export=download&id=1C_Jrj68Y
 enable_lio() {
     echo "Enable LIO"
     sudo apt -y update
-    sudo apt -y install linux-image-extra-$(uname -r)
+    sudo apt -y install linux-modules-extra-$(uname -r)
     sudo mount --make-shared /sys
     sudo mount --make-shared /
     sudo mount --make-shared /dev
@@ -100,7 +100,15 @@ run_openshift() {
     echo "Run openshift"
     # Configure insecure docker registry for openshift
     sudo service docker stop
-    sudo sed -i 's/DOCKER_OPTS=\"/DOCKER_OPTS=\"--insecure-registry 172.30.0.0\/16 /' /etc/default/docker
+
+    # For ubuntu trusty:
+    # sudo sed -i 's/DOCKER_OPTS=\"/DOCKER_OPTS=\"--insecure-registry 172.30.0.0\/16 /' /etc/default/docker
+
+    # For ubuntu xenial:
+    # Writing directly to /etc/docker/daemon.json seems to leave the file empty.
+    # Using a temporary file and move the file after writing to it.
+    sudo cat /etc/docker/daemon.json | jq 'setpath(["insecure-registries"]; ["172.30.0.0/16"])' > /tmp/daemon.json && sudo mv /tmp/daemon.json /etc/docker/
+
     sudo service docker start
 
     # Change directory to $HOME to avoid creating openshift cluster files in the project git repo.
