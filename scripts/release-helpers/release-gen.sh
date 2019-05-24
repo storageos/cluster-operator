@@ -142,6 +142,10 @@ echo
 echo "Updating createdAt timestamp..."
 sed -i -e "s/createdAt.*/createdAt: $(date -u +'%Y-%m-%dT%H:%M:%SZ')/g" deploy/storageos-operators.configmap.yaml
 
+echo "Updating container image labels..."
+# Update operator version.
+sed -i -e "s/version.*/version=\"$NEW_VERSION\" \\\/g" build/Dockerfile build/rhel-build-service/Dockerfile
+
 # Update all the metadata files with above changes.
 echo "Updating all the metadata files..."
 bash scripts/metadata-checker/update-metadata-files.sh
