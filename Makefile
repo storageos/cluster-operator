@@ -98,7 +98,7 @@ olm-lint:
 metadata-bundle-lint: metadata-zip
 	docker run -it --rm -v $(PWD)/build/_output/:/metadata \
 		-w /home/test/ \
-		python:3 bash -c "pip install operator-courier && unzip /metadata/$(METADATA_FILE) && operator-courier verify --ui_validate_io ."
+		python:3 bash -c "pip install operator-courier && unzip /metadata/$(METADATA_FILE) -d out && operator-courier --verbose verify --ui_validate_io out/"
 
 # Prepare the repo for a new release.
 release:
