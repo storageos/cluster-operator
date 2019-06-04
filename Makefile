@@ -61,6 +61,12 @@ operator-sdk:
 install-operator-sdk: operator-sdk
 	sudo cp build/operator-sdk /usr/local/bin/
 
+install-yq:
+	@if [ ! -f build/yq ]; then \
+		curl -Lo build/yq https://github.com/mikefarah/yq/releases/download/2.3.0/yq_linux_amd64 && \
+		chmod +x build/yq; \
+	fi
+
 # Generate metadata bundle for openshift metadata scanner.
 metadata-zip:
 	# Remove any existing metadata bundle.
@@ -92,7 +98,12 @@ olm-lint:
 metadata-bundle-lint: metadata-zip
 	docker run -it --rm -v $(PWD)/build/_output/:/metadata \
 		-w /home/test/ \
-		python:3 bash -c "pip install operator-courier && unzip /metadata/$(METADATA_FILE) && operator-courier verify --ui_validate_io ."
+		python:3 bash -c "pip install operator-courier && unzip /metadata/$(METADATA_FILE) -d out && operator-courier --verbose verify --ui_validate_io out/"
 
+# Prepare the repo for a new release.
 release:
 	bash scripts/release-helpers/release-gen.sh $(NEW_VERSION)
+
+# Create a single manifest for installing the operator.
+generate-install-manifest: install-yq
+	bash scripts/create-manifest.sh $(OPERATOR_IMAGE)

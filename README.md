@@ -26,18 +26,16 @@ for more information.
 1. Build operator container image with `make image/cluster-operator`. Publish or
   copy this container image to an existing k8s cluster to make it available
   for use within the cluster.
-2. Apply the manifests in `deploy/` to install the operator
-   * Apply `namespace.yaml` to create the `storageos-operator` namespace.
-   * Apply `service_account.yaml`, `role.yaml` and `role_binding.yaml` to create
-    a service account and to grant all the permissions.
-   * Apply `crds/*_crd.yaml` to define the custom resources.
-   * Apply `operator.yaml` to install the operator. Change the container image
-     in this file when installing a new operator.
-   * Apply `crds/*_storageoscluster_cr.yaml` to create a `StorageOSCluster`
-     custom resource.
+2. Generate install manifest file with `make generate-install-manifest`. This
+will generate `storageos-operator.yaml`.
+3. Install the operator `kubectl create -f storageos-operator.yaml`
+4. Install a `StorageOSCluster` by creating a custom resource
+`kubectl create -f deploy/crds/*_storageoscluster_cr.yaml`.
 
 **NOTE**: Installing StorageOS on Minikube is not currently supported due to
 missing [kernel prerequisites](https://docs.storageos.com/docs/prerequisites/systemconfiguration).
+There are custom built [Kubernetes in Docker (KinD)](https://github.com/kubernetes-sigs/kind)
+node image compatible with StorageOS available at https://hub.docker.com/r/storageos/kind-node.
 
 For development, run the operator outside of the k8s cluster by running:
 
