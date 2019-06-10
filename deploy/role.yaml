@@ -91,9 +91,14 @@ rules:
   - csi.storage.k8s.io
   resources:
   - csidrivers
+  - csinodeinfos
   verbs:
   - create
   - delete
+  - watch
+  - list
+  - get
+  - update
 # OpenShift specific rule.
 - apiGroups:
   - security.openshift.io
