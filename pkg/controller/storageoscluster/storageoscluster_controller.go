@@ -191,6 +191,10 @@ func (r *ReconcileStorageOSCluster) reconcile(m *storageosv1.StorageOSCluster) e
 	m.Spec.Images.NodeContainer = m.Spec.GetNodeContainerImage()
 	m.Spec.Images.InitContainer = m.Spec.GetInitContainerImage()
 
+	if !m.Spec.DisableScheduler {
+		m.Spec.Images.HyperkubeContainer = m.Spec.GetHyperkubeImage(r.k8sVersion)
+	}
+
 	if m.Spec.CSI.Enable {
 		m.Spec.Images.CSINodeDriverRegistrarContainer = m.Spec.GetCSINodeDriverRegistrarImage(storageos.CSIV1Supported(r.k8sVersion))
 		if storageos.CSIV1Supported((r.k8sVersion)) {

@@ -248,49 +248,15 @@ func (s Deployment) csiHelperVolumes() []corev1.Volume {
 	}
 }
 
-// getCSIHelperStatefulSet returns the CSI helper StatefulSet resource.
-func (s Deployment) getCSIHelperStatefulSet(name string) *appsv1.StatefulSet {
-	return &appsv1.StatefulSet{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "StatefulSet",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: s.stos.Spec.GetResourceNS(),
-			Labels: map[string]string{
-				"app": "storageos",
-			},
-		},
-	}
-}
-
-// getCSIHelperDeployment returns the CSI helper Deployment resource.
-func (s Deployment) getCSIHelperDeployment(name string) *appsv1.Deployment {
-	return &appsv1.Deployment{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "Deployment",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: s.stos.Spec.GetResourceNS(),
-			Labels: map[string]string{
-				"app": "storageos",
-			},
-		},
-	}
-}
-
 // deleteCSIHelper deletes the CSI helper based on the cluster configuration.
 func (s Deployment) deleteCSIHelper() error {
 	// The names of CSI helpers are fixed. Using the appropriate names for the
 	// different kinds.
 	switch s.stos.Spec.GetCSIDeploymentStrategy() {
 	case deploymentKind:
-		return s.deleteObject(s.getCSIHelperDeployment(csiHelperName))
+		return s.deleteObject(s.getDeploymentByName(csiHelperName))
 	default:
-		return s.deleteObject(s.getCSIHelperStatefulSet(statefulsetName))
+		return s.deleteObject(s.getStatefulSetByName(statefulsetName))
 	}
 }
 

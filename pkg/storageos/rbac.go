@@ -11,6 +11,7 @@ const (
 	DaemonsetSA   = "storageos-daemonset-sa"
 	StatefulsetSA = "storageos-statefulset-sa"
 	CSIHelperSA   = "storageos-csi-helper-sa"
+	SchedulerSA   = "storageos-scheduler-sa"
 
 	CSIProvisionerClusterRoleName    = "storageos:csi-provisioner"
 	CSIProvisionerClusterBindingName = "storageos:csi-provisioner"
@@ -31,6 +32,9 @@ const (
 
 	FencingClusterRoleName    = "storageos:pod-fencer"
 	FencingClusterBindingName = "storageos:pod-fencer"
+
+	SchedulerClusterRoleName    = "storageos:scheduler-extender"
+	SchedulerClusterBindingName = "storageos:scheduler-extender"
 )
 
 func (s *Deployment) createServiceAccount(name string) error {
@@ -81,6 +85,12 @@ func (s *Deployment) createServiceAccountForDaemonSet() error {
 // CSI helper kind based on the cluster config.
 func (s *Deployment) createServiceAccountForCSIHelper() error {
 	return s.createServiceAccount(s.getCSIHelperServiceAccountName())
+}
+
+// createServiceAccountForScheduler creates a service account for scheduler
+// extender.
+func (s *Deployment) createServiceAccountForScheduler() error {
+	return s.createServiceAccount(SchedulerSA)
 }
 
 func (s *Deployment) createRoleForKeyMgmt() error {
@@ -271,6 +281,45 @@ func (s *Deployment) createClusterRoleForAttacher() error {
 	return s.createClusterRole(CSIAttacherClusterRoleName, rules)
 }
 
+// createClusterRoleForScheduler creates a ClusterRole resource for scheduler
+// extender with all the permissions required by kube-scheduler.
+func (s *Deployment) createClusterRoleForScheduler() error {
+	rules := []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{""},
+			Resources: []string{
+				"configmaps",
+				"persistentvolumes",
+				"persistentvolumeclaims",
+				"nodes",
+				"replicationcontrollers",
+				"pods",
+				"pods/binding",
+				"services",
+				"endpoints",
+				"events",
+			},
+			Verbs: []string{"get", "list", "watch", "create", "update"},
+		},
+		{
+			APIGroups: []string{"apps"},
+			Resources: []string{"statefulsets", "replicasets"},
+			Verbs:     []string{"list", "watch"},
+		},
+		{
+			APIGroups: []string{"storage.k8s.io"},
+			Resources: []string{"storageclasses"},
+			Verbs:     []string{"list", "watch"},
+		},
+		{
+			APIGroups: []string{"policy"},
+			Resources: []string{"poddisruptionbudgets"},
+			Verbs:     []string{"list", "watch"},
+		},
+	}
+	return s.createClusterRole(SchedulerClusterRoleName, rules)
+}
+
 func (s *Deployment) createRoleBindingForKeyMgmt() error {
 	roleBinding := s.getRoleBinding(KeyManagementBindingName)
 	roleBinding.Subjects = []rbacv1.Subject{
@@ -455,4 +504,22 @@ func (s *Deployment) createClusterRoleBindingForSCC() error {
 		APIGroup: "rbac.authorization.k8s.io",
 	}
 	return s.createClusterRoleBinding(OpenShiftSCCClusterBindingName, subjects, roleRef)
+}
+
+// createClusterRoleBindingForScheduler creates a cluster role binding for the
+// scheduler extender.
+func (s *Deployment) createClusterRoleBindingForScheduler() error {
+	subjects := []rbacv1.Subject{
+		{
+			Kind:      "ServiceAccount",
+			Name:      SchedulerSA,
+			Namespace: s.stos.Spec.GetResourceNS(),
+		},
+	}
+	roleRef := rbacv1.RoleRef{
+		Kind:     "ClusterRole",
+		Name:     SchedulerClusterRoleName,
+		APIGroup: "rbac.authorization.k8s.io",
+	}
+	return s.createClusterRoleBinding(SchedulerClusterBindingName, subjects, roleRef)
 }
