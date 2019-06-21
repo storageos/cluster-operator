@@ -653,6 +653,11 @@ data:
                 drawbacks, this may not always be desired.
               displayName: Force TCMU
               path: forceTCMU
+            - description: Disable StorageOS scheduler deployment. StorageOS scheduler
+                helps improve the scheduling decision of a pod, considering the location
+                of volumes and their replicas.
+              displayName: Disable Scheduler
+              path: disableScheduler
             - description: When enabled, the Operator will not perform any actions on
                 the cluster.
               displayName: Pause Operator

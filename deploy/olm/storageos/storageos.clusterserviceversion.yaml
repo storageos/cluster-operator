@@ -192,6 +192,7 @@ spec:
           - statefulsets
           - daemonsets
           - deployments
+          - replicasets
           verbs:
           - '*'
         - apiGroups:
@@ -203,6 +204,7 @@ spec:
           - watch
           - get
           - update
+          - create
         - apiGroups:
           - ""
           resources:
@@ -214,6 +216,7 @@ spec:
           - update
           - patch
           - delete
+          - create
         - apiGroups:
           - ""
           resources:
@@ -224,6 +227,10 @@ spec:
           - services
           - persistentvolumeclaims
           - persistentvolumes
+          - configmaps
+          - replicationcontrollers
+          - pods/binding
+          - endpoints
           verbs:
           - create
           - patch
@@ -269,6 +276,13 @@ spec:
           verbs:
           - create
           - delete
+        - apiGroups:
+          - policy
+          resources:
+          - poddisruptionbudgets
+          verbs:
+          - list
+          - watch
         - apiGroups:
           - security.openshift.io
           resources:
@@ -407,6 +421,11 @@ spec:
           be desired.
         displayName: Force TCMU
         path: forceTCMU
+      - description: Disable StorageOS scheduler deployment. StorageOS scheduler helps
+          improve the scheduling decision of a pod, considering the location of volumes
+          and their replicas.
+        displayName: Disable Scheduler
+        path: disableScheduler
       - description: When enabled, the Operator will not perform any actions on the
           cluster.
         displayName: Pause Operator
