@@ -3,47 +3,53 @@ package storageoscluster
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
+	"github.com/storageos/cluster-operator/pkg/storageos"
+	"github.com/storageos/cluster-operator/pkg/util/k8sutil"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/record"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	"github.com/storageos/cluster-operator/pkg/storageos"
-	"github.com/storageos/cluster-operator/pkg/util/k8sutil"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/record"
 )
+
+var log = ctrl.Log.WithName("cluster")
 
 // Add creates a new StorageOSCluster Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
 	// Get k8s version from client and set the version in ReconcileStorageOSCluster.
 	clientset := kubernetes.NewForConfigOrDie(mgr.GetConfig())
-	k := k8sutil.NewK8SOps(clientset)
+	k := k8sutil.NewK8SOps(clientset, log)
 	version, err := k.GetK8SVersion()
 	if err != nil {
 		return err
 	}
-	log.Println("k8s version:", version)
+
+	log.WithValues("k8s", version).Info("Adding cluster controller")
+
 	return add(mgr, newReconciler(mgr, strings.TrimLeft(version, "v")))
 }
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager, k8sVersion string) reconcile.Reconciler {
 	return &ReconcileStorageOSCluster{
-		client: mgr.GetClient(), scheme: mgr.GetScheme(), k8sVersion: k8sVersion, recorder: mgr.GetRecorder("storageoscluster-operator"),
+		client:     mgr.GetClient(),
+		scheme:     mgr.GetScheme(),
+		k8sVersion: k8sVersion,
+		recorder:   mgr.GetRecorder("storageoscluster-operator"),
 	}
 }
 
@@ -100,7 +106,9 @@ func (r *ReconcileStorageOSCluster) ResetCurrentCluster() {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileStorageOSCluster) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	// log.Printf("Reconciling StorageOSCluster %s/%s\n", request.Namespace, request.Name)
+
+	log := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	// log.Info("Reconciling Cluster")
 
 	reconcilePeriod := 15 * time.Second
 	reconcileResult := reconcile.Result{RequeueAfter: reconcilePeriod}
@@ -143,7 +151,7 @@ func (r *ReconcileStorageOSCluster) Reconcile(request reconcile.Request) (reconc
 		// failed when the previous cluster was deleted. The same cluster was
 		// created again and has a different UID. Create and assign a new
 		// current cluster.
-		log.Printf("replacing current cluster UID: %s with new cluster UID: %s", r.currentCluster.cluster.GetUID(), instance.GetUID())
+		log.WithValues("current", r.currentCluster.cluster.GetUID(), "new", instance.GetUID()).Info("Replacing cluster id")
 		r.SetCurrentCluster(instance)
 	}
 
@@ -308,7 +316,7 @@ func (r *ReconcileStorageOSCluster) generateJoinToken(m *storageosv1.StorageOSCl
 	// Log when node selector fails to select any node.
 	if len(selectedNodes) == 0 {
 		r.recorder.Event(m, corev1.EventTypeWarning, "FailedCreation", "no compatible nodes available for deployment, check node selector term and pod toleration options")
-		log.Printf("no compatible nodes available for deployment of cluster %s", m.Name)
+		log.WithValues("cluster", m.Name).Error(fmt.Errorf("no compatible nodes"), "No compatible nodes available for deployment of cluster")
 	}
 
 	nodeIPs := storageos.GetNodeIPs(selectedNodes)

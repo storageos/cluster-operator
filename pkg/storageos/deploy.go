@@ -3,7 +3,6 @@ package storageos
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/blang/semver"
@@ -12,6 +11,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 const (
@@ -72,6 +72,8 @@ const (
 	// k8s distribution vendor specific keywords.
 	k8sDistroOpenShift = "openshift"
 )
+
+var log = ctrl.Log.WithName("cluster")
 
 // Deploy deploys storageos by creating all the resources needed to run storageos.
 func (s *Deployment) Deploy() error {
@@ -239,13 +241,13 @@ func CSIV1Supported(version string) bool {
 func versionSupported(haveVersion, wantVersion string) bool {
 	supportedVersion, err := semver.Parse(wantVersion)
 	if err != nil {
-		log.Printf("failed to parse version: %v", err)
+		log.Error(err, "failed to parse version", "want", wantVersion)
 		return false
 	}
 
 	currentVersion, err := semver.Parse(haveVersion)
 	if err != nil {
-		log.Printf("failed to parse version: %v", err)
+		log.Error(err, "failed to parse version", "have", haveVersion)
 		return false
 	}
 
