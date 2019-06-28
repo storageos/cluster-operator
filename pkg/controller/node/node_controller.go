@@ -11,12 +11,12 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
@@ -24,7 +24,7 @@ import (
 	storageostypes "github.com/storageos/go-api/types"
 )
 
-var log = ctrl.Log.WithName("node")
+var log = logf.Log.WithName("node")
 
 // Node controller errors.
 var (

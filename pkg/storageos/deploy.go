@@ -11,7 +11,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 const (
@@ -73,7 +73,7 @@ const (
 	k8sDistroOpenShift = "openshift"
 )
 
-var log = ctrl.Log.WithName("cluster")
+var log = logf.Log.WithName("cluster")
 
 // Deploy deploys storageos by creating all the resources needed to run storageos.
 func (s *Deployment) Deploy() error {
