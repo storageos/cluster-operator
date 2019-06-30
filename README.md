@@ -68,8 +68,8 @@ example-storageos   3/3       Running   4m
 Get all the details about the cluster:
 
 ```bash
-$ kubectl describe storageoscluster/example-storageos
-Name:         example-storageos
+$ kubectl describe storageoscluster/example-storageoscluster
+Name:         example-storageoscluster
 Namespace:    default
 Labels:       <none>
 Annotations:  kubectl.kubernetes.io/last-applied-configuration={"apiVersion":"storageos.com/v1","kind":"StorageOSCluster","metadata":{"annotations":{},"name":"example-storageos","namespace":"default"},"spec":{"...
@@ -79,7 +79,7 @@ Metadata:
   Creation Timestamp:  2018-07-21T12:57:11Z
   Generation:          1
   Resource Version:    10939030
-  Self Link:           /apis/storageos.com/v1/namespaces/default/storageosclusters/example-storageos
+  Self Link:           /apis/storageos.com/v1/namespaces/default/storageosclusters/example-storageoscluster
   UID:                 955b24a4-8ce5-11e8-956a-1866da35eee2
 Spec:
   Join:  test07
