@@ -59,8 +59,8 @@ After creating a StorageOSCluster resource, query the resource:
 
 ```bash
 $ kubectl get storageoscluster
-NAME                READY     STATUS    AGE
-example-storageos   3/3       Running   4m
+NAME                       READY     STATUS    AGE
+example-storageoscluster   3/3       Running   4m
 ```
 
 ## Inspect a StorageOSCluster Resource
@@ -72,7 +72,7 @@ $ kubectl describe storageoscluster/example-storageoscluster
 Name:         example-storageoscluster
 Namespace:    default
 Labels:       <none>
-Annotations:  kubectl.kubernetes.io/last-applied-configuration={"apiVersion":"storageos.com/v1","kind":"StorageOSCluster","metadata":{"annotations":{},"name":"example-storageos","namespace":"default"},"spec":{"...
+Annotations:  kubectl.kubernetes.io/last-applied-configuration={"apiVersion":"storageos.com/v1","kind":"StorageOSCluster","metadata":{"annotations":{},"name":"example-storageoscluster","namespace":"default"},"spec":{"...
 API Version:  storageos.com/v1
 Kind:         StorageOSCluster
 Metadata:
