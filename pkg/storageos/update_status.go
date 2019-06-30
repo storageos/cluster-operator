@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"reflect"
 	"strings"
@@ -13,7 +12,7 @@ import (
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	storageosapi "github.com/storageos/go-api"
 	"github.com/storageos/go-api/types"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
 func (s *Deployment) updateStorageOSStatus(status *storageosv1.StorageOSClusterStatus) error {
@@ -46,6 +45,7 @@ func (s *Deployment) updateStorageOSStatus(status *storageosv1.StorageOSClusterS
 // getStorageOSStatus queries health of all the nodes in the join token and
 // returns the cluster status.
 func (s *Deployment) getStorageOSStatus() (*storageosv1.StorageOSClusterStatus, error) {
+
 	var totalNodes, readyNodes int
 
 	// Create an empty array because it's used to create cluster status. An
@@ -72,7 +72,7 @@ func (s *Deployment) getStorageOSStatus() (*storageosv1.StorageOSClusterStatus, 
 				memberStatus.Unready = append(memberStatus.Unready, node)
 			}
 		} else {
-			log.Printf("failed to get health of node %s: %v", node, err)
+			log.WithValues("node", node).Info("api not ready, retrying")
 		}
 	}
 

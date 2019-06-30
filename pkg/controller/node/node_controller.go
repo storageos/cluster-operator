@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -17,12 +16,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	storageosapi "github.com/storageos/go-api"
 	storageostypes "github.com/storageos/go-api/types"
 )
+
+var log = logf.Log.WithName("node")
 
 // Node controller errors.
 var (
@@ -69,7 +71,9 @@ type ReconcileNode struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	// log.Printf("Reconciling Node %s/%s\n", request.Namespace, request.Name)
+
+	log := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	// log.Info("Reconciling Node")
 
 	reconcilePeriod := 5 * time.Second
 	reconcileResult := reconcile.Result{RequeueAfter: reconcilePeriod}
@@ -96,7 +100,7 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 			return reconcile.Result{}, nil
 		}
 		// Requeue the request in order to retry getting the cluster.
-		log.Println("failed to find current cluster:", err)
+		log.Error(err, "failed to find current cluster")
 		return reconcileResult, err
 	}
 
@@ -109,14 +113,14 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 		r.stosClient.clusterUID != cluster.GetUID() {
 
 		if err := r.setClientForCluster(cluster); err != nil {
-			log.Println("failed to configure api client:", err)
+			log.Error(err, "failed to configure api client")
 			return reconcileResult, err
 		}
 	}
 
 	// Sync labels to StorageOS node object.
 	if err = r.syncLabels(instance.Name, instance.Labels); err != nil {
-		log.Println("failed to sync labels:", err)
+		log.Error(err, "failed to sync labels, api may not be ready")
 		// Error syncing labels - requeue the request.
 		return reconcileResult, err
 	}

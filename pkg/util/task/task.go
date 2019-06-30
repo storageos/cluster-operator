@@ -2,8 +2,9 @@ package task
 
 import (
 	"errors"
-	"log"
 	"time"
+
+	"github.com/go-logr/logr"
 )
 
 // ErrTimedOut is returned when an operation times out
@@ -12,7 +13,7 @@ var ErrTimedOut = errors.New("timed out performing task")
 // DoRetryWithTimeout performs given task with given timeout and timeBeforeRetry.
 // The function t returns a result out, a boolean to retry, and an error
 // containing the reason for failure.
-func DoRetryWithTimeout(t func() (interface{}, bool, error), timeout, timeBeforeRetry time.Duration) (interface{}, error) {
+func DoRetryWithTimeout(t func() (interface{}, bool, error), timeout, timeBeforeRetry time.Duration, log logr.Logger) (interface{}, error) {
 	done := make(chan bool, 1)
 	quit := make(chan bool, 1)
 	var out interface{}
@@ -35,7 +36,7 @@ func DoRetryWithTimeout(t func() (interface{}, bool, error), timeout, timeBefore
 					return
 				}
 
-				log.Printf("%v Next retry in: %v", err, timeBeforeRetry)
+				log.Error(err, "task failed", "retrying in", timeBeforeRetry.String())
 				time.Sleep(timeBeforeRetry)
 			}
 

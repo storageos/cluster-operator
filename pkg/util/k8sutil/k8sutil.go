@@ -2,10 +2,10 @@ package k8sutil
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/storageos/cluster-operator/pkg/util/task"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -34,11 +34,15 @@ const (
 // actions on a kubernetes cluster.
 type K8SOps struct {
 	client kubernetes.Interface
+	logger logr.Logger
 }
 
 // NewK8SOps creates and returns a new k8sOps object.
-func NewK8SOps(client kubernetes.Interface) *K8SOps {
-	return &K8SOps{client: client}
+func NewK8SOps(client kubernetes.Interface, logger logr.Logger) *K8SOps {
+	return &K8SOps{
+		client: client,
+		logger: logger,
+	}
 }
 
 // GetK8SVersion queries and returns kubernetes server version.
@@ -169,7 +173,7 @@ func (k K8SOps) ScaleDownApps() error {
 
 	var valZero int32
 	for _, d := range deps.Items {
-		log.Printf("scaling down deployment: [%s] %s", d.GetNamespace(), d.GetName())
+		k.logger.WithValues("Namespace", d.GetNamespace(), "Name", d.GetName()).Info("scaling down deployment")
 
 		t := func() (interface{}, bool, error) {
 			dCopy, err := k.client.AppsV1().Deployments(d.GetNamespace()).Get(d.GetName(), metav1.GetOptions{})
@@ -182,7 +186,7 @@ func (k K8SOps) ScaleDownApps() error {
 			}
 
 			if *dCopy.Spec.Replicas == 0 {
-				log.Printf("app [%s] %s is already scaled down to 0", dCopy.Namespace, dCopy.Name)
+				k.logger.WithValues("Namespace", dCopy.Namespace, "Name", dCopy.Name).Info("app already scaled down to 0")
 				return nil, false, nil
 			}
 
@@ -190,20 +194,20 @@ func (k K8SOps) ScaleDownApps() error {
 			dCopy.Spec.Replicas = &valZero
 			_, updateErr := k.client.AppsV1().Deployments(d.GetNamespace()).Update(dCopy)
 			if updateErr != nil {
-				log.Printf("failed to update Deployment %s: %v", dCopy.GetName(), updateErr)
+				k.logger.Error(updateErr, "failed to update Deployment", "Name", dCopy.GetName())
 				return nil, true, updateErr
 			}
 
 			return nil, false, nil
 		}
 
-		if _, err := task.DoRetryWithTimeout(t, deploymentUpdateTimeout, defaultRetryInterval); err != nil {
+		if _, err := task.DoRetryWithTimeout(t, deploymentUpdateTimeout, defaultRetryInterval, k.logger); err != nil {
 			return err
 		}
 	}
 
 	for _, s := range ss.Items {
-		log.Printf("scaling down statefulset: [%s] %s", s.GetNamespace(), s.GetName())
+		k.logger.WithValues("Namespace", s.GetNamespace(), "Name", s.GetName()).Info("scaling down statefulset")
 
 		t := func() (interface{}, bool, error) {
 			sCopy, err := k.client.AppsV1().StatefulSets(s.GetNamespace()).Get(s.GetName(), metav1.GetOptions{})
@@ -216,7 +220,7 @@ func (k K8SOps) ScaleDownApps() error {
 			}
 
 			if *sCopy.Spec.Replicas == 0 {
-				log.Printf("app [%s] %s is already scaled down to 0", sCopy.Namespace, sCopy.Name)
+				k.logger.WithValues("Namespace", sCopy.Namespace, "Name", sCopy.Name).Info("app already scaled down to 0")
 				return nil, false, nil
 			}
 
@@ -224,14 +228,14 @@ func (k K8SOps) ScaleDownApps() error {
 			sCopy.Spec.Replicas = &valZero
 			_, updateErr := k.client.AppsV1().StatefulSets(s.GetNamespace()).Get(s.GetName(), metav1.GetOptions{})
 			if updateErr != nil {
-				log.Printf("failed to update StatefulSet %s: %v", sCopy.GetName(), updateErr)
+				k.logger.Error(updateErr, "failed to update StatefulSet", "Name", sCopy.GetName())
 				return nil, true, updateErr
 			}
 
 			return nil, false, nil
 		}
 
-		if _, err := task.DoRetryWithTimeout(t, statefulSetUpdateTimeout, defaultRetryInterval); err != nil {
+		if _, err := task.DoRetryWithTimeout(t, statefulSetUpdateTimeout, defaultRetryInterval, k.logger); err != nil {
 			return err
 		}
 	}
@@ -248,7 +252,7 @@ func (k K8SOps) ScaleUpApps() error {
 	}
 
 	for _, d := range deps.Items {
-		log.Printf("restoring app: [%s] %s", d.Namespace, d.Name)
+		k.logger.WithValues("Namespace", d.Namespace, "Name", d.Name).Info("restoring app")
 
 		t := func() (interface{}, bool, error) {
 			dCopy, err := k.client.AppsV1().Deployments(d.GetNamespace()).Get(d.GetName(), metav1.GetOptions{})
@@ -267,13 +271,13 @@ func (k K8SOps) ScaleUpApps() error {
 
 			val, present := dCopy.Annotations[replicaKey]
 			if !present || len(val) == 0 {
-				log.Printf("not restoring app: [%s] %s as no annotation found to track replica count", dCopy.GetNamespace(), dCopy.GetName())
+				k.logger.WithValues("Namespace", dCopy.GetNamespace(), "Name", dCopy.GetName()).Info("not restoring app: no annotation found to track replica count")
 				return nil, false, nil
 			}
 
 			i, err := strconv.Atoi(val)
 			if err != nil {
-				log.Printf("failed to read replica for %s: %v", dCopy.GetName(), err)
+				k.logger.Error(err, "failed to read replica", "Name", dCopy.GetName())
 				return nil, false, nil
 			}
 
@@ -281,20 +285,20 @@ func (k K8SOps) ScaleUpApps() error {
 			dCopy.Spec.Replicas = int32Ptr(int32(i))
 			_, updateErr := k.client.AppsV1().Deployments(dCopy.GetNamespace()).Update(dCopy)
 			if updateErr != nil {
-				log.Printf("failed to update Daemonset %s: %v", dCopy.GetName(), updateErr)
+				k.logger.Error(updateErr, "failed to update DaemonSet", "Name", dCopy.GetName())
 				return nil, true, updateErr
 			}
 
 			return nil, false, nil
 		}
 
-		if _, err := task.DoRetryWithTimeout(t, deploymentUpdateTimeout, defaultRetryInterval); err != nil {
+		if _, err := task.DoRetryWithTimeout(t, deploymentUpdateTimeout, defaultRetryInterval, k.logger); err != nil {
 			return err
 		}
 	}
 
 	for _, s := range ss.Items {
-		log.Printf("restoring app: [%s] %s", s.Namespace, s.Name)
+		k.logger.WithValues("Namespace", s.Namespace, "Name", s.Name).Info("restoring app")
 
 		t := func() (interface{}, bool, error) {
 			sCopy, err := k.client.AppsV1().StatefulSets(s.GetNamespace()).Get(s.GetName(), metav1.GetOptions{})
@@ -313,13 +317,13 @@ func (k K8SOps) ScaleUpApps() error {
 
 			val, present := sCopy.Annotations[replicaKey]
 			if !present || len(val) == 0 {
-				log.Printf("not restoring app: [%s] %s as no annotation found to track replica count", sCopy.GetNamespace(), sCopy.GetName())
+				k.logger.WithValues("Namespace", sCopy.GetNamespace(), "Name", sCopy.GetName()).Info("not restoring app: no annotation found to track replica count")
 				return nil, false, nil
 			}
 
 			i, err := strconv.Atoi(val)
 			if err != nil {
-				log.Printf("failed to read replica for %s: %v", sCopy.GetName(), err)
+				k.logger.Error(err, "failed to read replica", "Name", sCopy.GetName())
 				return nil, false, nil
 			}
 
@@ -327,14 +331,14 @@ func (k K8SOps) ScaleUpApps() error {
 			sCopy.Spec.Replicas = int32Ptr(int32(i))
 			_, updateErr := k.client.AppsV1().StatefulSets(sCopy.GetNamespace()).Update(sCopy)
 			if updateErr != nil {
-				log.Printf("failed to update StatefulSet %s: %v", sCopy.GetName(), updateErr)
+				k.logger.Error(updateErr, "failed to update StatefulSet", "Name", sCopy.GetName())
 				return nil, true, updateErr
 			}
 
 			return nil, false, nil
 		}
 
-		if _, err := task.DoRetryWithTimeout(t, statefulSetUpdateTimeout, defaultRetryInterval); err != nil {
+		if _, err := task.DoRetryWithTimeout(t, statefulSetUpdateTimeout, defaultRetryInterval, k.logger); err != nil {
 			return err
 		}
 
@@ -352,7 +356,7 @@ func (k K8SOps) UpgradeDaemonSet(newImage string) error {
 		return err
 	}
 
-	log.Printf("updating storageos daemonset: [%s] %s", ds.GetNamespace(), ds.GetName())
+	k.logger.WithValues("Namespace", ds.GetNamespace(), "Name", ds.GetName()).Info("updating storageos daemonset")
 
 	expectedGenerations := make(map[types.UID]int64)
 
@@ -391,19 +395,19 @@ func (k K8SOps) UpgradeDaemonSet(newImage string) error {
 		dCopy.Spec.Template.Spec.Containers[0].Image = newImage
 		_, updateErr := k.client.AppsV1().DaemonSets(dCopy.GetNamespace()).Update(dCopy)
 		if updateErr != nil {
-			log.Printf("failed to update Daemonset %s: %v", dCopy.GetName(), updateErr)
+			k.logger.Error(updateErr, "failed to update DaemonSet", "Name", dCopy.GetName())
 			return nil, true, updateErr
 		}
 
 		return nil, false, nil
 	}
 
-	if _, err := task.DoRetryWithTimeout(t, deploymentUpdateTimeout, defaultRetryInterval); err != nil {
+	if _, err := task.DoRetryWithTimeout(t, deploymentUpdateTimeout, defaultRetryInterval, k.logger); err != nil {
 		return err
 	}
 
 	// Wait for the new daemonset to be ready
-	log.Printf("Checking upgrade status of daemonset: [%s] %s to version %s", ds.GetNamespace(), ds.GetName(), newImage)
+	k.logger.WithValues("Namespace", ds.GetNamespace(), "Name", ds.GetName(), "image", newImage).Info("checking upgrade status of DaemonSet")
 
 	// Check the DaemonSet generation and block until the latest expected
 	// generation is available.
@@ -421,11 +425,11 @@ func (k K8SOps) UpgradeDaemonSet(newImage string) error {
 		return nil, false, nil
 	}
 
-	if _, err := task.DoRetryWithTimeout(t, daemonsetUpdateTriggerTimeout, defaultRetryInterval); err != nil {
+	if _, err := task.DoRetryWithTimeout(t, daemonsetUpdateTriggerTimeout, defaultRetryInterval, k.logger); err != nil {
 		return err
 	}
 
-	log.Println("Waiting for the daemonset to be ready")
+	k.logger.Info("Waiting for the daemonset to be ready")
 
 	if err = k.WaitForDaemonSetToBeReady(ds.GetName(), ds.GetNamespace()); err != nil {
 		return err
@@ -466,7 +470,7 @@ func (k K8SOps) WaitForDaemonSetToBeReady(name, namespace string) error {
 		return nil, false, nil
 	}
 
-	if _, err := task.DoRetryWithTimeout(t, daemonsetUpdateTriggerTimeout, defaultRetryInterval); err != nil {
+	if _, err := task.DoRetryWithTimeout(t, daemonsetUpdateTriggerTimeout, defaultRetryInterval, k.logger); err != nil {
 		return err
 	}
 
