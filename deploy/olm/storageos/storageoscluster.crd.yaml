@@ -45,6 +45,10 @@ spec:
               type: boolean
             disableTelemetry:
               type: boolean
+            disableTCMU:
+              type: boolean
+            forceTCMU:
+              type: boolean
             images:
               properties:
                 nodeContainer:

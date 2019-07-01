@@ -18,6 +18,8 @@ const (
 	namespaceEnvVar                     = "NAMESPACE"
 	disableFencingEnvVar                = "DISABLE_FENCING"
 	disableTelemetryEnvVar              = "DISABLE_TELEMETRY"
+	disableTCMUEnvVar                   = "DISABLE_TCMU"
+	forceTCMUEnvVar                     = "FORCE_TCMU"
 	deviceDirEnvVar                     = "DEVICE_DIR"
 	csiEndpointEnvVar                   = "CSI_ENDPOINT"
 	csiVersionEnvVar                    = "CSI_VERSION"
@@ -177,8 +179,20 @@ func (s *Deployment) createDaemonSet() error {
 									Value: s.stos.Spec.GetResourceNS(),
 								},
 								{
+									Name:  disableFencingEnvVar,
+									Value: strconv.FormatBool(s.stos.Spec.DisableFencing),
+								},
+								{
 									Name:  disableTelemetryEnvVar,
 									Value: strconv.FormatBool(s.stos.Spec.DisableTelemetry),
+								},
+								{
+									Name:  disableTCMUEnvVar,
+									Value: strconv.FormatBool(s.stos.Spec.DisableTCMU),
+								},
+								{
+									Name:  forceTCMUEnvVar,
+									Value: strconv.FormatBool(s.stos.Spec.ForceTCMU),
 								},
 								{
 									Name:  csiVersionEnvVar,

@@ -150,6 +150,22 @@ type StorageOSClusterSpec struct {
 	// Disable Telemetry.
 	DisableTelemetry bool `json:"disableTelemetry"`
 
+	// Disable TCMU can be set to true to disable the TCMU storage driver.  This
+	// is required when there are multiple storage systems running on the same
+	// node and you wish to avoid conflicts.  Only one TCMU-based storage system
+	// can run on a node at a time.
+	//
+	// Disabling TCMU will degrade performance.
+	DisableTCMU bool `json:"disableTCMU"`
+
+	// Force TCMU can be set to true to ensure that TCMU is enabled or
+	// cause StorageOS to abort startup.
+	//
+	// At startup, StorageOS will automatically fallback to non-TCMU mode if
+	// another TCMU-based storage system is running on the node.  Since non-TCMU
+	// will degrade performance, this may not always be desired.
+	ForceTCMU bool `json:"forceTCMU"`
+
 	// TLSEtcdSecretRefName is the name of the secret object that contains the
 	// etcd TLS certs. This secret is shared with etcd, therefore it's not part
 	// of the main storageos secret.
