@@ -82,6 +82,9 @@ func (s Deployment) schedulerDeployment(replicas int32) *appsv1.Deployment {
 		},
 	}
 
+	// Add pod toleration for quick recovery on node failure.
+	addPodTolerationForRecovery(&dep.Spec.Template.Spec)
+
 	return dep
 }
 

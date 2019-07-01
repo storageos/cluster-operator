@@ -73,6 +73,10 @@ const (
 
 	// k8s distribution vendor specific keywords.
 	k8sDistroOpenShift = "openshift"
+
+	// podTolerationSeconds is the time for which a pod tolerates an unfavorable
+	// node condition.
+	podTolerationSeconds = 30
 )
 
 var log = logf.Log.WithName("storageos.cluster")
@@ -395,4 +399,26 @@ func GetNodeIPs(nodes []corev1.Node) []string {
 		ips = append(ips, node.Status.Addresses[0].Address)
 	}
 	return ips
+}
+
+// addPodTolerationForRecovery adds pod tolerations for cases when a node isn't
+// functional. Usually k8s toleration seconds is five minutes. This sets the
+// toleration seconds to 30 seconds.
+func addPodTolerationForRecovery(podSpec *corev1.PodSpec) {
+	tolerationSeconds := int64(podTolerationSeconds)
+	recoveryTolerations := []corev1.Toleration{
+		{
+			Effect:            corev1.TaintEffectNoExecute,
+			Key:               nodeNotReadyTolKey,
+			Operator:          corev1.TolerationOpExists,
+			TolerationSeconds: &tolerationSeconds,
+		},
+		{
+			Effect:            corev1.TaintEffectNoExecute,
+			Key:               nodeUnreachableTolKey,
+			Operator:          corev1.TolerationOpExists,
+			TolerationSeconds: &tolerationSeconds,
+		},
+	}
+	podSpec.Tolerations = append(podSpec.Tolerations, recoveryTolerations...)
 }

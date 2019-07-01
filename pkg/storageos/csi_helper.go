@@ -118,28 +118,6 @@ func (s Deployment) addCommonPodProperties(podSpec *corev1.PodSpec) error {
 	return nil
 }
 
-// addPodTolerationForRecovery adds pod tolerations for cases when a node isn't
-// functional. Usually k8s toleration seconds is five minutes. This sets the
-// toleration seconds to 30 seconds.
-func addPodTolerationForRecovery(podSpec *corev1.PodSpec) {
-	tolerationSeconds := int64(30)
-	recoveryTolerations := []corev1.Toleration{
-		{
-			Effect:            corev1.TaintEffectNoExecute,
-			Key:               nodeNotReadyTolKey,
-			Operator:          corev1.TolerationOpExists,
-			TolerationSeconds: &tolerationSeconds,
-		},
-		{
-			Effect:            corev1.TaintEffectNoExecute,
-			Key:               nodeUnreachableTolKey,
-			Operator:          corev1.TolerationOpExists,
-			TolerationSeconds: &tolerationSeconds,
-		},
-	}
-	podSpec.Tolerations = append(podSpec.Tolerations, recoveryTolerations...)
-}
-
 // csiHelperContainers returns a list of containers that should be part of the
 // CSI helper pods.
 func (s Deployment) csiHelperContainers() []corev1.Container {
