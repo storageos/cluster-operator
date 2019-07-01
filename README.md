@@ -141,6 +141,8 @@ Parameter | Description | Default
 `debug` | Enable debug mode for all the cluster nodes | `false`
 `disableFencing` | Disable Pod fencing | `false`
 `disableTelemetry` | Disable telemetry reports | `false`
+`disableTCMU` | Disable TCMU to allow co-existence with other storage systems but degrades performance | `false`
+`forceTCMU` | Forces TCMU to be enabled or causes StorageOS to abort startup | `false`
 `nodeSelectorTerms` | Set node selector for storageos pod placement |
 `tolerations` | Set pod tolerations for storageos pod placement |
 `resources` | Set resource requirements for the containers |
