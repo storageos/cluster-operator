@@ -40,7 +40,7 @@ func Add(mgr manager.Manager) error {
 
 	log.WithValues("k8s", version).Info("Adding cluster controller")
 
-	return add(mgr, newReconciler(mgr, strings.TrimLeft(version, "v")))
+	return add(mgr, newReconciler(mgr, version))
 }
 
 // newReconciler returns a new reconcile.Reconciler
