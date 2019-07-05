@@ -21,6 +21,7 @@ import (
 
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	storageosapi "github.com/storageos/go-api"
+	storageoserror "github.com/storageos/go-api/serror"
 	storageostypes "github.com/storageos/go-api/types"
 )
 
@@ -120,8 +121,13 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 
 	// Sync labels to StorageOS node object.
 	if err = r.syncLabels(instance.Name, instance.Labels); err != nil {
-		log.Error(err, "failed to sync labels, api may not be ready")
+		if storageoserror.ErrorKind(err) == storageoserror.APIUncontactable {
+			log.Info("Waiting for StorageOS API to become ready")
+			return reconcileResult, nil
+		}
+
 		// Error syncing labels - requeue the request.
+		log.Error(err, "failed to sync node labels")
 		return reconcileResult, err
 	}
 

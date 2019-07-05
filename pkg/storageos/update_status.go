@@ -71,8 +71,6 @@ func (s *Deployment) getStorageOSStatus() (*storageosv1.StorageOSClusterStatus, 
 			} else {
 				memberStatus.Unready = append(memberStatus.Unready, node)
 			}
-		} else {
-			log.WithValues("node", node).Info("api not ready, retrying")
 		}
 	}
 
