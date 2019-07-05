@@ -36,7 +36,7 @@ func DoRetryWithTimeout(t func() (interface{}, bool, error), timeout, timeBefore
 					return
 				}
 
-				log.Error(err, "task failed", "retrying in", timeBeforeRetry.String())
+				log.Info("Task failed", "retrying in", timeBeforeRetry.String(), "error", err)
 				time.Sleep(timeBeforeRetry)
 			}
 

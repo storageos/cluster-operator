@@ -27,7 +27,7 @@ import (
 	storageosapi "github.com/storageos/go-api"
 )
 
-var log = logf.Log.WithName("upgrade")
+var log = logf.Log.WithName("storageos.upgrade")
 
 var (
 	// operatorImage is the image name of controller-operator. This is needed
@@ -281,7 +281,7 @@ func (r *ReconcileStorageOSUpgrade) Reconcile(request reconcile.Request) (reconc
 	}
 	err = r.client.Get(context.TODO(), nsdName, r.imagePuller)
 	if err != nil {
-		log.Error(err, "error fetching image puller status")
+		log.Info("Failed to fetch image puller status", "error", err)
 	}
 	// Re-queue if the image pull didn't complete.
 	if !r.imagePuller.Status.Completed {
