@@ -73,7 +73,7 @@ const (
 	k8sDistroOpenShift = "openshift"
 )
 
-var log = logf.Log.WithName("cluster")
+var log = logf.Log.WithName("storageos.cluster")
 
 // Deploy deploys storageos by creating all the resources needed to run storageos.
 func (s *Deployment) Deploy() error {
@@ -241,13 +241,13 @@ func CSIV1Supported(version string) bool {
 func versionSupported(haveVersion, wantVersion string) bool {
 	supportedVersion, err := semver.Parse(wantVersion)
 	if err != nil {
-		log.Error(err, "failed to parse version", "want", wantVersion)
+		log.Error(err, "Failed to parse version", "want", wantVersion)
 		return false
 	}
 
 	currentVersion, err := semver.Parse(haveVersion)
 	if err != nil {
-		log.Error(err, "failed to parse version", "have", haveVersion)
+		log.Error(err, "Failed to parse version", "have", haveVersion)
 		return false
 	}
 

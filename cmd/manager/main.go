@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 )
 
-var log = logf.Log.WithName("setup")
+var log = logf.Log.WithName("storageos.setup")
 
 func main() {
 
@@ -58,7 +58,7 @@ func main() {
 		fatal(err)
 	}
 
-	log.Info("Starting the Cmd")
+	log.Info("Starting the StorageOS Operator")
 
 	// Start the Cmd
 	fatal(mgr.Start(signals.SetupSignalHandler()))

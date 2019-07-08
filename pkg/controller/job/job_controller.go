@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var log = logf.Log.WithName("job")
+var log = logf.Log.WithName("storageos.job")
 
 // Add creates a new Job Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -133,7 +133,7 @@ func (r *ReconcileJob) Reconcile(request reconcile.Request) (reconcile.Result, e
 	found := &appsv1.DaemonSet{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: daemonset.Name, Namespace: daemonset.Namespace}, found)
 	if err != nil && errors.IsNotFound(err) {
-		log.Info("creating a new DaemonSet")
+		log.Info("Creating a new DaemonSet")
 		err = r.client.Create(context.TODO(), daemonset)
 		if err != nil {
 			return reconcileResult, err
@@ -175,7 +175,7 @@ func checkPods(client kubernetes.Interface, cr *storageosv1.Job, recorder record
 
 	pods, err := client.CoreV1().Pods(cr.GetNamespace()).List(podListOpts)
 	if err != nil {
-		log.Error(err, "failed to get podList")
+		log.Error(err, "Failed to get pods")
 		return false, err
 	}
 
@@ -184,7 +184,7 @@ func checkPods(client kubernetes.Interface, cr *storageosv1.Job, recorder record
 
 	// Skip if there are no daemonset-job pods.
 	if totalPods == 0 {
-		log.Info("no DaemonSets found")
+		log.Info("No DaemonSets found")
 		return false, nil
 	}
 
@@ -194,7 +194,7 @@ func checkPods(client kubernetes.Interface, cr *storageosv1.Job, recorder record
 		req := client.CoreV1().Pods(p.GetNamespace()).GetLogs(p.GetName(), opts)
 		logText, err := getPlainLogs(req)
 		if err != nil {
-			log.Error(err, "failed to get logs from pod", "pod", p.GetName())
+			log.Info("Failed to get logs from pod", "pod", p.GetName(), "error", err)
 			// Continue checking other pods.
 			continue
 		}

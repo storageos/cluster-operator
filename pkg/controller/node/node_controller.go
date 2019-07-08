@@ -21,10 +21,11 @@ import (
 
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	storageosapi "github.com/storageos/go-api"
+	storageoserror "github.com/storageos/go-api/serror"
 	storageostypes "github.com/storageos/go-api/types"
 )
 
-var log = logf.Log.WithName("node")
+var log = logf.Log.WithName("storageos.node")
 
 // Node controller errors.
 var (
@@ -100,7 +101,7 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 			return reconcile.Result{}, nil
 		}
 		// Requeue the request in order to retry getting the cluster.
-		log.Error(err, "failed to find current cluster")
+		log.Error(err, "Failed to find current cluster")
 		return reconcileResult, err
 	}
 
@@ -113,16 +114,21 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 		r.stosClient.clusterUID != cluster.GetUID() {
 
 		if err := r.setClientForCluster(cluster); err != nil {
-			log.Error(err, "failed to configure api client")
+			log.Error(err, "Failed to configure api client")
 			return reconcileResult, err
 		}
 	}
 
 	// Sync labels to StorageOS node object.
 	if err = r.syncLabels(instance.Name, instance.Labels); err != nil {
-		log.Error(err, "failed to sync labels, api may not be ready")
+		if storageoserror.ErrorKind(err) == storageoserror.APIUncontactable {
+			log.V(4).Info("Waiting for StorageOS API to become ready")
+			return reconcileResult, nil
+		}
+
 		// Error syncing labels - requeue the request.
-		return reconcileResult, err
+		log.V(4).Info("Failed to sync node labels", "error", err)
+		return reconcileResult, nil
 	}
 
 	return reconcileResult, nil
