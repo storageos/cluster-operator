@@ -6,13 +6,6 @@ MACHINE = $(shell uname -m)
 BUILD_IMAGE = golang:1.12.5
 BASE_IMAGE = storageos/base-image:0.1.0
 
-# OLM release versions(StorageOS operator) are required to creating redhat
-# operator metadata zip. The zip must have the previous version and the new
-# version CSVs. For operator to upgrade, CSV of the previous release, that's
-# referred in the replaces field of CSV, must also be included in the zip.
-OLM_PREVIOUS_VERSION = 1.2.0
-OLM_CURRENT_VERSION = 1.3.0
-
 # When this file name is modified, the new name must be added in .travis.yml
 # file as well for publishing the file at release.
 METADATA_FILE = storageos-olm-metadata.zip
@@ -87,8 +80,7 @@ metadata-zip:
 		deploy/olm/storageos/storageoscluster.crd.yaml \
 		deploy/olm/storageos/storageosjob.crd.yaml \
 		deploy/olm/storageos/storageosupgrade.crd.yaml \
-		deploy/olm/csv-rhel/storageos.v$(OLM_PREVIOUS_VERSION).clusterserviceversion.yaml \
-		deploy/olm/csv-rhel/storageos.v$(OLM_CURRENT_VERSION).clusterserviceversion.yaml
+		deploy/olm/csv-rhel/storageos.v*.clusterserviceversion.yaml
 
 metadata-update:
 	# Update all the metadata files in-place.
