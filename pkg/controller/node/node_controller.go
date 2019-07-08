@@ -127,8 +127,8 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 		}
 
 		// Error syncing labels - requeue the request.
-		log.Error(err, "Failed to sync node labels")
-		return reconcileResult, err
+		log.V(4).Info("Failed to sync node labels", "error", err)
+		return reconcileResult, nil
 	}
 
 	return reconcileResult, nil
