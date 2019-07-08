@@ -156,7 +156,8 @@ func (r *ReconcileStorageOSCluster) Reconcile(request reconcile.Request) (reconc
 	}
 
 	if err := r.reconcile(instance); err != nil {
-		return reconcileResult, err
+		log.V(4).Info("Reconcile failed", "error", err)
+		return reconcileResult, nil
 	}
 
 	return reconcileResult, nil
