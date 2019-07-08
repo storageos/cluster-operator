@@ -7,6 +7,7 @@ import (
 
 	"github.com/blang/semver"
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,9 +27,10 @@ const (
 	statefulsetKind = "statefulset"
 	deploymentKind  = "deployment"
 
-	daemonsetName   = "storageos-daemonset"
-	statefulsetName = "storageos-statefulset"
-	csiHelperName   = "storageos-csi-helper"
+	daemonsetName         = "storageos-daemonset"
+	statefulsetName       = "storageos-statefulset"
+	csiHelperName         = "storageos-csi-helper"
+	schedulerExtenderName = "storageos-scheduler"
 
 	tlsSecretType       = "kubernetes.io/tls"
 	storageosSecretType = "kubernetes.io/storageos"
@@ -71,6 +73,10 @@ const (
 
 	// k8s distribution vendor specific keywords.
 	k8sDistroOpenShift = "openshift"
+
+	// podTolerationSeconds is the time for which a pod tolerates an unfavorable
+	// node condition.
+	podTolerationSeconds = 30
 )
 
 var log = logf.Log.WithName("storageos.cluster")
@@ -160,6 +166,12 @@ func (s *Deployment) Deploy() error {
 		}
 
 		if err := s.createCSIHelper(); err != nil {
+			return err
+		}
+	}
+
+	if !s.stos.Spec.DisableScheduler {
+		if err := s.createSchedulerExtender(); err != nil {
 			return err
 		}
 	}
@@ -304,6 +316,40 @@ func (s *Deployment) deleteObject(obj runtime.Object) error {
 	return nil
 }
 
+// getDeploymentByName returns a StorageOS Deployment resource.
+func (s Deployment) getDeploymentByName(name string) *appsv1.Deployment {
+	return &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "Deployment",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: s.stos.Spec.GetResourceNS(),
+			Labels: map[string]string{
+				"app": "storageos",
+			},
+		},
+	}
+}
+
+// getStatefulSetByName returns a StorageOS StatefulSet resource.
+func (s Deployment) getStatefulSetByName(name string) *appsv1.StatefulSet {
+	return &appsv1.StatefulSet{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "StatefulSet",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: s.stos.Spec.GetResourceNS(),
+			Labels: map[string]string{
+				"app": "storageos",
+			},
+		},
+	}
+}
+
 func addOwnerRefToObject(obj metav1.Object, ownerRef metav1.OwnerReference) {
 	obj.SetOwnerReferences(append(obj.GetOwnerReferences(), ownerRef))
 }
@@ -353,4 +399,26 @@ func GetNodeIPs(nodes []corev1.Node) []string {
 		ips = append(ips, node.Status.Addresses[0].Address)
 	}
 	return ips
+}
+
+// addPodTolerationForRecovery adds pod tolerations for cases when a node isn't
+// functional. Usually k8s toleration seconds is five minutes. This sets the
+// toleration seconds to 30 seconds.
+func addPodTolerationForRecovery(podSpec *corev1.PodSpec) {
+	tolerationSeconds := int64(podTolerationSeconds)
+	recoveryTolerations := []corev1.Toleration{
+		{
+			Effect:            corev1.TaintEffectNoExecute,
+			Key:               nodeNotReadyTolKey,
+			Operator:          corev1.TolerationOpExists,
+			TolerationSeconds: &tolerationSeconds,
+		},
+		{
+			Effect:            corev1.TaintEffectNoExecute,
+			Key:               nodeUnreachableTolKey,
+			Operator:          corev1.TolerationOpExists,
+			TolerationSeconds: &tolerationSeconds,
+		},
+	}
+	podSpec.Tolerations = append(podSpec.Tolerations, recoveryTolerations...)
 }

@@ -80,6 +80,12 @@ func (s *Deployment) Delete() error {
 		}
 	}
 
+	if !s.stos.Spec.DisableScheduler {
+		if err := s.deleteSchedulerExtender(); err != nil {
+			return err
+		}
+	}
+
 	// Delete cluster role for openshift security context constraints.
 	if strings.Contains(s.stos.Spec.K8sDistro, k8sDistroOpenShift) {
 		if err := s.deleteClusterRoleBinding(OpenShiftSCCClusterBindingName); err != nil {

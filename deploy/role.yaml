@@ -17,6 +17,7 @@ rules:
   - statefulsets
   - daemonsets
   - deployments
+  - replicasets
   verbs:
   - "*"
 - apiGroups:
@@ -28,6 +29,7 @@ rules:
   - watch
   - get
   - update
+  - create
 - apiGroups:
   - ""
   resources:
@@ -39,6 +41,7 @@ rules:
   - update
   - patch
   - delete
+  - create
 - apiGroups:
   - ""
   resources:
@@ -49,6 +52,10 @@ rules:
   - services
   - persistentvolumeclaims
   - persistentvolumes
+  - configmaps
+  - replicationcontrollers
+  - pods/binding
+  - endpoints
   verbs:
   - create
   - patch
@@ -94,6 +101,13 @@ rules:
   verbs:
   - create
   - delete
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - list
+  - watch
 # OpenShift specific rule.
 - apiGroups:
   - security.openshift.io

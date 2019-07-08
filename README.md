@@ -143,6 +143,7 @@ Parameter | Description | Default
 `disableTelemetry` | Disable telemetry reports | `false`
 `disableTCMU` | Disable TCMU to allow co-existence with other storage systems but degrades performance | `false`
 `forceTCMU` | Forces TCMU to be enabled or causes StorageOS to abort startup | `false`
+`disableScheduler` | Disable StorageOS scheduler for data locality | `false`
 `nodeSelectorTerms` | Set node selector for storageos pod placement |
 `tolerations` | Set pod tolerations for storageos pod placement |
 `resources` | Set resource requirements for the containers |

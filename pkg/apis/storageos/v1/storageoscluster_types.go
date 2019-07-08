@@ -39,6 +39,8 @@ const (
 	CSIv0ExternalProvisionerContainerImage    = "storageos/csi-provisioner:v0.4.2"
 	CSIv0ExternalAttacherContainerImage       = "quay.io/k8scsi/csi-attacher:v0.4.2"
 
+	DefaultHyperkubeContainerRegistry = "gcr.io/google_containers/hyperkube"
+
 	DefaultPluginRegistrationPath = "/var/lib/kubelet/plugins_registry"
 	OldPluginRegistrationPath     = "/var/lib/kubelet/plugins"
 
@@ -185,6 +187,9 @@ type StorageOSClusterSpec struct {
 	// distribution information will also be included in the product telemetry
 	// (if enabled), to help focus development efforts.
 	K8sDistro string `json:"k8sDistro"`
+
+	// Disable StorageOS scheduler extender.
+	DisableScheduler bool `json:"disableScheduler"`
 }
 
 // StorageOSClusterStatus defines the observed state of StorageOSCluster
@@ -305,6 +310,17 @@ func (s StorageOSClusterSpec) GetCSILivenessProbeImage() string {
 		return s.Images.CSILivenessProbeContainer
 	}
 	return CSIv1LivenessProbeContainerImage
+}
+
+// GetHyperkubeImage returns hyperkube container image for a given k8s version.
+// If an image is set explicitly in the cluster configuration, that image is
+// returned.
+func (s StorageOSClusterSpec) GetHyperkubeImage(k8sVersion string) string {
+	if s.Images.HyperkubeContainer != "" {
+		return s.Images.HyperkubeContainer
+	}
+	// Add version prefix "v" in the tag.
+	return fmt.Sprintf("%s:v%s", DefaultHyperkubeContainerRegistry, k8sVersion)
 }
 
 // GetServiceName returns the service name.
@@ -460,6 +476,7 @@ type ContainerImages struct {
 	CSIExternalProvisionerContainer    string `json:"csiExternalProvisionerContainer"`
 	CSIExternalAttacherContainer       string `json:"csiExternalAttacherContainer"`
 	CSILivenessProbeContainer          string `json:"csiLivenessProbeContainer"`
+	HyperkubeContainer                 string `json:"hyperkubeContainer"`
 }
 
 // StorageOSClusterCSI contains CSI configurations.

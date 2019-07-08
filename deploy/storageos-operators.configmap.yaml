@@ -58,6 +58,8 @@ data:
                     type: boolean
                   forceTCMU:
                     type: boolean
+                  disableScheduler:
+                    type: boolean
                   images:
                     properties:
                       nodeContainer:
@@ -419,6 +421,7 @@ data:
                 - statefulsets
                 - daemonsets
                 - deployments
+                - replicasets
                 verbs:
                 - "*"
               - apiGroups:
@@ -430,6 +433,7 @@ data:
                 - watch
                 - get
                 - update
+                - create
               - apiGroups:
                 - ""
                 resources:
@@ -441,6 +445,7 @@ data:
                 - update
                 - patch
                 - delete
+                - create
               - apiGroups:
                 - ""
                 resources:
@@ -451,6 +456,10 @@ data:
                 - services
                 - persistentvolumeclaims
                 - persistentvolumes
+                - configmaps
+                - replicationcontrollers
+                - pods/binding
+                - endpoints
                 verbs:
                 - create
                 - patch
@@ -496,6 +505,13 @@ data:
                 verbs:
                 - create
                 - delete
+              - apiGroups:
+                - policy
+                resources:
+                - poddisruptionbudgets
+                verbs:
+                - list
+                - watch
               - apiGroups:
                 - security.openshift.io
                 resources:
@@ -637,6 +653,11 @@ data:
                 drawbacks, this may not always be desired.
               displayName: Force TCMU
               path: forceTCMU
+            - description: Disable StorageOS scheduler deployment. StorageOS scheduler
+                helps improve the scheduling decision of a pod, considering the location
+                of volumes and their replicas.
+              displayName: Disable Scheduler
+              path: disableScheduler
             - description: When enabled, the Operator will not perform any actions on
                 the cluster.
               displayName: Pause Operator

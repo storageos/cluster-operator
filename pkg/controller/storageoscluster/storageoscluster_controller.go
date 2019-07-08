@@ -40,7 +40,7 @@ func Add(mgr manager.Manager) error {
 
 	log.WithValues("k8s", version).Info("Adding cluster controller")
 
-	return add(mgr, newReconciler(mgr, strings.TrimLeft(version, "v")))
+	return add(mgr, newReconciler(mgr, version))
 }
 
 // newReconciler returns a new reconcile.Reconciler
@@ -190,6 +190,10 @@ func (r *ReconcileStorageOSCluster) reconcile(m *storageosv1.StorageOSCluster) e
 	m.Spec.ResourceNS = m.Spec.GetResourceNS()
 	m.Spec.Images.NodeContainer = m.Spec.GetNodeContainerImage()
 	m.Spec.Images.InitContainer = m.Spec.GetInitContainerImage()
+
+	if !m.Spec.DisableScheduler {
+		m.Spec.Images.HyperkubeContainer = m.Spec.GetHyperkubeImage(r.k8sVersion)
+	}
 
 	if m.Spec.CSI.Enable {
 		m.Spec.Images.CSINodeDriverRegistrarContainer = m.Spec.GetCSINodeDriverRegistrarImage(storageos.CSIV1Supported(r.k8sVersion))

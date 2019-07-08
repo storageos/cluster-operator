@@ -1691,3 +1691,91 @@ func TestDeployPodPriorityClass(t *testing.T) {
 	}
 
 }
+
+func TestDeploySchedulerExtender(t *testing.T) {
+	stosCluster := &api.StorageOSCluster{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: gvk.GroupVersion().String(),
+			Kind:       gvk.Kind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "teststos",
+			Namespace: "default",
+		},
+		Spec: api.StorageOSClusterSpec{
+			CSI: api.StorageOSClusterCSI{
+				Enable: true,
+			},
+		},
+	}
+
+	c := fake.NewFakeClientWithScheme(testScheme)
+	if err := c.Create(context.Background(), stosCluster); err != nil {
+		t.Fatalf("failed to create storageoscluster object: %v", err)
+	}
+
+	deploy := NewDeployment(c, stosCluster, nil, testScheme, "1.15.0", false)
+	err := deploy.Deploy()
+	if err != nil {
+		t.Error("deployment failed:", err)
+	}
+
+	// Get scheduler policy configmap and check the data.
+	policycm := &corev1.ConfigMap{}
+	policyNSName := types.NamespacedName{
+		Name:      policyConfigMapName,
+		Namespace: defaultNS,
+	}
+
+	if err := c.Get(context.Background(), policyNSName, policycm); err != nil {
+		t.Fatal("failed to get the created scheduler policy configmap", err)
+	}
+
+	// Check if the expected key and value exists.
+	if val, exists := policycm.Data[policyConfigKey]; exists {
+		if len(val) == 0 {
+			t.Errorf("%q is empty, expected not to be empty", policyConfigKey)
+		}
+	} else {
+		t.Errorf("expected %q to be in scheduler policy configmap data", policyConfigKey)
+	}
+
+	// Get scheduler configuration configmap and check the data.
+	schedConfigcm := &corev1.ConfigMap{}
+	schedConfigNSName := types.NamespacedName{
+		Name:      schedulerConfigConfigMapName,
+		Namespace: defaultNS,
+	}
+
+	if err := c.Get(context.Background(), schedConfigNSName, schedConfigcm); err != nil {
+		t.Fatal("failed to get the created scheduler configuration configmap", err)
+	}
+
+	// Check if the expected key and value exists.
+	if val, exists := schedConfigcm.Data[schedulerConfigKey]; exists {
+		if len(val) == 0 {
+			t.Errorf("%q is empty, expected not to be empty", schedulerConfigKey)
+		}
+	} else {
+		t.Errorf("expected %q to be in scheduler configuration configmap data", schedulerConfigKey)
+	}
+
+	// Check the attributes of the scheduler deployment.
+	schedDeployment := &appsv1.Deployment{}
+	schedDeploymentNSName := types.NamespacedName{
+		Name:      schedulerExtenderName,
+		Namespace: defaultNS,
+	}
+
+	if err := c.Get(context.Background(), schedDeploymentNSName, schedDeployment); err != nil {
+		t.Fatal("failed to get the created scheduler deployment", err)
+	}
+
+	if *schedDeployment.Spec.Replicas != schedulerReplicas {
+		t.Fatalf("unexpected number of replicas:\n\t(WNT) %d\n\t(GOT) %d", *schedDeployment.Spec.Replicas, schedulerReplicas)
+	}
+
+	if schedDeployment.Spec.Template.Spec.ServiceAccountName != SchedulerSA {
+		t.Fatalf("unexpected service account name:\n\t(WNT) %q\n\t(GOT) %q", schedDeployment.Spec.Template.Spec.ServiceAccountName, SchedulerSA)
+	}
+}

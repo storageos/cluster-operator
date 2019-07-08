@@ -3,8 +3,10 @@ package k8sutil
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/blang/semver"
 	"github.com/go-logr/logr"
 	"github.com/storageos/cluster-operator/pkg/util/task"
 	appsv1 "k8s.io/api/apps/v1"
@@ -45,13 +47,27 @@ func NewK8SOps(client kubernetes.Interface, logger logr.Logger) *K8SOps {
 	}
 }
 
-// GetK8SVersion queries and returns kubernetes server version.
+// GetK8SVersion queries and returns kubernetes server version in tri-dot
+// format.
 func (k K8SOps) GetK8SVersion() (string, error) {
 	info, err := k.client.Discovery().ServerVersion()
 	if err != nil {
 		return "", err
 	}
-	return info.String(), nil
+	return k.getBaseK8SVersion(info.String())
+}
+
+// getBaseK8SVersion returns the base version of kubernetes on top of which
+// vendor specific versions are made.
+func (k K8SOps) getBaseK8SVersion(version string) (string, error) {
+	// NOTE: semver.ParseTolerant has a bug due to which parsing with patch
+	// value 0 fails (https://github.com/blang/semver/issues/55).
+	// Trim prefix "v" and use semver.Parse as a workaround.
+	ver, err := semver.Parse(strings.TrimLeft(version, "v"))
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%d.%d.%d", ver.Major, ver.Minor, ver.Patch), nil
 }
 
 // EventRecorder creates and returns an EventRecorder which could be used to
