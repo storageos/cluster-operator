@@ -28,8 +28,8 @@ const (
 
 	DefaultIngressHostname = "storageos.local"
 
-	DefaultNodeContainerImage                 = "storageos/node:1.2.1"
-	DefaultInitContainerImage                 = "storageos/init:0.1"
+	DefaultNodeContainerImage                 = "storageos/node:1.3.0"
+	DefaultInitContainerImage                 = "storageos/init:0.2"
 	CSIv1ClusterDriverRegistrarContainerImage = "quay.io/k8scsi/csi-cluster-driver-registrar:v1.0.1"
 	CSIv1NodeDriverRegistrarContainerImage    = "quay.io/k8scsi/csi-node-driver-registrar:v1.0.1"
 	CSIv1ExternalProvisionerContainerImage    = "storageos/csi-provisioner:v1.0.1"
