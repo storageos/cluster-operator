@@ -155,12 +155,4 @@ echo "Creating versioned CSV files..."
 cp deploy/olm/storageos/storageos.clusterserviceversion.yaml deploy/olm/storageos/storageos.v$NEW_VERSION.clusterserviceversion.yaml
 cp deploy/olm/csv-rhel/storageos.clusterserviceversion.yaml deploy/olm/csv-rhel/storageos.v$NEW_VERSION.clusterserviceversion.yaml
 
-# Update OLM versions in the makefile. This is required for proper OLM metadata
-# zip generation.
-# Swap the previous version with current version and use the new version as
-# current version.
-REPLACE=$(awk '/CURRENT_VERSION =/{print $3}' Makefile)
-sed -i -e "s/OLM_PREVIOUS_VERSION\ =.*/OLM_PREVIOUS_VERSION\ = $REPLACE/g" Makefile
-sed -i -e "s/OLM_CURRENT_VERSION\ =.*/OLM_CURRENT_VERSION\ = $NEW_VERSION/g" Makefile
-
 echo "Ready for new release."
