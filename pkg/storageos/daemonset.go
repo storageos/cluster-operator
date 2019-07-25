@@ -40,6 +40,7 @@ const (
 	kvBackendEnvVar                     = "KV_BACKEND"
 	debugEnvVar                         = "LOG_LEVEL"
 	k8sDistroEnvVar                     = "K8S_DISTRO"
+	nodeImageEnvVar                     = "NODE_IMAGE"
 
 	sysAdminCap = "SYS_ADMIN"
 	debugVal    = "xdebug"
@@ -78,8 +79,14 @@ func (s *Deployment) createDaemonSet() error {
 					DNSPolicy:          corev1.DNSClusterFirstWithHostNet,
 					InitContainers: []corev1.Container{
 						{
-							Name:  "enable-lio",
+							Name:  "storageos-init",
 							Image: s.stos.Spec.GetInitContainerImage(),
+							Env: []corev1.EnvVar{
+								{
+									Name:  nodeImageEnvVar,
+									Value: s.stos.Spec.GetNodeContainerImage(),
+								},
+							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "kernel-modules",
@@ -89,6 +96,11 @@ func (s *Deployment) createDaemonSet() error {
 								{
 									Name:             "sys",
 									MountPath:        "/sys",
+									MountPropagation: &mountPropagationBidirectional,
+								},
+								{
+									Name:             "state",
+									MountPath:        "/var/lib/storageos",
 									MountPropagation: &mountPropagationBidirectional,
 								},
 							},
