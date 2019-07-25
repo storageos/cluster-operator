@@ -30,6 +30,7 @@ rules:
   - get
   - update
   - create
+  - patch
 - apiGroups:
   - ""
   resources:

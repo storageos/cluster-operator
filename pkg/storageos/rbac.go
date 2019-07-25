@@ -299,7 +299,7 @@ func (s *Deployment) createClusterRoleForScheduler() error {
 				"endpoints",
 				"events",
 			},
-			Verbs: []string{"get", "list", "watch", "create", "update"},
+			Verbs: []string{"get", "list", "watch", "create", "update", "patch"},
 		},
 		{
 			APIGroups: []string{"apps"},
