@@ -26,10 +26,13 @@ build/cluster-operator:
 		-o ./build/_output/bin/cluster-operator \
 		./cmd/manager
 
-# Generate APIs and CRD specs.
+# Generate APIs, CRD specs and CRD clientset.
 generate:
 	./build/operator-sdk generate k8s
 	./build/operator-sdk generate openapi
+	./vendor/k8s.io/code-generator/generate-groups.sh "deepcopy,client" \
+		github.com/storageos/cluster-operator/pkg/client \
+		github.com/storageos/cluster-operator/pkg/apis storageos:v1
 
 image/cluster-operator: operator-sdk
 	docker build \
