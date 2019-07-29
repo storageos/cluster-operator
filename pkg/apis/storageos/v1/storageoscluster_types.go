@@ -74,17 +74,17 @@ type StorageOSClusterSpec struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 
 	// Join is the join token used for service discovery.
-	Join string `json:"join"`
+	Join string `json:"join,omitempty"`
 
 	// CSI defines the configurations for CSI.
-	CSI StorageOSClusterCSI `json:"csi"`
+	CSI StorageOSClusterCSI `json:"csi,omitempty"`
 
 	// ResourceNS is the kubernetes Namespace where storageos resources are
 	// provisioned.
-	ResourceNS string `json:"namespace"`
+	ResourceNS string `json:"namespace,omitempty"`
 
 	// Service is the Service configuration for the cluster nodes.
-	Service StorageOSClusterService `json:"service"`
+	Service StorageOSClusterService `json:"service,omitempty"`
 
 	// SecretRefName is the name of the secret object that contains all the
 	// sensitive cluster configurations.
@@ -97,33 +97,33 @@ type StorageOSClusterSpec struct {
 	// in a container.
 	// Typically: "/var/lib/kubelet/plugins/kubernetes.io~storageos".
 	// If not set, defaults will be used.
-	SharedDir string `json:"sharedDir"`
+	SharedDir string `json:"sharedDir,omitempty"`
 
 	// Ingress defines the ingress configurations used in the cluster.
-	Ingress StorageOSClusterIngress `json:"ingress"`
+	Ingress StorageOSClusterIngress `json:"ingress,omitempty"`
 
 	// Images defines the various container images used in the cluster.
-	Images ContainerImages `json:"images"`
+	Images ContainerImages `json:"images,omitempty"`
 
 	// KVBackend defines the key-value store backend used in the cluster.
-	KVBackend StorageOSClusterKVBackend `json:"kvBackend"`
+	KVBackend StorageOSClusterKVBackend `json:"kvBackend,omitempty"`
 
 	// Pause is to pause the operator for the cluster.
-	Pause bool `json:"pause"`
+	Pause bool `json:"pause,omitempty"`
 
 	// Debug is to set debug mode of the cluster.
-	Debug bool `json:"debug"`
+	Debug bool `json:"debug,omitempty"`
 
 	// NodeSelectorTerms is to set the placement of storageos pods using
 	// node affinity requiredDuringSchedulingIgnoredDuringExecution.
-	NodeSelectorTerms []corev1.NodeSelectorTerm `json:"nodeSelectorTerms"`
+	NodeSelectorTerms []corev1.NodeSelectorTerm `json:"nodeSelectorTerms,omitempty"`
 
 	// Tolerations is to set the placement of storageos pods using
 	// pod toleration.
-	Tolerations []corev1.Toleration `json:"tolerations"`
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 
 	// Resources is to set the resource requirements of the storageos containers.
-	Resources corev1.ResourceRequirements `json:"resources"`
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 
 	// Disable Pod Fencing.  With StatefulSets, Pods are only re-scheduled if
 	// the Pod has been marked as killed.  In practice this means that failover
@@ -147,10 +147,10 @@ type StorageOSClusterSpec struct {
 	// with Kubernetes when it detects that a node has gone offline.
 	// Additionally, the Kubernetes permissions required for Fencing will not be
 	// added to the StorageOS role.
-	DisableFencing bool `json:"disableFencing"`
+	DisableFencing bool `json:"disableFencing,omitempty"`
 
 	// Disable Telemetry.
-	DisableTelemetry bool `json:"disableTelemetry"`
+	DisableTelemetry bool `json:"disableTelemetry,omitempty"`
 
 	// Disable TCMU can be set to true to disable the TCMU storage driver.  This
 	// is required when there are multiple storage systems running on the same
@@ -158,7 +158,7 @@ type StorageOSClusterSpec struct {
 	// can run on a node at a time.
 	//
 	// Disabling TCMU will degrade performance.
-	DisableTCMU bool `json:"disableTCMU"`
+	DisableTCMU bool `json:"disableTCMU,omitempty"`
 
 	// Force TCMU can be set to true to ensure that TCMU is enabled or
 	// cause StorageOS to abort startup.
@@ -166,15 +166,15 @@ type StorageOSClusterSpec struct {
 	// At startup, StorageOS will automatically fallback to non-TCMU mode if
 	// another TCMU-based storage system is running on the node.  Since non-TCMU
 	// will degrade performance, this may not always be desired.
-	ForceTCMU bool `json:"forceTCMU"`
+	ForceTCMU bool `json:"forceTCMU,omitempty"`
 
 	// TLSEtcdSecretRefName is the name of the secret object that contains the
 	// etcd TLS certs. This secret is shared with etcd, therefore it's not part
 	// of the main storageos secret.
-	TLSEtcdSecretRefName string `json:"tlsEtcdSecretRefName"`
+	TLSEtcdSecretRefName string `json:"tlsEtcdSecretRefName,omitempty"`
 
 	// TLSEtcdSecretRefNamespace is the namespace of the etcd TLS secret object.
-	TLSEtcdSecretRefNamespace string `json:"tlsEtcdSecretRefNamespace"`
+	TLSEtcdSecretRefNamespace string `json:"tlsEtcdSecretRefNamespace,omitempty"`
 
 	// K8sDistro is the name of the Kubernetes distribution where the operator
 	// is being deployed.  It should be in the format: `name[-1.0]`, where the
@@ -186,10 +186,10 @@ type StorageOSClusterSpec struct {
 	// configuration by setting appropriate defaults for the distribution.  The
 	// distribution information will also be included in the product telemetry
 	// (if enabled), to help focus development efforts.
-	K8sDistro string `json:"k8sDistro"`
+	K8sDistro string `json:"k8sDistro,omitempty"`
 
 	// Disable StorageOS scheduler extender.
-	DisableScheduler bool `json:"disableScheduler"`
+	DisableScheduler bool `json:"disableScheduler,omitempty"`
 }
 
 // StorageOSClusterStatus defines the observed state of StorageOSCluster
@@ -197,17 +197,22 @@ type StorageOSClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 
-	Phase            ClusterPhase          `json:"phase"`
+	Phase            ClusterPhase          `json:"phase,omitempty"`
 	NodeHealthStatus map[string]NodeHealth `json:"nodeHealthStatus,omitempty"`
-	Nodes            []string              `json:"nodes"`
-	Ready            string                `json:"ready"`
-	Members          MembersStatus         `json:"members"`
+	Nodes            []string              `json:"nodes,omitempty"`
+	Ready            string                `json:"ready,omitempty"`
+	Members          MembersStatus         `json:"members,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // StorageOSCluster is the Schema for the storageosclusters API
 // +k8s:openapi-gen=true
+// +kubebuilder:printcolumn:name="ready",type="string",JSONPath=".status.ready",description="Ready status of the storageos nodes."
+// +kubebuilder:printcolumn:name="status",type="string",JSONPath=".status.phase",description="Status of the whole cluster."
+// +kubebuilder:printcolumn:name="age",type="date",JSONPath=".metadata.creationTimestamp"
+// +kubebuilder:resource:path=storageosclusters,shortName=stos
+// +kubebuilder:singular=storageoscluster
 type StorageOSCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -469,65 +474,65 @@ func (s StorageOSClusterSpec) GetCSIDeploymentStrategy() string {
 
 // ContainerImages contains image names of all the containers used by the operator.
 type ContainerImages struct {
-	NodeContainer                      string `json:"nodeContainer"`
-	InitContainer                      string `json:"initContainer"`
-	CSINodeDriverRegistrarContainer    string `json:"csiNodeDriverRegistrarContainer"`
-	CSIClusterDriverRegistrarContainer string `json:"csiClusterDriverRegistrarContainer"`
-	CSIExternalProvisionerContainer    string `json:"csiExternalProvisionerContainer"`
-	CSIExternalAttacherContainer       string `json:"csiExternalAttacherContainer"`
-	CSILivenessProbeContainer          string `json:"csiLivenessProbeContainer"`
-	HyperkubeContainer                 string `json:"hyperkubeContainer"`
+	NodeContainer                      string `json:"nodeContainer,omitempty"`
+	InitContainer                      string `json:"initContainer,omitempty"`
+	CSINodeDriverRegistrarContainer    string `json:"csiNodeDriverRegistrarContainer,omitempty"`
+	CSIClusterDriverRegistrarContainer string `json:"csiClusterDriverRegistrarContainer,omitempty"`
+	CSIExternalProvisionerContainer    string `json:"csiExternalProvisionerContainer,omitempty"`
+	CSIExternalAttacherContainer       string `json:"csiExternalAttacherContainer,omitempty"`
+	CSILivenessProbeContainer          string `json:"csiLivenessProbeContainer,omitempty"`
+	HyperkubeContainer                 string `json:"hyperkubeContainer,omitempty"`
 }
 
 // StorageOSClusterCSI contains CSI configurations.
 type StorageOSClusterCSI struct {
-	Enable                       bool   `json:"enable"`
-	Version                      string `json:"version"`
-	Endpoint                     string `json:"endpoint"`
-	EnableProvisionCreds         bool   `json:"enableProvisionCreds"`
-	EnableControllerPublishCreds bool   `json:"enableControllerPublishCreds"`
-	EnableNodePublishCreds       bool   `json:"enableNodePublishCreds"`
-	RegistrarSocketDir           string `json:"registrarSocketDir"`
-	KubeletDir                   string `json:"kubeletDir"`
-	PluginDir                    string `json:"pluginDir"`
-	DeviceDir                    string `json:"deviceDir"`
-	RegistrationDir              string `json:"registrationDir"`
-	KubeletRegistrationPath      string `json:"kubeletRegistrationPath"`
-	DriverRegistrationMode       string `json:"driverRegisterationMode"`
-	DriverRequiresAttachment     string `json:"driverRequiresAttachment"`
-	DeploymentStrategy           string `json:"deploymentStrategy"`
+	Enable                       bool   `json:"enable,omitempty"`
+	Version                      string `json:"version,omitempty"`
+	Endpoint                     string `json:"endpoint,omitempty"`
+	EnableProvisionCreds         bool   `json:"enableProvisionCreds,omitempty"`
+	EnableControllerPublishCreds bool   `json:"enableControllerPublishCreds,omitempty"`
+	EnableNodePublishCreds       bool   `json:"enableNodePublishCreds,omitempty"`
+	RegistrarSocketDir           string `json:"registrarSocketDir,omitempty"`
+	KubeletDir                   string `json:"kubeletDir,omitempty"`
+	PluginDir                    string `json:"pluginDir,omitempty"`
+	DeviceDir                    string `json:"deviceDir,omitempty"`
+	RegistrationDir              string `json:"registrationDir,omitempty"`
+	KubeletRegistrationPath      string `json:"kubeletRegistrationPath,omitempty"`
+	DriverRegistrationMode       string `json:"driverRegisterationMode,omitempty"`
+	DriverRequiresAttachment     string `json:"driverRequiresAttachment,omitempty"`
+	DeploymentStrategy           string `json:"deploymentStrategy,omitempty"`
 }
 
 // StorageOSClusterService contains Service configurations.
 type StorageOSClusterService struct {
 	Name         string            `json:"name"`
 	Type         string            `json:"type"`
-	ExternalPort int               `json:"externalPort"`
-	InternalPort int               `json:"internalPort"`
-	Annotations  map[string]string `json:"annotations"`
+	ExternalPort int               `json:"externalPort,omitempty"`
+	InternalPort int               `json:"internalPort,omitempty"`
+	Annotations  map[string]string `json:"annotations,omitempty"`
 }
 
 // StorageOSClusterIngress contains Ingress configurations.
 type StorageOSClusterIngress struct {
-	Enable      bool              `json:"enable"`
-	Hostname    string            `json:"hostname"`
-	TLS         bool              `json:"tls"`
-	Annotations map[string]string `json:"annotations"`
+	Enable      bool              `json:"enable,omitempty"`
+	Hostname    string            `json:"hostname,omitempty"`
+	TLS         bool              `json:"tls,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // NodeHealth contains health status of a node.
 type NodeHealth struct {
-	DirectfsInitiator string `json:"directfsInitiator"`
-	Director          string `json:"director"`
-	KV                string `json:"kv"`
-	KVWrite           string `json:"kvWrite"`
-	Nats              string `json:"nats"`
-	Presentation      string `json:"presentation"`
-	Rdb               string `json:"rdb"`
+	DirectfsInitiator string `json:"directfsInitiator,omitempty"`
+	Director          string `json:"director,omitempty"`
+	KV                string `json:"kv,omitempty"`
+	KVWrite           string `json:"kvWrite,omitempty"`
+	Nats              string `json:"nats,omitempty"`
+	Presentation      string `json:"presentation,omitempty"`
+	Rdb               string `json:"rdb,omitempty"`
 }
 
 // StorageOSClusterKVBackend stores key-value store backend configurations.
 type StorageOSClusterKVBackend struct {
-	Address string `json:"address"`
-	Backend string `json:"backend"`
+	Address string `json:"address,omitempty"`
+	Backend string `json:"backend,omitempty"`
 }
