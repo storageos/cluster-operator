@@ -12,6 +12,7 @@ type StorageOSUpgradeSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 
+	// NewImage is the new StorageOS node container image.
 	NewImage string `json:"newImage"`
 }
 
@@ -19,13 +20,16 @@ type StorageOSUpgradeSpec struct {
 type StorageOSUpgradeStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	Completed bool `json:"completed"`
+
+	// Completed is the status of upgrade process.
+	Completed bool `json:"completed,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // StorageOSUpgrade is the Schema for the storageosupgrades API
 // +k8s:openapi-gen=true
+// +kubebuilder:singular=storageosupgrade
 type StorageOSUpgrade struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

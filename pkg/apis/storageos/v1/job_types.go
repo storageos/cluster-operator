@@ -30,15 +30,15 @@ type JobSpec struct {
 	CompletionWord string `json:"completionWord"`
 
 	// LabelSelector is the label selector for the job Pods.
-	LabelSelector string `json:"labelSelector"`
+	LabelSelector string `json:"labelSelector,omitempty"`
 
 	// NodeSelectorTerms is the set of placement of the job pods using node
 	// affinity requiredDuringSchedulingIgnoredDuringExecution.
-	NodeSelectorTerms []corev1.NodeSelectorTerm `json:"nodeSelectorTerms"`
+	NodeSelectorTerms []corev1.NodeSelectorTerm `json:"nodeSelectorTerms,omitempty"`
 
 	// Tolerations is to set the placement of storageos pods using
 	// pod toleration.
-	Tolerations []corev1.Toleration `json:"tolerations"`
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 }
 
 // GetLabelSelector returns Job's pod label selector.
@@ -55,13 +55,14 @@ type JobStatus struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 
 	// Completed indicates the complete status of job.
-	Completed bool `json:"completed"`
+	Completed bool `json:"completed,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Job is the Schema for the jobs API
 // +k8s:openapi-gen=true
+// +kubebuilder:singular=job
 type Job struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

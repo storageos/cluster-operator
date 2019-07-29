@@ -50,15 +50,10 @@ jobs:
       go: "1.11"
       sudo: required
       env:
-        - "TEST_CLUSTER=minikube"
-        - "INSTALL_METHOD=none"
-      name: Minikube (k8s-1.10)
-      script: ./test/e2e.sh $TEST_CLUSTER $INSTALL_METHOD
-    - <<: *base-test
-      env:
         - "TEST_CLUSTER=openshift"
         - "INSTALL_METHOD=none"
       name: OpenShift-3.11 (k8s-1.11)
+      script: ./test/e2e.sh $TEST_CLUSTER $INSTALL_METHOD
     - <<: *base-test
       env:
         - "TEST_CLUSTER=kind"

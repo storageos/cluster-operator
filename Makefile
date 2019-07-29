@@ -26,8 +26,10 @@ build/cluster-operator:
 		-o ./build/_output/bin/cluster-operator \
 		./cmd/manager
 
+# Generate APIs and CRD specs.
 generate:
 	./build/operator-sdk generate k8s
+	./build/operator-sdk generate openapi
 
 image/cluster-operator: operator-sdk
 	docker build \
@@ -87,7 +89,7 @@ metadata-update:
 	bash scripts/metadata-checker/update-metadata-files.sh
 
 # Lint the OLM metadata bundle.
-olm-lint:
+olm-lint: generate
 	# Generate metadata files and verify all the metadata files are up-to-date.
 	bash scripts/metadata-checker/metadata-diff-checker.sh
 	# Verify the OLM metada using operator-courier.
