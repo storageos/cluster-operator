@@ -25,6 +25,7 @@ type StorageOSUpgradeStatus struct {
 	Completed bool `json:"completed,omitempty"`
 }
 
+// +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // StorageOSUpgrade is the Schema for the storageosupgrades API
