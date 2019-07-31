@@ -28,6 +28,7 @@ import (
 type StorageosV1Interface interface {
 	RESTClient() rest.Interface
 	JobsGetter
+	NFSServersGetter
 	StorageOSClustersGetter
 	StorageOSUpgradesGetter
 }
@@ -39,6 +40,10 @@ type StorageosV1Client struct {
 
 func (c *StorageosV1Client) Jobs(namespace string) JobInterface {
 	return newJobs(c, namespace)
+}
+
+func (c *StorageosV1Client) NFSServers(namespace string) NFSServerInterface {
+	return newNFSServers(c, namespace)
 }
 
 func (c *StorageosV1Client) StorageOSClusters(namespace string) StorageOSClusterInterface {
