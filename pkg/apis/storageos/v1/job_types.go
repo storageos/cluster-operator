@@ -9,6 +9,7 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // JobSpec defines the desired state of Job
+// +k8s:openapi-gen=true
 type JobSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
@@ -50,6 +51,7 @@ func (s JobSpec) GetLabelSelector() string {
 }
 
 // JobStatus defines the observed state of Job
+// +k8s:openapi-gen=true
 type JobStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file

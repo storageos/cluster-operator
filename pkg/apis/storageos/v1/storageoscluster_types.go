@@ -69,6 +69,7 @@ func getDefaultCSIKubeletRegistrationPath(pluginRegistrationPath string) string 
 }
 
 // StorageOSClusterSpec defines the desired state of StorageOSCluster
+// +k8s:openapi-gen=true
 type StorageOSClusterSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
@@ -79,9 +80,9 @@ type StorageOSClusterSpec struct {
 	// CSI defines the configurations for CSI.
 	CSI StorageOSClusterCSI `json:"csi,omitempty"`
 
-	// ResourceNS is the kubernetes Namespace where storageos resources are
+	// Namespace is the kubernetes Namespace where storageos resources are
 	// provisioned.
-	ResourceNS string `json:"namespace,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
 
 	// Service is the Service configuration for the cluster nodes.
 	Service StorageOSClusterService `json:"service,omitempty"`
@@ -193,6 +194,7 @@ type StorageOSClusterSpec struct {
 }
 
 // StorageOSClusterStatus defines the observed state of StorageOSCluster
+// +k8s:openapi-gen=true
 type StorageOSClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
@@ -246,8 +248,8 @@ type MembersStatus struct {
 
 // GetResourceNS returns the namespace where all the resources should be provisioned.
 func (s StorageOSClusterSpec) GetResourceNS() string {
-	if s.ResourceNS != "" {
-		return s.ResourceNS
+	if s.Namespace != "" {
+		return s.Namespace
 	}
 	return DefaultNamespace
 }

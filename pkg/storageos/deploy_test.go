@@ -1616,7 +1616,7 @@ func TestDeployPodPriorityClass(t *testing.T) {
 						Enable:             true,
 						DeploymentStrategy: tc.csiDeploymentStrategy,
 					},
-					ResourceNS: tc.resourceNS,
+					Namespace: tc.resourceNS,
 				},
 			}
 

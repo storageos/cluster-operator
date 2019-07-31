@@ -27,7 +27,7 @@ func TestClusterInTreePlugin(t *testing.T) {
 	clusterSpec := storageos.StorageOSClusterSpec{
 		SecretRefName:      "storageos-api",
 		SecretRefNamespace: "default",
-		ResourceNS:         resourceNS,
+		Namespace:          resourceNS,
 		Tolerations: []corev1.Toleration{
 			{
 				Key:      "key",

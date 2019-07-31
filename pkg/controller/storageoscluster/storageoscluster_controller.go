@@ -188,7 +188,7 @@ func (r *ReconcileStorageOSCluster) reconcile(m *storageosv1.StorageOSCluster) e
 
 	// Update the spec values. This ensures that the default values are applied
 	// when fields are not set in the spec.
-	m.Spec.ResourceNS = m.Spec.GetResourceNS()
+	m.Spec.Namespace = m.Spec.GetResourceNS()
 	m.Spec.Images.NodeContainer = m.Spec.GetNodeContainerImage()
 	m.Spec.Images.InitContainer = m.Spec.GetInitContainerImage()
 
