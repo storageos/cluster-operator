@@ -186,8 +186,8 @@ data:
                         type: string
                     type: object
                   namespace:
-                    description: ResourceNS is the kubernetes Namespace where storageos
-                      resources are provisioned.
+                    description: Namespace is the kubernetes Namespace where storageos resources
+                      are provisioned.
                     type: string
                   nodeSelectorTerms:
                     description: NodeSelectorTerms is to set the placement of storageos

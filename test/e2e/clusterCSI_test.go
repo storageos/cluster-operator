@@ -29,7 +29,7 @@ func TestClusterCSI(t *testing.T) {
 	clusterSpec := storageos.StorageOSClusterSpec{
 		SecretRefName:      "storageos-api",
 		SecretRefNamespace: "default",
-		ResourceNS:         resourceNS,
+		Namespace:          resourceNS,
 		CSI: storageos.StorageOSClusterCSI{
 			Enable: true,
 		},
