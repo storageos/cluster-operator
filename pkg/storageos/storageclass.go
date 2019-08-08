@@ -13,7 +13,7 @@ func (s *Deployment) createStorageClass() error {
 		provisioner = csiProvisionerName
 	}
 
-	sc := s.getStorageClass("fast")
+	sc := s.getStorageClass(s.stos.Spec.GetStorageClassName())
 	sc.Provisioner = provisioner
 	sc.Parameters = map[string]string{
 		"pool": "default",

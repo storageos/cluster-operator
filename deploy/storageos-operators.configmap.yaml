@@ -235,6 +235,10 @@ data:
                       kubelet is running in a container. Typically: "/var/lib/kubelet/plugins/kubernetes.io~storageos".
                       If not set, defaults will be used.'
                     type: string
+                  storageClassName:
+                    description: StorageClassName is the name of default StorageClass created
+                      for StorageOS volumes.
+                    type: string
                   tlsEtcdSecretRefName:
                     description: TLSEtcdSecretRefName is the name of the secret object that
                       contains the etcd TLS certs. This secret is shared with etcd, therefore

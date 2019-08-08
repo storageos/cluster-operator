@@ -402,6 +402,13 @@ func schema_pkg_apis_storageos_v1_StorageOSClusterSpec(ref common.ReferenceCallb
 							Format:      "",
 						},
 					},
+					"storageClassName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "StorageClassName is the name of default StorageClass created for StorageOS volumes.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"service": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Service is the Service configuration for the cluster nodes.",
