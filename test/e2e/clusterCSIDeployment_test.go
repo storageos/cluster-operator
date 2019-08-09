@@ -86,5 +86,9 @@ func TestClusterCSIDeployment(t *testing.T) {
 		}
 	}
 
+	// Test NFSServer deployment.
+	testutil.NFSServerTest(t, ctx)
+
+	// Test node label sync.
 	testutil.NodeLabelSyncTest(t, f.KubeClient)
 }

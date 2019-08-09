@@ -16,6 +16,10 @@ spec:
     description: Remote target address of the NFS server.
     name: target
     type: string
+  - JSONPath: .status.accessModes
+    description: Access modes supported by the NFS server.
+    name: access modes
+    type: string
   - JSONPath: .spec.storageClassName
     description: StorageClass used for creating the NFS volume.
     name: storageclass
@@ -131,6 +135,9 @@ spec:
           type: object
         status:
           properties:
+            accessModes:
+              description: AccessModes is the access modes supported by the NFS server.
+              type: string
             phase:
               description: 'Phase is a simple, high-level summary of where the NFS
                 Server is in its lifecycle. Phase will be set to Ready when the NFS

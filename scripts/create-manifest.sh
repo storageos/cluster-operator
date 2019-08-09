@@ -13,6 +13,7 @@ declare -a manifestfiles=(
     "deploy/crds/storageos_v1_storageoscluster_crd.yaml"
     "deploy/crds/storageos_v1_storageosupgrade_crd.yaml"
     "deploy/crds/storageos_v1_job_crd.yaml"
+    "deploy/crds/storageos_v1_nfsserver_crd.yaml"
     "deploy/namespace.yaml"
     "deploy/role.yaml"
     "deploy/service_account.yaml"

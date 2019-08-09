@@ -2,6 +2,7 @@ package v1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -13,6 +14,8 @@ const (
 	// DefaultNFSContainerImage is the name of the Ganesha container to run.
 	// TODO: change to an image we maintain.
 	DefaultNFSContainerImage = "darkowlzz/nfs-ganesha:v0.0.2"
+
+	DefaultNFSVolumeCapacity = "1Gi"
 
 	PhasePending = "Pending"
 	PhaseRunning = "Running"
@@ -73,6 +76,16 @@ func (s NFSServerSpec) GetContainerImage() string {
 	return DefaultNFSContainerImage
 }
 
+// GetRequestedCapacity returns the requested capacity for the NFS volume.
+func (s NFSServerSpec) GetRequestedCapacity() resource.Quantity {
+	if s.Resources.Requests != nil {
+		if capacity, exists := s.Resources.Requests[corev1.ResourceName(corev1.ResourceStorage)]; exists {
+			return capacity
+		}
+	}
+	return resource.MustParse(DefaultNFSVolumeCapacity)
+}
+
 // NFSServerStatus defines the observed state of NFSServer
 // +k8s:openapi-gen=true
 type NFSServerStatus struct {
@@ -107,6 +120,9 @@ type NFSServerStatus struct {
 	//
 	Phase string `json:"phase,omitempty"`
 
+	// AccessModes is the access modes supported by the NFS server.
+	AccessModes string `json:"accessModes,omitempty"`
+
 	// TODO(sc): do we want to add more info, e.g. Condition, messages or
 	// StartTime?
 }
@@ -119,6 +135,7 @@ type NFSServerStatus struct {
 // +kubebuilder:printcolumn:name="status",type="string",JSONPath=".status.phase",description="Status of the NFS server."
 // +kubebuilder:printcolumn:name="capacity",type="string",JSONPath=".spec.resources.requests.storage",description="Capacity of the NFS server."
 // +kubebuilder:printcolumn:name="target",type="string",JSONPath=".status.remoteTarget",description="Remote target address of the NFS server."
+// +kubebuilder:printcolumn:name="access modes",type="string",JSONPath=".status.accessModes",description="Access modes supported by the NFS server."
 // +kubebuilder:printcolumn:name="storageclass",type="string",JSONPath=".spec.storageClassName",description="StorageClass used for creating the NFS volume."
 // +kubebuilder:printcolumn:name="age",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:resource:path=nfsservers,shortName=nfsserver

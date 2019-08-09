@@ -326,6 +326,13 @@ func schema_pkg_apis_storageos_v1_NFSServerStatus(ref common.ReferenceCallback) 
 							Format:      "",
 						},
 					},
+					"accessModes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AccessModes is the access modes supported by the NFS server.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
