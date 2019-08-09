@@ -33,7 +33,11 @@ yq r deploy/storageos-operators.configmap.yaml \
     data.customResourceDefinitions | yq r - [2] | tee \
     deploy/crds/storageos_v1_storageosupgrade_crd.yaml \
     deploy/olm/storageos/storageosupgrade.crd.yaml > /dev/null
-
+# nfsserver
+yq r deploy/storageos-operators.configmap.yaml \
+    data.customResourceDefinitions | yq r - [3] | tee \
+    deploy/crds/storageos_v1_nfsserver_crd.yaml \
+    deploy/olm/storageos/storageosnfsserver.crd.yaml > /dev/null
 
 # Extract package from configmap, update and write to the final file.
 yq r deploy/storageos-operators.configmap.yaml \

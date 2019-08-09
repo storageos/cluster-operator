@@ -244,6 +244,19 @@ func schema_pkg_apis_storageos_v1_NFSServerSpec(ref common.ReferenceCallback) co
 							Format:      "",
 						},
 					},
+					"tolerations": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Tolerations is to set the placement of NFS server pods using pod toleration.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("k8s.io/api/core/v1.Toleration"),
+									},
+								},
+							},
+						},
+					},
 					"resources": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Resources represents the minimum resources required",
@@ -302,7 +315,7 @@ func schema_pkg_apis_storageos_v1_NFSServerSpec(ref common.ReferenceCallback) co
 			},
 		},
 		Dependencies: []string{
-			"github.com/storageos/cluster-operator/pkg/apis/storageos/v1.ExportsSpec", "k8s.io/api/core/v1.ResourceRequirements"},
+			"github.com/storageos/cluster-operator/pkg/apis/storageos/v1.ExportsSpec", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.Toleration"},
 	}
 }
 

@@ -3,6 +3,7 @@ package nfs
 import (
 	"context"
 
+	"github.com/storageos/cluster-operator/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -43,6 +44,9 @@ func (d *Deployment) createStatefulSet(size *resource.Quantity, nfsPort int, rpc
 			VolumeClaimTemplates: d.createVolumeClaimTemplateSpecs(size, d.nfsServer.Labels),
 		},
 	}
+
+	// TODO: Add node affinity support for NFS server pods.
+	util.AddTolerations(&ss.Spec.Template.Spec, d.nfsServer.Spec.Tolerations)
 
 	return d.createOrUpdateObject(ss)
 }

@@ -571,6 +571,12 @@ data:
                     description: StorageClassName is the name of the StorageClass used by
                       the NFS volume.
                     type: string
+                  tolerations:
+                    description: Tolerations is to set the placement of NFS server pods
+                      using pod toleration.
+                    items:
+                      type: object
+                    type: array
                 type: object
               status:
                 properties:

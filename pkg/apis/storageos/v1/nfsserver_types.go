@@ -36,6 +36,10 @@ type NFSServerSpec struct {
 	// StorageClassName is the name of the StorageClass used by the NFS volume.
 	StorageClassName string `json:"storageClassName,omitempty"`
 
+	// Tolerations is to set the placement of NFS server pods using
+	// pod toleration.
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+
 	// Resources represents the minimum resources required
 	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`

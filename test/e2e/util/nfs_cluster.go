@@ -67,6 +67,14 @@ func NFSServerTest(t *testing.T, ctx *framework.TestCtx) {
 				corev1.ResourceStorage: resource.MustParse(nfsResourceSize),
 			},
 		},
+		Tolerations: []corev1.Toleration{
+			{
+				Key:      "key",
+				Operator: corev1.TolerationOpEqual,
+				Value:    "value",
+				Effect:   corev1.TaintEffectNoSchedule,
+			},
+		},
 	}
 
 	// Create a new NFS server. This creates the server resources and checks the
