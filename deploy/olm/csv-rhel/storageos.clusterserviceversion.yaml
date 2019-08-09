@@ -184,6 +184,7 @@ spec:
           - storageosclusters
           - storageosupgrades
           - jobs
+          - nfsservers
           verbs:
           - '*'
         - apiGroups:
@@ -503,4 +504,13 @@ spec:
       - description: Set to true if the upgrade completed.
         displayName: Completed
         path: completed
+    - name: nfsservers.storageos.com
+      version: v1
+      kind: NFSServer
+      displayName: NFS Server
+      description: NFS Server creates a NFS Ganesha server.
+      specDescriptors:
+      - description: The container image of the NFS server.
+        displayName: Image
+        path: nfsContainer
   replaces: storageosoperator.v1.2.0
