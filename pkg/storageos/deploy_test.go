@@ -23,6 +23,7 @@ import (
 
 	storageosapis "github.com/storageos/cluster-operator/pkg/apis"
 	api "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
+	"github.com/storageos/cluster-operator/pkg/util"
 )
 
 var gvk = schema.GroupVersionKind{
@@ -89,7 +90,8 @@ func TestCreateNamespace(t *testing.T) {
 func TestCreateServiceAccount(t *testing.T) {
 	c, deploy := setupFakeDeployment()
 	saName := "my-service-account"
-	if err := deploy.createServiceAccount(saName); err != nil {
+	if err := util.CreateServiceAccount(c, saName, deploy.stos.Spec.GetResourceNS()); err != nil {
+		// if err := deploy.createServiceAccount(saName); err != nil {
 		t.Fatal("failed to create service account for daemonset", err)
 	}
 
@@ -150,7 +152,7 @@ func TestCreateRoleForKeyMgmt(t *testing.T) {
 }
 
 func TestCreateClusterRole(t *testing.T) {
-	c, deploy := setupFakeDeployment()
+	c, _ := setupFakeDeployment()
 	roleName := "my-cluster-role"
 	rules := []rbacv1.PolicyRule{
 		{
@@ -164,7 +166,8 @@ func TestCreateClusterRole(t *testing.T) {
 			Verbs:     []string{"list", "watch", "create", "update", "patch"},
 		},
 	}
-	if err := deploy.createClusterRole(roleName, rules); err != nil {
+	if err := util.CreateClusterRole(c, roleName, rules); err != nil {
+		// if err := deploy.createClusterRole(roleName, rules); err != nil {
 		t.Fatal("failed to create cluster role", err)
 	}
 
@@ -235,7 +238,7 @@ func TestCreateRoleBindingForKeyMgmt(t *testing.T) {
 }
 
 func TestCreateClusterRoleBinding(t *testing.T) {
-	c, deploy := setupFakeDeployment()
+	c, _ := setupFakeDeployment()
 	bindingName := "my-cluster-binding"
 	subjects := []rbacv1.Subject{
 		{
@@ -249,7 +252,8 @@ func TestCreateClusterRoleBinding(t *testing.T) {
 		Name:     CSIDriverRegistrarClusterRoleName,
 		APIGroup: "rbac.authorization.k8s.io",
 	}
-	if err := deploy.createClusterRoleBinding(bindingName, subjects, roleRef); err != nil {
+	if err := util.CreateClusterRoleBinding(c, bindingName, subjects, roleRef); err != nil {
+		// if err := deploy.createClusterRoleBinding(bindingName, subjects, roleRef); err != nil {
 		t.Fatal("failed to create cluster role binding", err)
 	}
 
@@ -1109,11 +1113,11 @@ func TestDeployNodeAffinity(t *testing.T) {
 		csiDeploymentStrategy string
 	}{
 		{
-			name:                  "csi helper StatefulSet",
+			name: "csi helper StatefulSet",
 			csiDeploymentStrategy: "statefulset",
 		},
 		{
-			name:                  "csi helper Deployment",
+			name: "csi helper Deployment",
 			csiDeploymentStrategy: "deployment",
 		},
 	}
