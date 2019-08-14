@@ -1,5 +1,9 @@
 package nfs
 
+import (
+	"github.com/storageos/cluster-operator/pkg/util"
+)
+
 // Delete deletes all the storageos resources.
 // This explicit delete is implemented instead of depending on the garbage
 // collector because sometimes the garbage collector deletes the resources
@@ -14,6 +18,12 @@ func (d *Deployment) Delete() error {
 		return err
 	}
 	if err := d.deleteService(); err != nil {
+		return err
+	}
+	if err := util.DeleteClusterRoleBinding(d.client, d.getClusterRoleBindingName()); err != nil {
+		return err
+	}
+	if err := util.DeleteServiceAccount(d.client, d.getServiceAccountName(), d.nfsServer.Namespace); err != nil {
 		return err
 	}
 
