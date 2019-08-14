@@ -21,38 +21,30 @@ const (
 	PVCNamePrefix = "nfs-data"
 )
 
-func (d *Deployment) createStatefulSet(size *resource.Quantity, nfsPort int, rpcPort int, metricsPort int) error {
+func (d *Deployment) createStatefulSet(size *resource.Quantity, nfsPort int, metricsPort int) error {
 
 	replicas := int32(1)
 
 	// TODO: Check if the PVC already exists before attempting to create one.
 
-	ss := &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            d.nfsServer.Name,
-			Namespace:       d.nfsServer.Namespace,
-			Labels:          d.nfsServer.Labels,
-			OwnerReferences: d.nfsServer.ObjectMeta.OwnerReferences,
+	spec := appsv1.StatefulSetSpec{
+		ServiceName: d.nfsServer.Name,
+		Replicas:    &replicas,
+		Selector: &metav1.LabelSelector{
+			MatchLabels: d.labelsForStatefulSet(d.nfsServer.Name, d.nfsServer.Labels),
 		},
-		Spec: appsv1.StatefulSetSpec{
-			ServiceName: d.nfsServer.Name,
-			Replicas:    &replicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: labelsForStatefulSet(d.nfsServer.Name, d.nfsServer.Labels),
-			},
-			Template:             d.createPodTemplateSpec(nfsPort, rpcPort, metricsPort, d.nfsServer.Labels),
-			VolumeClaimTemplates: d.createVolumeClaimTemplateSpecs(size, d.nfsServer.Labels),
-		},
+		Template:             d.createPodTemplateSpec(nfsPort, metricsPort, d.nfsServer.Labels),
+		VolumeClaimTemplates: d.createVolumeClaimTemplateSpecs(size, d.nfsServer.Labels),
 	}
 
 	// TODO: Add node affinity support for NFS server pods.
-	util.AddTolerations(&ss.Spec.Template.Spec, d.nfsServer.Spec.Tolerations)
+	util.AddTolerations(&spec.Template.Spec, d.nfsServer.Spec.Tolerations)
 
-	return d.createOrUpdateObject(ss)
+	return util.CreateStatefulSet(d.client, d.nfsServer.Name, d.nfsServer.Namespace, spec)
 }
 
 func (d *Deployment) createVolumeClaimTemplateSpecs(size *resource.Quantity, labels map[string]string) []corev1.PersistentVolumeClaim {
-	scName := d.nfsServer.Spec.GetStorageClassName()
+	scName := d.nfsServer.Spec.StorageClassName
 
 	claim := corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
@@ -78,19 +70,19 @@ func (d *Deployment) createVolumeClaimTemplateSpecs(size *resource.Quantity, lab
 	return []corev1.PersistentVolumeClaim{claim}
 }
 
-func (d *Deployment) createPodTemplateSpec(nfsPort int, rpcPort int, metricsPort int, labels map[string]string) corev1.PodTemplateSpec {
+func (d *Deployment) createPodTemplateSpec(nfsPort int, metricsPort int, labels map[string]string) corev1.PodTemplateSpec {
 
 	return corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels: labelsForStatefulSet(d.nfsServer.Name, labels),
+			Labels: d.labelsForStatefulSet(d.nfsServer.Name, labels),
 		},
 		Spec: corev1.PodSpec{
+			ServiceAccountName: d.getServiceAccountName(),
 			Containers: []corev1.Container{
 				{
 					ImagePullPolicy: "IfNotPresent",
 					Name:            "nfsd",
 					Image:           d.nfsServer.Spec.GetContainerImage(),
-					// Args: []string{"nfs", "server", "--ganeshaConfigPath=" + NFSConfigMapPath + "/" + nfsServer.name},
 					Env: []corev1.EnvVar{
 						{
 							Name:  "GANESHA_CONFIGFILE",
@@ -101,10 +93,6 @@ func (d *Deployment) createPodTemplateSpec(nfsPort int, rpcPort int, metricsPort
 						{
 							Name:          "nfs-port",
 							ContainerPort: int32(nfsPort),
-						},
-						{
-							Name:          "rpc-port",
-							ContainerPort: int32(rpcPort),
 						},
 						{
 							Name:          "metrics-port",
@@ -145,15 +133,6 @@ func (d *Deployment) createPodTemplateSpec(nfsPort int, rpcPort int, metricsPort
 			},
 		},
 	}
-}
-
-func (d *Deployment) deleteStatefulSet(name string, namespace string) error {
-
-	obj, err := d.getStatefulSet(name, namespace)
-	if err != nil {
-		return err
-	}
-	return d.deleteObject(obj)
 }
 
 func (d *Deployment) getStatefulSet(name string, namespace string) (*appsv1.StatefulSet, error) {

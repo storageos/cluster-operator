@@ -6,6 +6,7 @@ import (
 	"time"
 
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
+	stosClientset "github.com/storageos/cluster-operator/pkg/client/clientset/versioned"
 	"github.com/storageos/cluster-operator/pkg/nfs"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -25,11 +26,6 @@ var log = logf.Log.WithName("controller_nfsserver")
 
 const finalizer = "finalizer.nfsserver.storageos.com"
 
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
-
 // Add creates a new NFSServer Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
@@ -38,10 +34,12 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
+	storageos := stosClientset.NewForConfigOrDie(mgr.GetConfig())
 	return &ReconcileNFSServer{
-		client:   mgr.GetClient(),
-		scheme:   mgr.GetScheme(),
-		recorder: mgr.GetRecorder("storageos-nfsserver"),
+		client:     mgr.GetClient(),
+		scheme:     mgr.GetScheme(),
+		recorder:   mgr.GetRecorder("storageos-nfsserver"),
+		stosClient: storageos,
 	}
 }
 
@@ -98,9 +96,10 @@ var _ reconcile.Reconciler = &ReconcileNFSServer{}
 type ReconcileNFSServer struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client   client.Client
-	scheme   *runtime.Scheme
-	recorder record.EventRecorder
+	client     client.Client
+	stosClient stosClientset.Interface
+	scheme     *runtime.Scheme
+	recorder   record.EventRecorder
 }
 
 // Reconcile reads that state of the cluster for a NFSServer object and makes changes based on the state read
@@ -140,9 +139,6 @@ func (r *ReconcileNFSServer) Reconcile(request reconcile.Request) (reconcile.Res
 }
 
 func (r *ReconcileNFSServer) reconcile(instance *storageosv1.NFSServer) error {
-	// Assign storage class name in case it's empty.
-	instance.Spec.StorageClassName = instance.Spec.GetStorageClassName()
-
 	// Add our finalizer immediately so we can cleanup a partial deployment.  If
 	// this is not set, the CR can simply be deleted.
 	if len(instance.GetFinalizers()) == 0 {
@@ -157,7 +153,7 @@ func (r *ReconcileNFSServer) reconcile(instance *storageosv1.NFSServer) error {
 		return nil
 	}
 
-	d := nfs.NewDeployment(r.client, instance, r.recorder, r.scheme)
+	d := nfs.NewDeployment(r.client, r.stosClient, instance, r.recorder, r.scheme)
 
 	// If the CR has not been marked for deletion, ensure it is deployed.
 	if instance.GetDeletionTimestamp() == nil {

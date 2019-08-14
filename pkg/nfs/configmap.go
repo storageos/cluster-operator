@@ -8,8 +8,8 @@ import (
 	"text/template"
 
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
+	"github.com/storageos/cluster-operator/pkg/util"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -18,6 +18,8 @@ const (
 	DefaultAccessType = "readwrite"
 	DefaultSquash     = "none"
 	DefaultLogLevel   = "DEBUG"
+	DefaultGraceless  = true
+	DefaultFsidDevice = true
 )
 
 func createConfig(instance *storageosv1.NFSServer) (string, error) {
@@ -45,7 +47,7 @@ func createConfig(instance *storageosv1.NFSServer) (string, error) {
 		id++
 	}
 
-	globalCfg, err := globalConfig(true, true)
+	globalCfg, err := globalConfig(DefaultGraceless, DefaultFsidDevice)
 	if err != nil {
 		return "", err
 	}
@@ -171,19 +173,11 @@ func (d *Deployment) createNFSConfigMap() error {
 		return err
 	}
 
-	configMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            d.nfsServer.Name,
-			Namespace:       d.nfsServer.Namespace,
-			OwnerReferences: d.nfsServer.ObjectMeta.OwnerReferences,
-			// Labels:          createAppLabels(nfsServer),
-		},
-		Data: map[string]string{
-			d.nfsServer.Name: nfsConfig,
-		},
+	data := map[string]string{
+		d.nfsServer.Name: nfsConfig,
 	}
 
-	return d.createOrUpdateObject(configMap)
+	return util.CreateConfigMap(d.client, d.nfsServer.Name, d.nfsServer.Namespace, data)
 }
 
 func (d *Deployment) getConfigMap(name string, namespace string) (*corev1.ConfigMap, error) {
@@ -197,12 +191,4 @@ func (d *Deployment) getConfigMap(name string, namespace string) (*corev1.Config
 		return nil, err
 	}
 	return configMap, nil
-}
-
-func (d *Deployment) deleteNFSConfigMap() error {
-	configMap, err := d.getConfigMap(d.nfsServer.Name, d.nfsServer.Namespace)
-	if err != nil {
-		return err
-	}
-	return d.deleteObject(configMap)
 }

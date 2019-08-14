@@ -12,8 +12,7 @@ import (
 // Constants for NFSServer default values and different phases.
 const (
 	// DefaultNFSContainerImage is the name of the Ganesha container to run.
-	// TODO: change to an image we maintain.
-	DefaultNFSContainerImage = "darkowlzz/nfs-ganesha:v0.0.2"
+	DefaultNFSContainerImage = "storageos/nfs:test"
 
 	DefaultNFSVolumeCapacity = "1Gi"
 
@@ -47,10 +46,6 @@ type NFSServerSpec struct {
 	// The annotations-related configuration to add/set on each Pod related object.
 	Annotations map[string]string `json:"annotations,omitempty"`
 
-	// Replicas of the NFS daemon
-	// TODO(simon): Don't think we can have multiple servers?
-	// Replicas int `json:"replicas,omitempty"`
-
 	// The parameters to configure the NFS export
 	Exports []ExportsSpec `json:"exports,omitempty"`
 
@@ -64,12 +59,14 @@ type NFSServerSpec struct {
 
 // GetStorageClassName returns the name of the StorageClass to be used for the
 // NFS volume.
-func (s NFSServerSpec) GetStorageClassName() string {
-	// TODO: Fetch the StorageClass name from the current StorageOS cluster.
+// clusterSCName is the name of the default StorageClass of a StorageOS cluster.
+func (s NFSServerSpec) GetStorageClassName(clusterSCName string) string {
+	// StorageClass defined in NFSServer custom resource takes precedence over
+	// the Cluster default StorageClass.
 	if s.StorageClassName != "" {
 		return s.StorageClassName
 	}
-	return DefaultStorageClassName
+	return clusterSCName
 }
 
 // GetContainerImage returns the NFS server container image.

@@ -11,13 +11,13 @@ import (
 // especially when a cluster reboots. Althrough the operator re-creates the
 // resources, we want to avoid this behavior by implementing an explcit delete.
 func (d *Deployment) Delete() error {
-	if err := d.deleteStatefulSet(d.nfsServer.Name, d.nfsServer.Namespace); err != nil {
+	if err := util.DeleteStatefulSet(d.client, d.nfsServer.Name, d.nfsServer.Namespace); err != nil {
 		return err
 	}
-	if err := d.deleteNFSConfigMap(); err != nil {
+	if err := util.DeleteConfigMap(d.client, d.nfsServer.Name, d.nfsServer.Namespace); err != nil {
 		return err
 	}
-	if err := d.deleteService(); err != nil {
+	if err := util.DeleteService(d.client, d.nfsServer.Name, d.nfsServer.Namespace); err != nil {
 		return err
 	}
 	if err := util.DeleteClusterRoleBinding(d.client, d.getClusterRoleBindingName()); err != nil {
