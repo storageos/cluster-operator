@@ -27,24 +27,22 @@ func createConfig(instance *storageosv1.NFSServer) (string, error) {
 	// id needs to be unique for each export on the server node.
 	id := 57
 
-	var exports []string
-	// If no export list given, use defaults
-	if len(instance.Spec.Exports) == 0 {
-		exportCfg, err := exportConfig(id, instance.Name, DefaultAccessType, DefaultSquash)
+	var exportCfg string
+	// If no export specified, create a default export.
+	if instance.Spec.Export.Name == "" {
+		export, err := exportConfig(id, instance.Name, DefaultAccessType, DefaultSquash)
 		if err != nil {
 			return "", err
 		}
-		exports = append(exports, exportCfg)
-	}
-
-	// Otherwise use export list
-	for _, export := range instance.Spec.Exports {
-		exportCfg, err := exportConfig(id, export.PersistentVolumeClaim.ClaimName, export.Server.AccessMode, export.Server.Squash)
+		exportCfg = export
+	} else {
+		// Otherwise create export with the given export configuration.
+		exportSpec := instance.Spec.Export
+		export, err := exportConfig(id, exportSpec.PersistentVolumeClaim.ClaimName, exportSpec.Server.AccessMode, exportSpec.Server.Squash)
 		if err != nil {
 			return "", err
 		}
-		exports = append(exports, exportCfg)
-		id++
+		exportCfg = export
 	}
 
 	globalCfg, err := globalConfig(DefaultGraceless, DefaultFsidDevice)
@@ -57,7 +55,7 @@ func createConfig(instance *storageosv1.NFSServer) (string, error) {
 		return "", err
 	}
 
-	return fmt.Sprintf("%s\n%s\n%s", globalCfg, logCfg, strings.Join(exports, "\n")), nil
+	return fmt.Sprintf("%s\n%s\n%s", globalCfg, logCfg, exportCfg), nil
 }
 
 // nfsExportConfig is the NFS server export configuration.
@@ -116,7 +114,7 @@ type nfsLogConfig struct {
 	LogLevel string
 }
 
-// TODO, use defualt "EVENT" level.
+// TODO, use default "EVENT" level.
 func logConfig(logLevel string) (string, error) {
 	logConfigTemplate := `
 LOG {

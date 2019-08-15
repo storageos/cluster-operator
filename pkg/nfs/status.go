@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"strings"
 
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	v1 "k8s.io/api/core/v1"
@@ -49,12 +48,10 @@ func (s *Deployment) getStatus() (*storageosv1.NFSServerStatus, error) {
 	}
 
 	// Set access mode.
-	if len(s.nfsServer.Spec.Exports) == 0 {
+	if s.nfsServer.Spec.Export.Name == "" {
 		status.AccessModes = getAccessMode(DefaultAccessType)
 	} else {
-		for _, exp := range s.nfsServer.Spec.Exports {
-			status.AccessModes = strings.Join([]string{status.AccessModes, getAccessMode(exp.Server.AccessMode)}, ",")
-		}
+		status.AccessModes = getAccessMode(s.nfsServer.Spec.Export.Server.AccessMode)
 	}
 
 	// We got both without error, so upgrade to Pending.

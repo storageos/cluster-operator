@@ -277,17 +277,10 @@ func schema_pkg_apis_storageos_v1_NFSServerSpec(ref common.ReferenceCallback) co
 							},
 						},
 					},
-					"exports": {
+					"export": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The parameters to configure the NFS export",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/storageos/cluster-operator/pkg/apis/storageos/v1.ExportsSpec"),
-									},
-								},
-							},
+							Ref:         ref("github.com/storageos/cluster-operator/pkg/apis/storageos/v1.ExportSpec"),
 						},
 					},
 					"persistentVolumeReclaimPolicy": {
@@ -315,7 +308,7 @@ func schema_pkg_apis_storageos_v1_NFSServerSpec(ref common.ReferenceCallback) co
 			},
 		},
 		Dependencies: []string{
-			"github.com/storageos/cluster-operator/pkg/apis/storageos/v1.ExportsSpec", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.Toleration"},
+			"github.com/storageos/cluster-operator/pkg/apis/storageos/v1.ExportSpec", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.Toleration"},
 	}
 }
 

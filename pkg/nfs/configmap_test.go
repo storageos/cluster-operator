@@ -79,27 +79,59 @@ EXPORT {
 }`,
 		},
 		{
-			name: "nfs server spec with exports",
+			name: "nfs server spec with default export server spec",
 			nfsServerSpec: storageosv1.NFSServerSpec{
-				Exports: []storageosv1.ExportsSpec{
-					{
-						Name: "export1",
-						Server: storageosv1.ServerSpec{
-							AccessMode: "readonly",
-							Squash:     "test-squash",
-						},
-						PersistentVolumeClaim: corev1.PersistentVolumeClaimVolumeSource{
-							ClaimName: "test-claim",
-							ReadOnly:  false,
-						},
+				Export: storageosv1.ExportSpec{
+					Name:   "export1",
+					Server: storageosv1.ServerSpec{},
+					PersistentVolumeClaim: corev1.PersistentVolumeClaimVolumeSource{
+						ClaimName: "test-claim",
+						ReadOnly:  false,
 					},
-					{
-						Name:   "export2",
-						Server: storageosv1.ServerSpec{},
-						PersistentVolumeClaim: corev1.PersistentVolumeClaimVolumeSource{
-							ClaimName: "test-claim-2",
-							ReadOnly:  false,
-						},
+				},
+			},
+			wantConfig: `
+NFSv4 {
+	Graceless = true;
+}
+NFS_Core_Param {
+	fsid_device = true;
+}
+
+LOG {
+	default_log_level = DEBUG;
+	Components {
+		ALL = DEBUG;
+	}
+}
+
+EXPORT {
+	Export_Id = 57;
+	Path = /export/test-claim;
+	Pseudo = /test-claim;
+	Protocols = 4;
+	Transports = TCP;
+	Sectype = sys;
+	Access_Type = RW;
+	Squash = none;
+	FSAL {
+		Name = VFS;
+	}
+}`,
+		},
+
+		{
+			name: "nfs server spec with custom export server spec",
+			nfsServerSpec: storageosv1.NFSServerSpec{
+				Export: storageosv1.ExportSpec{
+					Name: "export1",
+					Server: storageosv1.ServerSpec{
+						AccessMode: "readonly",
+						Squash:     "test-squash",
+					},
+					PersistentVolumeClaim: corev1.PersistentVolumeClaimVolumeSource{
+						ClaimName: "test-claim",
+						ReadOnly:  false,
 					},
 				},
 			},
@@ -127,20 +159,6 @@ EXPORT {
 	Sectype = sys;
 	Access_Type = RO;
 	Squash = test-squash;
-	FSAL {
-		Name = VFS;
-	}
-}
-
-EXPORT {
-	Export_Id = 58;
-	Path = /export/test-claim-2;
-	Pseudo = /test-claim-2;
-	Protocols = 4;
-	Transports = TCP;
-	Sectype = sys;
-	Access_Type = RW;
-	Squash = none;
 	FSAL {
 		Name = VFS;
 	}

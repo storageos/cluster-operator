@@ -498,58 +498,29 @@ data:
                     description: The annotations-related configuration to add/set on each
                       Pod related object.
                     type: object
-                  exports:
+                  export:
                     description: The parameters to configure the NFS export
-                    items:
-                      properties:
-                        name:
-                          description: Name of the export
-                          type: string
-                        persistentVolumeClaim:
-                          description: PVC from which the NFS daemon gets storage for sharing
-                          type: object
-                        server:
-                          description: The NFS server configuration
-                          properties:
-                            accessMode:
-                              description: Reading and Writing permissions on the export
-                                Valid values are "ReadOnly", "ReadWrite" and "none"
-                              type: string
-                            allowedClients:
-                              description: The clients allowed to access the NFS export
-                              items:
-                                properties:
-                                  accessMode:
-                                    description: Reading and Writing permissions for the
-                                      client to access the NFS export Valid values are "ReadOnly",
-                                      "ReadWrite" and "none" Gets overridden when ServerSpec.accessMode
-                                      is specified
-                                    type: string
-                                  clients:
-                                    description: The clients that can access the share Values
-                                      can be hostname, ip address, netgroup, CIDR network
-                                      address, or all
-                                    items:
-                                      type: string
-                                    type: array
-                                  name:
-                                    description: Name of the clients group
-                                    type: string
-                                  squash:
-                                    description: Squash options for clients Valid values
-                                      are "none", "rootid", "root", and "all" Gets overridden
-                                      when ServerSpec.squash is specified
-                                    type: string
-                                type: object
-                              type: array
-                            squash:
-                              description: This prevents the root users connected remotely
-                                from having root privileges Valid values are "none", "rootid",
-                                "root", and "all"
-                              type: string
-                          type: object
-                      type: object
-                    type: array
+                    properties:
+                      name:
+                        description: Name of the export
+                        type: string
+                      persistentVolumeClaim:
+                        description: PVC from which the NFS daemon gets storage for sharing
+                        type: object
+                      server:
+                        description: The NFS server configuration
+                        properties:
+                          accessMode:
+                            description: Reading and Writing permissions on the export Valid
+                              values are "ReadOnly", "ReadWrite" and "none"
+                            type: string
+                          squash:
+                            description: This prevents the root users connected remotely
+                              from having root privileges Valid values are "none", "rootid",
+                              "root", and "all"
+                            type: string
+                        type: object
+                    type: object
                   mountOptions:
                     description: PV mount options. Not validated - mount of the PVs will
                       simply fail if one is invalid.

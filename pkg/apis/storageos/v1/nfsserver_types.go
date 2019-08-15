@@ -47,7 +47,7 @@ type NFSServerSpec struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
 
 	// The parameters to configure the NFS export
-	Exports []ExportsSpec `json:"exports,omitempty"`
+	Export ExportSpec `json:"export,omitempty"`
 
 	// Reclamation policy for the persistent volume shared to the user's pod.
 	PersistentVolumeReclaimPolicy corev1.PersistentVolumeReclaimPolicy `json:"persistentVolumeReclaimPolicy,omitempty"`
@@ -161,8 +161,8 @@ func init() {
 	SchemeBuilder.Register(&NFSServer{}, &NFSServerList{})
 }
 
-// ExportsSpec represents the spec of NFS exports
-type ExportsSpec struct {
+// ExportSpec represents the spec of NFS export.
+type ExportSpec struct {
 	// Name of the export
 	Name string `json:"name,omitempty"`
 
@@ -181,29 +181,5 @@ type ServerSpec struct {
 
 	// This prevents the root users connected remotely from having root privileges
 	// Valid values are "none", "rootid", "root", and "all"
-	Squash string `json:"squash,omitempty"`
-
-	// The clients allowed to access the NFS export
-	AllowedClients []AllowedClientsSpec `json:"allowedClients,omitempty"`
-}
-
-// AllowedClientsSpec represents the client specs for accessing the NFS export
-type AllowedClientsSpec struct {
-
-	// Name of the clients group
-	Name string `json:"name,omitempty"`
-
-	// The clients that can access the share
-	// Values can be hostname, ip address, netgroup, CIDR network address, or all
-	Clients []string `json:"clients,omitempty"`
-
-	// Reading and Writing permissions for the client to access the NFS export
-	// Valid values are "ReadOnly", "ReadWrite" and "none"
-	// Gets overridden when ServerSpec.accessMode is specified
-	AccessMode string `json:"accessMode,omitempty"`
-
-	// Squash options for clients
-	// Valid values are "none", "rootid", "root", and "all"
-	// Gets overridden when ServerSpec.squash is specified
 	Squash string `json:"squash,omitempty"`
 }
