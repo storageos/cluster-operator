@@ -88,6 +88,14 @@ func (d *Deployment) createPodTemplateSpec(nfsPort int, metricsPort int, labels 
 							Name:  "GANESHA_CONFIGFILE",
 							Value: "/config/" + d.nfsServer.Name,
 						},
+						{
+							Name:  "NAME",
+							Value: d.nfsServer.Name,
+						},
+						{
+							Name:  "NAMESPACE",
+							Value: d.nfsServer.Namespace,
+						},
 					},
 					Ports: []corev1.ContainerPort{
 						{
