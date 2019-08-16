@@ -144,7 +144,8 @@ func (r *ReconcileStorageOSCluster) Reconcile(request reconcile.Request) (reconc
 	if !r.currentCluster.IsCurrentCluster(instance) {
 		err := fmt.Errorf("can't create more than one storageos cluster")
 		r.recorder.Event(instance, corev1.EventTypeWarning, "FailedCreation", err.Error())
-		return reconcileResult, err
+		// Do not requeue the request.
+		return reconcile.Result{}, nil
 	} else if r.currentCluster.cluster.GetUID() != instance.GetUID() {
 		// If the cluster name and namespace match with the current cluster, but
 		// the resource UIDs are different, maybe the current cluster reset
