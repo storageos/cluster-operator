@@ -7,7 +7,7 @@ metadata:
     capabilities: Full Lifecycle
     categories: Storage
     description: Cloud-native, persistent storage for containers.
-    containerImage: registry.connect.redhat.com/storageos/cluster-operator:1.2.0
+    containerImage: registry.connect.redhat.com/storageos/cluster-operator:1.3.0
     repository: https://github.com/storageos/cluster-operator
     createdAt: "2019-07-08T12:01:29Z"
     support: StorageOS, Inc

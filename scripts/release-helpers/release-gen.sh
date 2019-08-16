@@ -72,7 +72,7 @@ cat << EOF >$RHEL_CHANGES_FILE
 $FILE_HEADER_NOTE
 metadata.name: storageosoperator.v$NEW_VERSION
 metadata.namespace: placeholder
-metadata.annotations.containerImage: registry.connect.redhat.com/storageos/cluster-operator:1.2.0
+metadata.annotations.containerImage: registry.connect.redhat.com/storageos/cluster-operator:$NEW_VERSION
 metadata.annotations.certified: "true"
 metadata.annotations.alm-examples: |-
   [
