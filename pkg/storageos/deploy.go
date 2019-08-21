@@ -6,7 +6,7 @@ import (
 
 	"github.com/blang/semver"
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
-	"github.com/storageos/cluster-operator/pkg/util"
+	"github.com/storageos/cluster-operator/pkg/util/k8s/resource"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -223,7 +223,7 @@ func (s *Deployment) createNamespace() error {
 		},
 	}
 
-	return util.CreateOrUpdateObject(s.client, ns)
+	return resource.CreateOrUpdate(s.client, ns)
 }
 
 // addNodeContainerResources adds resource requirements for the node containers.

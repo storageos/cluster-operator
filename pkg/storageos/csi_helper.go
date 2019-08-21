@@ -1,7 +1,6 @@
 package storageos
 
 import (
-	"github.com/storageos/cluster-operator/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,7 +30,7 @@ func (s *Deployment) createCSIHelper() error {
 // csiHelperStatefulSet returns a CSI helper StatefulSet object.
 func (s Deployment) createCSIHelperStatefulSet(replicas int32) error {
 	podLabels := podLabelsForCSIHelpers(s.stos.Name, statefulsetKind)
-	spec := appsv1.StatefulSetSpec{
+	spec := &appsv1.StatefulSetSpec{
 		Replicas: &replicas,
 		Selector: &metav1.LabelSelector{
 			MatchLabels: podLabels,
@@ -50,13 +49,13 @@ func (s Deployment) createCSIHelperStatefulSet(replicas int32) error {
 
 	s.addCommonPodProperties(&spec.Template.Spec)
 
-	return util.CreateStatefulSet(s.client, statefulsetName, s.stos.Spec.GetResourceNS(), spec)
+	return s.k8sResourceManager.StatefulSet(statefulsetName, s.stos.Spec.GetResourceNS(), spec).Create()
 }
 
 // csiHelperDeployment returns a CSI helper Deployment object.
 func (s Deployment) createCSIHelperDeployment(replicas int32) error {
 	podLabels := podLabelsForCSIHelpers(s.stos.Name, deploymentKind)
-	spec := appsv1.DeploymentSpec{
+	spec := &appsv1.DeploymentSpec{
 		Replicas: &replicas,
 		Selector: &metav1.LabelSelector{
 			MatchLabels: podLabels,
@@ -75,7 +74,7 @@ func (s Deployment) createCSIHelperDeployment(replicas int32) error {
 
 	s.addCommonPodProperties(&spec.Template.Spec)
 
-	return util.CreateDeployment(s.client, csiHelperName, s.stos.Spec.GetResourceNS(), spec)
+	return s.k8sResourceManager.Deployment(csiHelperName, s.stos.Spec.GetResourceNS(), spec).Create()
 }
 
 // addCommonPodProperties adds common pod properties to a given pod spec. The
@@ -205,9 +204,9 @@ func (s Deployment) deleteCSIHelper() error {
 	// different kinds.
 	switch s.stos.Spec.GetCSIDeploymentStrategy() {
 	case deploymentKind:
-		return util.DeleteDeployment(s.client, csiHelperName, s.stos.Spec.GetResourceNS())
+		return s.k8sResourceManager.Deployment(csiHelperName, s.stos.Spec.GetResourceNS(), nil).Delete()
 	default:
-		return util.DeleteStatefulSet(s.client, statefulsetName, s.stos.Spec.GetResourceNS())
+		return s.k8sResourceManager.StatefulSet(statefulsetName, s.stos.Spec.GetResourceNS(), nil).Delete()
 	}
 }
 

@@ -1,15 +1,12 @@
 package nfs
 
 import (
-	"context"
-
 	"github.com/storageos/cluster-operator/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 const (
@@ -27,7 +24,7 @@ func (d *Deployment) createStatefulSet(size *resource.Quantity, nfsPort int, met
 
 	// TODO: Check if the PVC already exists before attempting to create one.
 
-	spec := appsv1.StatefulSetSpec{
+	spec := &appsv1.StatefulSetSpec{
 		ServiceName: d.nfsServer.Name,
 		Replicas:    &replicas,
 		Selector: &metav1.LabelSelector{
@@ -40,7 +37,7 @@ func (d *Deployment) createStatefulSet(size *resource.Quantity, nfsPort int, met
 	// TODO: Add node affinity support for NFS server pods.
 	util.AddTolerations(&spec.Template.Spec, d.nfsServer.Spec.Tolerations)
 
-	return util.CreateStatefulSet(d.client, d.nfsServer.Name, d.nfsServer.Namespace, spec)
+	return d.k8sResourceManager.StatefulSet(d.nfsServer.Name, d.nfsServer.Namespace, spec).Create()
 }
 
 func (d *Deployment) createVolumeClaimTemplateSpecs(size *resource.Quantity, labels map[string]string) []corev1.PersistentVolumeClaim {
@@ -141,18 +138,4 @@ func (d *Deployment) createPodTemplateSpec(nfsPort int, metricsPort int, labels 
 			},
 		},
 	}
-}
-
-func (d *Deployment) getStatefulSet(name string, namespace string) (*appsv1.StatefulSet, error) {
-
-	instance := &appsv1.StatefulSet{}
-	nn := types.NamespacedName{
-		Namespace: namespace,
-		Name:      name,
-	}
-	if err := d.client.Get(context.TODO(), nn, instance); err != nil {
-		return nil, err
-	}
-
-	return instance, nil
 }

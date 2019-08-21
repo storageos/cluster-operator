@@ -6,7 +6,7 @@ import (
 	"reflect"
 
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func (s *Deployment) updateStatus(status *storageosv1.NFSServerStatus) error {
@@ -20,7 +20,7 @@ func (s *Deployment) updateStatus(status *storageosv1.NFSServerStatus) error {
 	if s.nfsServer.Status.RemoteTarget != status.RemoteTarget {
 		if status.RemoteTarget != "" {
 			if s.recorder != nil {
-				s.recorder.Event(s.nfsServer, v1.EventTypeNormal, "ChangedStatus", fmt.Sprintf("NFS server is now functional: %s", status.RemoteTarget))
+				s.recorder.Event(s.nfsServer, corev1.EventTypeNormal, "ChangedStatus", fmt.Sprintf("NFS server is now functional: %s", status.RemoteTarget))
 			}
 		}
 	}
@@ -37,12 +37,12 @@ func (s *Deployment) getStatus() (*storageosv1.NFSServerStatus, error) {
 		AccessModes:  "",
 	}
 
-	ss, err := s.getStatefulSet(s.nfsServer.Name, s.nfsServer.Namespace)
+	ss, err := s.k8sResourceManager.StatefulSet(s.nfsServer.Name, s.nfsServer.Namespace, nil).Get()
 	if err != nil {
 		return status, err
 	}
 
-	svc, err := s.getService(s.nfsServer.Name, s.nfsServer.Namespace)
+	svc, err := s.k8sResourceManager.Service(s.nfsServer.Name, s.nfsServer.Namespace, nil, nil).Get()
 	if err != nil {
 		return status, err
 	}

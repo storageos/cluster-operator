@@ -1,9 +1,5 @@
 package storageos
 
-import (
-	"github.com/storageos/cluster-operator/pkg/util"
-)
-
 func (s *Deployment) createStorageClass() error {
 	// Provisioner name for in-tree storage plugin.
 	provisioner := intreeProvisionerName
@@ -55,5 +51,5 @@ func (s *Deployment) createStorageClass() error {
 		parameters[secretNameKey] = s.stos.Spec.SecretRefName
 	}
 
-	return util.CreateStorageClass(s.client, s.stos.Spec.GetStorageClassName(), provisioner, parameters)
+	return s.k8sResourceManager.StorageClass(s.stos.Spec.GetStorageClassName(), provisioner, parameters).Create()
 }

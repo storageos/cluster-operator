@@ -1,7 +1,6 @@
 package storageos
 
 import (
-	"github.com/storageos/cluster-operator/pkg/util"
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 
@@ -50,19 +49,19 @@ func (s *Deployment) getCSIHelperServiceAccountName() string {
 // createServiceAccountForDaemonSet creates a service account fot the DaemonSet
 // pods.
 func (s *Deployment) createServiceAccountForDaemonSet() error {
-	return util.CreateServiceAccount(s.client, DaemonsetSA, s.stos.Spec.GetResourceNS())
+	return s.k8sResourceManager.ServiceAccount(DaemonsetSA, s.stos.Spec.GetResourceNS()).Create()
 }
 
 // createServiceAccountForCSIHelper creates service account for the appropriate
 // CSI helper kind based on the cluster config.
 func (s *Deployment) createServiceAccountForCSIHelper() error {
-	return util.CreateServiceAccount(s.client, s.getCSIHelperServiceAccountName(), s.stos.Spec.GetResourceNS())
+	return s.k8sResourceManager.ServiceAccount(s.getCSIHelperServiceAccountName(), s.stos.Spec.GetResourceNS()).Create()
 }
 
 // createServiceAccountForScheduler creates a service account for scheduler
 // extender.
 func (s *Deployment) createServiceAccountForScheduler() error {
-	return util.CreateServiceAccount(s.client, SchedulerSA, s.stos.Spec.GetResourceNS())
+	return s.k8sResourceManager.ServiceAccount(SchedulerSA, s.stos.Spec.GetResourceNS()).Create()
 }
 
 func (s *Deployment) createRoleForKeyMgmt() error {
@@ -73,7 +72,7 @@ func (s *Deployment) createRoleForKeyMgmt() error {
 			Verbs:     []string{"get", "list", "create", "delete"},
 		},
 	}
-	return util.CreateRole(s.client, KeyManagementRoleName, s.stos.Spec.GetResourceNS(), rules)
+	return s.k8sResourceManager.Role(KeyManagementRoleName, s.stos.Spec.GetResourceNS(), rules).Create()
 }
 
 func (s *Deployment) createClusterRoleForFencing() error {
@@ -109,7 +108,7 @@ func (s *Deployment) createClusterRoleForFencing() error {
 			Verbs:     []string{"list", "watch", "create", "update", "patch"},
 		},
 	}
-	return util.CreateClusterRole(s.client, FencingClusterRoleName, rules)
+	return s.k8sResourceManager.ClusterRole(FencingClusterRoleName, rules).Create()
 }
 
 func (s *Deployment) createClusterRoleForDriverRegistrar() error {
@@ -135,7 +134,7 @@ func (s *Deployment) createClusterRoleForDriverRegistrar() error {
 			Verbs:     []string{"create"},
 		},
 	}
-	return util.CreateClusterRole(s.client, CSIDriverRegistrarClusterRoleName, rules)
+	return s.k8sResourceManager.ClusterRole(CSIDriverRegistrarClusterRoleName, rules).Create()
 }
 
 func (s *Deployment) createClusterRoleForProvisioner() error {
@@ -166,7 +165,7 @@ func (s *Deployment) createClusterRoleForProvisioner() error {
 			Verbs:     []string{"list", "watch", "create", "update", "patch"},
 		},
 	}
-	return util.CreateClusterRole(s.client, CSIProvisionerClusterRoleName, rules)
+	return s.k8sResourceManager.ClusterRole(CSIProvisionerClusterRoleName, rules).Create()
 }
 
 func (s *Deployment) createClusterRoleForAttacher() error {
@@ -202,7 +201,7 @@ func (s *Deployment) createClusterRoleForAttacher() error {
 			Verbs:     []string{"list", "watch", "create", "update", "patch"},
 		},
 	}
-	return util.CreateClusterRole(s.client, CSIAttacherClusterRoleName, rules)
+	return s.k8sResourceManager.ClusterRole(CSIAttacherClusterRoleName, rules).Create()
 }
 
 // createClusterRoleForScheduler creates a ClusterRole resource for scheduler
@@ -241,7 +240,7 @@ func (s *Deployment) createClusterRoleForScheduler() error {
 			Verbs:     []string{"list", "watch"},
 		},
 	}
-	return util.CreateClusterRole(s.client, SchedulerClusterRoleName, rules)
+	return s.k8sResourceManager.ClusterRole(SchedulerClusterRoleName, rules).Create()
 }
 
 func (s *Deployment) createRoleBindingForKeyMgmt() error {
@@ -252,12 +251,12 @@ func (s *Deployment) createRoleBindingForKeyMgmt() error {
 			Namespace: s.stos.Spec.GetResourceNS(),
 		},
 	}
-	roleRef := rbacv1.RoleRef{
+	roleRef := &rbacv1.RoleRef{
 		Kind:     "Role",
 		Name:     KeyManagementRoleName,
 		APIGroup: "rbac.authorization.k8s.io",
 	}
-	return util.CreateRoleBinding(s.client, KeyManagementBindingName, s.stos.Spec.GetResourceNS(), subjects, roleRef)
+	return s.k8sResourceManager.RoleBinding(KeyManagementBindingName, s.stos.Spec.GetResourceNS(), subjects, roleRef).Create()
 }
 
 func (s *Deployment) createClusterRoleBindingForFencing() error {
@@ -268,12 +267,12 @@ func (s *Deployment) createClusterRoleBindingForFencing() error {
 			Namespace: s.stos.Spec.GetResourceNS(),
 		},
 	}
-	roleRef := rbacv1.RoleRef{
+	roleRef := &rbacv1.RoleRef{
 		Kind:     "ClusterRole",
 		Name:     FencingClusterRoleName,
 		APIGroup: "rbac.authorization.k8s.io",
 	}
-	return util.CreateClusterRoleBinding(s.client, FencingClusterBindingName, subjects, roleRef)
+	return s.k8sResourceManager.ClusterRoleBinding(FencingClusterBindingName, subjects, roleRef).Create()
 }
 
 func (s *Deployment) createClusterRoleBindingForDriverRegistrar() error {
@@ -284,12 +283,12 @@ func (s *Deployment) createClusterRoleBindingForDriverRegistrar() error {
 			Namespace: s.stos.Spec.GetResourceNS(),
 		},
 	}
-	roleRef := rbacv1.RoleRef{
+	roleRef := &rbacv1.RoleRef{
 		Kind:     "ClusterRole",
 		Name:     CSIDriverRegistrarClusterRoleName,
 		APIGroup: "rbac.authorization.k8s.io",
 	}
-	return util.CreateClusterRoleBinding(s.client, CSIDriverRegistrarClusterBindingName, subjects, roleRef)
+	return s.k8sResourceManager.ClusterRoleBinding(CSIDriverRegistrarClusterBindingName, subjects, roleRef).Create()
 }
 
 func (s *Deployment) createClusterRoleBindingForK8SDriverRegistrar() error {
@@ -300,12 +299,12 @@ func (s *Deployment) createClusterRoleBindingForK8SDriverRegistrar() error {
 			Namespace: s.stos.Spec.GetResourceNS(),
 		},
 	}
-	roleRef := rbacv1.RoleRef{
+	roleRef := &rbacv1.RoleRef{
 		Kind:     "ClusterRole",
 		Name:     CSIDriverRegistrarClusterRoleName,
 		APIGroup: "rbac.authorization.k8s.io",
 	}
-	return util.CreateClusterRoleBinding(s.client, CSIK8SDriverRegistrarClusterBindingName, subjects, roleRef)
+	return s.k8sResourceManager.ClusterRoleBinding(CSIK8SDriverRegistrarClusterBindingName, subjects, roleRef).Create()
 }
 
 func (s *Deployment) createClusterRoleBindingForProvisioner() error {
@@ -316,12 +315,12 @@ func (s *Deployment) createClusterRoleBindingForProvisioner() error {
 			Namespace: s.stos.Spec.GetResourceNS(),
 		},
 	}
-	roleRef := rbacv1.RoleRef{
+	roleRef := &rbacv1.RoleRef{
 		Kind:     "ClusterRole",
 		Name:     CSIProvisionerClusterRoleName,
 		APIGroup: "rbac.authorization.k8s.io",
 	}
-	return util.CreateClusterRoleBinding(s.client, CSIProvisionerClusterBindingName, subjects, roleRef)
+	return s.k8sResourceManager.ClusterRoleBinding(CSIProvisionerClusterBindingName, subjects, roleRef).Create()
 }
 
 func (s *Deployment) createClusterRoleBindingForAttacher() error {
@@ -332,12 +331,12 @@ func (s *Deployment) createClusterRoleBindingForAttacher() error {
 			Namespace: s.stos.Spec.GetResourceNS(),
 		},
 	}
-	roleRef := rbacv1.RoleRef{
+	roleRef := &rbacv1.RoleRef{
 		Kind:     "ClusterRole",
 		Name:     CSIAttacherClusterRoleName,
 		APIGroup: "rbac.authorization.k8s.io",
 	}
-	return util.CreateClusterRoleBinding(s.client, CSIAttacherClusterBindingName, subjects, roleRef)
+	return s.k8sResourceManager.ClusterRoleBinding(CSIAttacherClusterBindingName, subjects, roleRef).Create()
 }
 
 // createClusterRoleForSCC creates cluster role with api group and resource
@@ -352,7 +351,7 @@ func (s *Deployment) createClusterRoleForSCC() error {
 			ResourceNames: []string{"privileged"},
 		},
 	}
-	return util.CreateClusterRole(s.client, OpenShiftSCCClusterRoleName, rules)
+	return s.k8sResourceManager.ClusterRole(OpenShiftSCCClusterRoleName, rules).Create()
 }
 
 // createClusterRoleBindingForSCC creates a cluster role binding of the
@@ -375,12 +374,12 @@ func (s *Deployment) createClusterRoleBindingForSCC() error {
 		})
 	}
 
-	roleRef := rbacv1.RoleRef{
+	roleRef := &rbacv1.RoleRef{
 		Kind:     "ClusterRole",
 		Name:     OpenShiftSCCClusterRoleName,
 		APIGroup: "rbac.authorization.k8s.io",
 	}
-	return util.CreateClusterRoleBinding(s.client, OpenShiftSCCClusterBindingName, subjects, roleRef)
+	return s.k8sResourceManager.ClusterRoleBinding(OpenShiftSCCClusterBindingName, subjects, roleRef).Create()
 }
 
 // createClusterRoleBindingForScheduler creates a cluster role binding for the
@@ -393,10 +392,10 @@ func (s *Deployment) createClusterRoleBindingForScheduler() error {
 			Namespace: s.stos.Spec.GetResourceNS(),
 		},
 	}
-	roleRef := rbacv1.RoleRef{
+	roleRef := &rbacv1.RoleRef{
 		Kind:     "ClusterRole",
 		Name:     SchedulerClusterRoleName,
 		APIGroup: "rbac.authorization.k8s.io",
 	}
-	return util.CreateClusterRoleBinding(s.client, SchedulerClusterBindingName, subjects, roleRef)
+	return s.k8sResourceManager.ClusterRoleBinding(SchedulerClusterBindingName, subjects, roleRef).Create()
 }

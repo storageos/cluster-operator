@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/storageos/cluster-operator/pkg/util"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -15,7 +13,7 @@ import (
 // under the service. Any other value for "kind" will not be included in the
 // service.
 func (s *Deployment) createService() error {
-	spec := corev1.ServiceSpec{
+	spec := &corev1.ServiceSpec{
 		Type: corev1.ServiceType(s.stos.Spec.GetServiceType()),
 		Ports: []corev1.ServicePort{
 			{
@@ -31,27 +29,19 @@ func (s *Deployment) createService() error {
 		},
 	}
 
-	if err := util.CreateService(s.client, s.stos.Spec.GetServiceName(), s.stos.Spec.GetResourceNS(), s.stos.Spec.Service.Annotations, spec); err != nil {
+	if err := s.k8sResourceManager.Service(s.stos.Spec.GetServiceName(), s.stos.Spec.GetResourceNS(), s.stos.Spec.Service.Annotations, spec).Create(); err != nil {
 		return err
 	}
 
 	// Patch storageos-api secret with above service IP in apiAddress.
 	if !s.stos.Spec.CSI.Enable {
-		secret := &corev1.Secret{}
-		nsNameSecret := types.NamespacedName{
-			Namespace: s.stos.Spec.SecretRefNamespace,
-			Name:      s.stos.Spec.SecretRefName,
-		}
-		if err := s.client.Get(context.Background(), nsNameSecret, secret); err != nil {
+		secret, err := s.k8sResourceManager.Secret(s.stos.Spec.SecretRefName, s.stos.Spec.SecretRefNamespace, corev1.SecretTypeOpaque, nil).Get()
+		if err != nil {
 			return err
 		}
 
-		svc := &corev1.Service{}
-		nsNameService := types.NamespacedName{
-			Namespace: s.stos.Spec.GetResourceNS(),
-			Name:      s.stos.Spec.GetServiceName(),
-		}
-		if err := s.client.Get(context.Background(), nsNameService, svc); err != nil {
+		svc, err := s.k8sResourceManager.Service(s.stos.Spec.GetServiceName(), s.stos.Spec.GetResourceNS(), nil, nil).Get()
+		if err != nil {
 			return err
 		}
 

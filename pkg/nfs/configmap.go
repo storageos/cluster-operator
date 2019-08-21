@@ -2,15 +2,11 @@ package nfs
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"strings"
 	"text/template"
 
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
-	"github.com/storageos/cluster-operator/pkg/util"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 // NFS server configuration constants.
@@ -175,18 +171,5 @@ func (d *Deployment) createNFSConfigMap() error {
 		d.nfsServer.Name: nfsConfig,
 	}
 
-	return util.CreateConfigMap(d.client, d.nfsServer.Name, d.nfsServer.Namespace, data)
-}
-
-func (d *Deployment) getConfigMap(name string, namespace string) (*corev1.ConfigMap, error) {
-	configMap := &corev1.ConfigMap{}
-
-	namespacedConfigMap := types.NamespacedName{
-		Namespace: namespace,
-		Name:      name,
-	}
-	if err := d.client.Get(context.TODO(), namespacedConfigMap, configMap); err != nil {
-		return nil, err
-	}
-	return configMap, nil
+	return d.k8sResourceManager.ConfigMap(d.nfsServer.Name, d.nfsServer.Namespace, data).Create()
 }

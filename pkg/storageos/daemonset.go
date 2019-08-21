@@ -3,7 +3,6 @@ package storageos
 import (
 	"strconv"
 
-	"github.com/storageos/cluster-operator/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,7 +52,7 @@ func (s *Deployment) createDaemonSet() error {
 	mountPropagationBidirectional := corev1.MountPropagationBidirectional
 	allowPrivilegeEscalation := true
 
-	spec := appsv1.DaemonSetSpec{
+	spec := &appsv1.DaemonSetSpec{
 		Selector: &metav1.LabelSelector{
 			MatchLabels: ls,
 		},
@@ -289,7 +288,7 @@ func (s *Deployment) createDaemonSet() error {
 
 	s.addCSI(podSpec)
 
-	return util.CreateDaemonSet(s.client, daemonsetName, s.stos.Spec.GetResourceNS(), spec)
+	return s.k8sResourceManager.DaemonSet(daemonsetName, s.stos.Spec.GetResourceNS(), spec).Create()
 }
 
 // addKVBackendEnvVars checks if KVBackend is set and sets the appropriate env vars.

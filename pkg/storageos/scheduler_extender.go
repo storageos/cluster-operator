@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"text/template"
 
-	"github.com/storageos/cluster-operator/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,7 +51,7 @@ func (s *Deployment) createSchedulerExtender() error {
 // contains the deployment configuration of the external kube-scheduler.
 func (s Deployment) createSchedulerDeployment(replicas int32) error {
 	podLabels := podLabelsForScheduler(s.stos.Name)
-	spec := appsv1.DeploymentSpec{
+	spec := &appsv1.DeploymentSpec{
 		Replicas: &replicas,
 		Selector: &metav1.LabelSelector{
 			MatchLabels: podLabels,
@@ -72,7 +71,7 @@ func (s Deployment) createSchedulerDeployment(replicas int32) error {
 	// Add pod toleration for quick recovery on node failure.
 	addPodTolerationForRecovery(&spec.Template.Spec)
 
-	return util.CreateDeployment(s.client, schedulerExtenderName, s.stos.Spec.GetResourceNS(), spec)
+	return s.k8sResourceManager.Deployment(schedulerExtenderName, s.stos.Spec.GetResourceNS(), spec).Create()
 }
 
 // schedulerContainers returns a list of containers that should be part of the
@@ -116,22 +115,22 @@ func (s Deployment) schedulerVolumes() []corev1.Volume {
 // deleteSchedulerExtender deletes all the scheduler related resources.
 func (s Deployment) deleteSchedulerExtender() error {
 	namespace := s.stos.Spec.GetResourceNS()
-	if err := util.DeleteDeployment(s.client, schedulerExtenderName, namespace); err != nil {
+	if err := s.k8sResourceManager.Deployment(schedulerExtenderName, namespace, nil).Delete(); err != nil {
 		return err
 	}
-	if err := util.DeleteConfigMap(s.client, policyConfigMapName, namespace); err != nil {
+	if err := s.k8sResourceManager.ConfigMap(policyConfigMapName, namespace, nil).Delete(); err != nil {
 		return err
 	}
-	if err := util.DeleteConfigMap(s.client, schedulerConfigConfigMapName, namespace); err != nil {
+	if err := s.k8sResourceManager.ConfigMap(schedulerConfigConfigMapName, namespace, nil).Delete(); err != nil {
 		return err
 	}
-	if err := util.DeleteClusterRoleBinding(s.client, SchedulerClusterBindingName); err != nil {
+	if err := s.k8sResourceManager.ClusterRoleBinding(SchedulerClusterBindingName, nil, nil).Delete(); err != nil {
 		return err
 	}
-	if err := util.DeleteServiceAccount(s.client, SchedulerSA, namespace); err != nil {
+	if err := s.k8sResourceManager.ServiceAccount(SchedulerSA, namespace).Delete(); err != nil {
 		return err
 	}
-	if err := util.DeleteClusterRole(s.client, SchedulerClusterRoleName); err != nil {
+	if err := s.k8sResourceManager.ClusterRole(SchedulerClusterRoleName, nil).Delete(); err != nil {
 		return err
 	}
 	return nil
@@ -191,7 +190,7 @@ func (s Deployment) createSchedulerPolicy() error {
 	data := map[string]string{
 		"policy.cfg": policyConfig.String(),
 	}
-	return util.CreateConfigMap(s.client, policyConfigMapName, s.stos.Spec.GetResourceNS(), data)
+	return s.k8sResourceManager.ConfigMap(policyConfigMapName, s.stos.Spec.GetResourceNS(), data).Create()
 }
 
 // schedulerConfigTemplate contains fields for rendering the scheduler
@@ -241,7 +240,7 @@ func (s Deployment) createSchedulerConfiguration() error {
 	data := map[string]string{
 		"config.yaml": schedConfig.String(),
 	}
-	return util.CreateConfigMap(s.client, schedulerConfigConfigMapName, s.stos.Spec.GetResourceNS(), data)
+	return s.k8sResourceManager.ConfigMap(schedulerConfigConfigMapName, s.stos.Spec.GetResourceNS(), data).Create()
 }
 
 // podLabelsForScheduler returns labels for the scheduler pod.

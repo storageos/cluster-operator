@@ -3,7 +3,7 @@ package storageos
 import (
 	"strings"
 
-	"github.com/storageos/cluster-operator/pkg/util"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // Delete deletes all the storageos resources.
@@ -15,31 +15,31 @@ import (
 func (s *Deployment) Delete() error {
 	namespace := s.stos.Spec.GetResourceNS()
 
-	if err := util.DeleteStorageClass(s.client, s.stos.Spec.GetStorageClassName()); err != nil {
+	if err := s.k8sResourceManager.StorageClass(s.stos.Spec.GetStorageClassName(), "", nil).Delete(); err != nil {
 		return err
 	}
 
-	if err := util.DeleteService(s.client, s.stos.Spec.GetServiceName(), namespace); err != nil {
+	if err := s.k8sResourceManager.Service(s.stos.Spec.GetServiceName(), namespace, nil, nil).Delete(); err != nil {
 		return err
 	}
 
-	if err := util.DeleteDaemonSet(s.client, daemonsetName, namespace); err != nil {
+	if err := s.k8sResourceManager.DaemonSet(daemonsetName, namespace, nil).Delete(); err != nil {
 		return err
 	}
 
-	if err := util.DeleteSecret(s.client, initSecretName, namespace); err != nil {
+	if err := s.k8sResourceManager.Secret(initSecretName, namespace, corev1.SecretTypeOpaque, nil).Delete(); err != nil {
 		return err
 	}
 
-	if err := util.DeleteRoleBinding(s.client, KeyManagementBindingName, namespace); err != nil {
+	if err := s.k8sResourceManager.RoleBinding(KeyManagementBindingName, namespace, nil, nil).Delete(); err != nil {
 		return err
 	}
 
-	if err := util.DeleteRole(s.client, KeyManagementRoleName, namespace); err != nil {
+	if err := s.k8sResourceManager.Role(KeyManagementRoleName, namespace, nil).Delete(); err != nil {
 		return err
 	}
 
-	if err := util.DeleteServiceAccount(s.client, DaemonsetSA, namespace); err != nil {
+	if err := s.k8sResourceManager.ServiceAccount(DaemonsetSA, namespace).Delete(); err != nil {
 		return err
 	}
 
@@ -48,35 +48,35 @@ func (s *Deployment) Delete() error {
 			return err
 		}
 
-		if err := util.DeleteClusterRoleBinding(s.client, CSIAttacherClusterBindingName); err != nil {
+		if err := s.k8sResourceManager.ClusterRoleBinding(CSIAttacherClusterBindingName, nil, nil).Delete(); err != nil {
 			return err
 		}
 
-		if err := util.DeleteClusterRoleBinding(s.client, CSIProvisionerClusterBindingName); err != nil {
+		if err := s.k8sResourceManager.ClusterRoleBinding(CSIProvisionerClusterBindingName, nil, nil).Delete(); err != nil {
 			return err
 		}
 
-		if err := util.DeleteClusterRole(s.client, CSIAttacherClusterRoleName); err != nil {
+		if err := s.k8sResourceManager.ClusterRole(CSIAttacherClusterRoleName, nil).Delete(); err != nil {
 			return err
 		}
 
-		if err := util.DeleteClusterRole(s.client, CSIProvisionerClusterRoleName); err != nil {
+		if err := s.k8sResourceManager.ClusterRole(CSIProvisionerClusterRoleName, nil).Delete(); err != nil {
 			return err
 		}
 
-		if err := util.DeleteServiceAccount(s.client, s.getCSIHelperServiceAccountName(), namespace); err != nil {
+		if err := s.k8sResourceManager.ServiceAccount(s.getCSIHelperServiceAccountName(), namespace).Delete(); err != nil {
 			return err
 		}
 
-		if err := util.DeleteClusterRoleBinding(s.client, CSIK8SDriverRegistrarClusterBindingName); err != nil {
+		if err := s.k8sResourceManager.ClusterRoleBinding(CSIK8SDriverRegistrarClusterBindingName, nil, nil).Delete(); err != nil {
 			return err
 		}
 
-		if err := util.DeleteClusterRoleBinding(s.client, CSIDriverRegistrarClusterBindingName); err != nil {
+		if err := s.k8sResourceManager.ClusterRoleBinding(CSIDriverRegistrarClusterBindingName, nil, nil).Delete(); err != nil {
 			return err
 		}
 
-		if err := util.DeleteClusterRole(s.client, CSIDriverRegistrarClusterRoleName); err != nil {
+		if err := s.k8sResourceManager.ClusterRole(CSIDriverRegistrarClusterRoleName, nil).Delete(); err != nil {
 			return err
 		}
 
@@ -93,22 +93,22 @@ func (s *Deployment) Delete() error {
 
 	// Delete cluster role for openshift security context constraints.
 	if strings.Contains(s.stos.Spec.K8sDistro, K8SDistroOpenShift) {
-		if err := util.DeleteClusterRoleBinding(s.client, OpenShiftSCCClusterBindingName); err != nil {
+		if err := s.k8sResourceManager.ClusterRoleBinding(OpenShiftSCCClusterBindingName, nil, nil).Delete(); err != nil {
 			return err
 		}
 
-		if err := util.DeleteClusterRole(s.client, OpenShiftSCCClusterRoleName); err != nil {
+		if err := s.k8sResourceManager.ClusterRole(OpenShiftSCCClusterRoleName, nil).Delete(); err != nil {
 			return err
 		}
 	}
 
 	// Delete role for Pod Fencing.
 	if !s.stos.Spec.DisableFencing {
-		if err := util.DeleteClusterRoleBinding(s.client, FencingClusterBindingName); err != nil {
+		if err := s.k8sResourceManager.ClusterRoleBinding(FencingClusterBindingName, nil, nil).Delete(); err != nil {
 			return err
 		}
 
-		if err := util.DeleteClusterRole(s.client, FencingClusterRoleName); err != nil {
+		if err := s.k8sResourceManager.ClusterRole(FencingClusterRoleName, nil).Delete(); err != nil {
 			return err
 		}
 	}

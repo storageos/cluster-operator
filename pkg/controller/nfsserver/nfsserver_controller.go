@@ -2,6 +2,7 @@ package nfsserver
 
 import (
 	"context"
+	goerrors "errors"
 	"strings"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,6 +23,10 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
+
+// ErrNoCluster is the error when there's no associated running StorageOS
+// cluster found for NFS server.
+var ErrNoCluster = goerrors.New("no storageos cluster found")
 
 var log = logf.Log.WithName("controller_nfsserver")
 
@@ -36,10 +42,10 @@ func Add(mgr manager.Manager) error {
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	storageos := stosClientset.NewForConfigOrDie(mgr.GetConfig())
 	return &ReconcileNFSServer{
-		client:     mgr.GetClient(),
-		scheme:     mgr.GetScheme(),
-		recorder:   mgr.GetRecorder("storageos-nfsserver"),
-		stosClient: storageos,
+		client:        mgr.GetClient(),
+		scheme:        mgr.GetScheme(),
+		recorder:      mgr.GetRecorder("storageos-nfsserver"),
+		stosClientset: storageos,
 	}
 }
 
@@ -96,16 +102,14 @@ var _ reconcile.Reconciler = &ReconcileNFSServer{}
 type ReconcileNFSServer struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client     client.Client
-	stosClient stosClientset.Interface
-	scheme     *runtime.Scheme
-	recorder   record.EventRecorder
+	client        client.Client
+	stosClientset stosClientset.Interface
+	scheme        *runtime.Scheme
+	recorder      record.EventRecorder
 }
 
 // Reconcile reads that state of the cluster for a NFSServer object and makes changes based on the state read
 // and what is in the NFSServer.Spec
-// TODO(user): Modify this Reconcile function to implement your Controller logic.  This example creates
-// a Pod as an example
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
@@ -153,7 +157,27 @@ func (r *ReconcileNFSServer) reconcile(instance *storageosv1.NFSServer) error {
 		return nil
 	}
 
-	d := nfs.NewDeployment(r.client, r.stosClient, instance, r.recorder, r.scheme)
+	// Get a StorageOS cluster to associate the NFS server with.
+	stosCluster, err := r.getCurrentStorageOSCluster()
+	if err != nil {
+		return err
+	}
+
+	// Update NFS spec with values inferred from the StorageOS cluster.
+	instance.Spec.StorageClassName = instance.Spec.GetStorageClassName(stosCluster.Spec.GetStorageClassName())
+
+	// Prepare for NFS deployment.
+
+	// Labels to be applied on all the k8s resources that are created for NFS
+	// server. Inherit the labels from the CR.
+	labels := instance.Labels
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	// Add default labels.
+	labels["app"] = "storageos"
+
+	d := nfs.NewDeployment(r.client, stosCluster, instance, labels, r.recorder, r.scheme)
 
 	// If the CR has not been marked for deletion, ensure it is deployed.
 	if instance.GetDeletionTimestamp() == nil {
@@ -197,6 +221,32 @@ func (r *ReconcileNFSServer) addFinalizer(instance *storageosv1.NFSServer) error
 		return err
 	}
 	return nil
+}
+
+// getCurrentStorageOSCluster returns a running StorageOS cluster.
+func (r *ReconcileNFSServer) getCurrentStorageOSCluster() (*storageosv1.StorageOSCluster, error) {
+	var currentCluster *storageosv1.StorageOSCluster
+
+	// Get a list of all the StorageOS clusters.
+	stosClusters, err := r.stosClientset.StorageosV1().StorageOSClusters("").List(metav1.ListOptions{})
+	if err != nil {
+		return currentCluster, err
+	}
+
+	for _, cluster := range stosClusters.Items {
+		// Only one cluster can be in running phase at a time.
+		if cluster.Status.Phase == storageosv1.ClusterPhaseRunning {
+			currentCluster = &cluster
+			break
+		}
+	}
+
+	// If no current cluster found, fail.
+	if currentCluster != nil {
+		return currentCluster, nil
+	}
+
+	return currentCluster, ErrNoCluster
 }
 
 func contains(list []string, s string) bool {

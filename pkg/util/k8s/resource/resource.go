@@ -1,4 +1,6 @@
-package util
+// Package resource contains implementation of k8s.Resource interface for
+// various k8s resources.
+package resource
 
 import (
 	"context"
@@ -6,12 +8,20 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// CreateOrUpdateObject creates or updates an existing k8s resource.
-func CreateOrUpdateObject(c client.Client, obj runtime.Object) error {
+// k8s APIVersion constants.
+const (
+	APIv1         = "v1"
+	APIappsv1     = "apps/v1"
+	APIextv1beta1 = "extensions/v1beta1"
+	APIrbacv1     = "rbac.authorization.k8s.io/v1"
+	APIstoragev1  = "storage.k8s.io/v1"
+)
+
+// CreateOrUpdate creates or updates an existing k8s resource.
+func CreateOrUpdate(c client.Client, obj runtime.Object) error {
 	if err := c.Create(context.Background(), obj); err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			// TODO: Support update.
@@ -28,8 +38,8 @@ func CreateOrUpdateObject(c client.Client, obj runtime.Object) error {
 	return nil
 }
 
-// DeleteObject deletes a k8s resource.
-func DeleteObject(c client.Client, obj runtime.Object) error {
+// Delete deletes a k8s resource.
+func Delete(c client.Client, obj runtime.Object) error {
 	if err := c.Delete(context.Background(), obj); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil

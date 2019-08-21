@@ -4,11 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	"github.com/storageos/cluster-operator/pkg/storageos"
-	"github.com/storageos/cluster-operator/pkg/util"
 	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
@@ -18,7 +15,9 @@ const (
 
 	serviceAccountPrefix = "storageos-nfs"
 
-	DefaultNFSPort     = 2049
+	// DefaultNFSPort is the default port for NFS server.
+	DefaultNFSPort = 2049
+	// DefaultMetricsPort is the default port for NFS mertics.
 	DefaultMetricsPort = 9587
 )
 
@@ -26,28 +25,7 @@ var log = logf.Log.WithName("storageos.nfsserver")
 
 // Deploy deploys a NFS server.
 func (d *Deployment) Deploy() error {
-	// Get the current StorageOS cluster.
-	stosClusters, err := d.stosClient.StorageosV1().StorageOSClusters("").List(metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-
-	var currentCluster storageosv1.StorageOSCluster
-
-	for _, cluster := range stosClusters.Items {
-		// Only one cluster can be in running phase at a time.
-		if cluster.Status.Phase == storageosv1.ClusterPhaseRunning {
-			currentCluster = cluster
-			break
-		}
-	}
-
-	d.cluster = &currentCluster
-
-	// Update NFSServer spec StorageClassName value.
-	d.nfsServer.Spec.StorageClassName = d.nfsServer.Spec.GetStorageClassName(d.cluster.Spec.GetStorageClassName())
-
-	err = d.ensureService(DefaultNFSPort, DefaultMetricsPort)
+	err := d.ensureService(DefaultNFSPort, DefaultMetricsPort)
 	if err != nil {
 		return err
 	}
@@ -61,7 +39,7 @@ func (d *Deployment) Deploy() error {
 
 	// Grant OpenShift SCC permission for StatefulSet using the ClusterRole
 	// created for the StorageOSCluster.
-	if strings.Contains(currentCluster.Spec.K8sDistro, storageos.K8SDistroOpenShift) {
+	if strings.Contains(d.cluster.Spec.K8sDistro, storageos.K8SDistroOpenShift) {
 		if err := d.createClusterRoleBindingForSCC(); err != nil {
 			return err
 		}
@@ -115,12 +93,12 @@ func (d *Deployment) createClusterRoleBindingForSCC() error {
 			Namespace: d.nfsServer.Namespace,
 		},
 	}
-	roleRef := rbacv1.RoleRef{
+	roleRef := &rbacv1.RoleRef{
 		Kind:     "ClusterRole",
 		Name:     storageos.OpenShiftSCCClusterRoleName,
 		APIGroup: "rbac.authorization.k8s.io",
 	}
-	return util.CreateClusterRoleBinding(d.client, d.getClusterRoleBindingName(), subjects, roleRef)
+	return d.k8sResourceManager.ClusterRoleBinding(d.getClusterRoleBindingName(), subjects, roleRef).Create()
 }
 
 func (d *Deployment) getClusterRoleBindingName() string {
@@ -132,5 +110,5 @@ func (d *Deployment) getServiceAccountName() string {
 }
 
 func (d *Deployment) createServiceAccountForNFSServer() error {
-	return util.CreateServiceAccount(d.client, d.getServiceAccountName(), d.nfsServer.Namespace)
+	return d.k8sResourceManager.ServiceAccount(d.getServiceAccountName(), d.nfsServer.Namespace).Create()
 }
