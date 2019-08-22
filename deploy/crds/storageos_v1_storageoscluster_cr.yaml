@@ -8,6 +8,7 @@ spec:
   secretRefNamespace: "default"
   namespace: "storageos"
   # k8sDistro: openshift
+  # storageClassName: fast
   # tlsEtcdSecretRefName:
   # tlsEtcdSecretRefNamespace:
   # disableTelemetry: true

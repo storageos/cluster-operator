@@ -21,6 +21,8 @@ const (
 
 	DefaultNamespace = "storageos"
 
+	DefaultStorageClassName = "fast"
+
 	DefaultServiceName         = "storageos"
 	DefaultServiceType         = "ClusterIP"
 	DefaultServiceExternalPort = 5705
@@ -83,6 +85,10 @@ type StorageOSClusterSpec struct {
 	// Namespace is the kubernetes Namespace where storageos resources are
 	// provisioned.
 	Namespace string `json:"namespace,omitempty"`
+
+	// StorageClassName is the name of default StorageClass created for
+	// StorageOS volumes.
+	StorageClassName string `json:"storageClassName,omitempty"`
 
 	// Service is the Service configuration for the cluster nodes.
 	Service StorageOSClusterService `json:"service,omitempty"`
@@ -252,6 +258,15 @@ func (s StorageOSClusterSpec) GetResourceNS() string {
 		return s.Namespace
 	}
 	return DefaultNamespace
+}
+
+// GetStorageClassName returns the name of default StorageClass created with the
+// StorageOS cluster.
+func (s StorageOSClusterSpec) GetStorageClassName() string {
+	if s.StorageClassName != "" {
+		return s.StorageClassName
+	}
+	return DefaultStorageClassName
 }
 
 // GetNodeContainerImage returns node container image.

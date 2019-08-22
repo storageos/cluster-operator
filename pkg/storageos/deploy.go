@@ -1,17 +1,14 @@
 package storageos
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
 	"github.com/blang/semver"
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
-	appsv1 "k8s.io/api/apps/v1"
+	"github.com/storageos/cluster-operator/pkg/util/k8s/resource"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
@@ -67,12 +64,16 @@ const (
 	csiV1NodePublishSecretNamespaceKey       = csiParameterPrefix + "node-publish-secret-namespace"
 	tlsCertKey                               = "tls.crt"
 	tlsKeyKey                                = "tls.key"
+	credUsernameKey                          = "username"
+	credPasswordKey                          = "password"
 
 	defaultUsername = "storageos"
 	defaultPassword = "storageos"
 
 	// k8s distribution vendor specific keywords.
-	k8sDistroOpenShift = "openshift"
+
+	// K8SDistroOpenShift is k8s distribution name for OpenShift.
+	K8SDistroOpenShift = "openshift"
 
 	// podTolerationSeconds is the time for which a pod tolerates an unfavorable
 	// node condition.
@@ -177,7 +178,7 @@ func (s *Deployment) Deploy() error {
 	}
 
 	// Add openshift security context constraints.
-	if strings.Contains(s.stos.Spec.K8sDistro, k8sDistroOpenShift) {
+	if strings.Contains(s.stos.Spec.K8sDistro, K8SDistroOpenShift) {
 		if err := s.createClusterRoleForSCC(); err != nil {
 			return err
 		}
@@ -222,7 +223,7 @@ func (s *Deployment) createNamespace() error {
 		},
 	}
 
-	return s.createOrUpdateObject(ns)
+	return resource.CreateOrUpdate(s.client, ns)
 }
 
 // addNodeContainerResources adds resource requirements for the node containers.
@@ -280,71 +281,6 @@ func getCSICredsEnvVar(envVarName, secretName, key string) corev1.EnvVar {
 					Name: secretName,
 				},
 				Key: key,
-			},
-		},
-	}
-}
-
-// createOrUpdateObject attempts to create a given object. If the object already
-// exists and `Deployment.update` is false, no change is made. If update is true,
-// the existing object is updated.
-func (s *Deployment) createOrUpdateObject(obj runtime.Object) error {
-	if err := s.client.Create(context.Background(), obj); err != nil {
-		if apierrors.IsAlreadyExists(err) {
-			if s.update {
-				return s.client.Update(context.Background(), obj)
-			}
-			// Exists, no update.
-			return nil
-		}
-
-		kind := obj.GetObjectKind().GroupVersionKind().Kind
-		return fmt.Errorf("failed to create %s: %v", kind, err)
-	}
-	return nil
-}
-
-// deleteObject deletes a given runtime object.
-func (s *Deployment) deleteObject(obj runtime.Object) error {
-	if err := s.client.Delete(context.Background(), obj); err != nil {
-		// If not found, the object has already been deleted.
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-	return nil
-}
-
-// getDeploymentByName returns a StorageOS Deployment resource.
-func (s Deployment) getDeploymentByName(name string) *appsv1.Deployment {
-	return &appsv1.Deployment{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "Deployment",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: s.stos.Spec.GetResourceNS(),
-			Labels: map[string]string{
-				"app": "storageos",
-			},
-		},
-	}
-}
-
-// getStatefulSetByName returns a StorageOS StatefulSet resource.
-func (s Deployment) getStatefulSetByName(name string) *appsv1.StatefulSet {
-	return &appsv1.StatefulSet{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "StatefulSet",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: s.stos.Spec.GetResourceNS(),
-			Labels: map[string]string{
-				"app": "storageos",
 			},
 		},
 	}

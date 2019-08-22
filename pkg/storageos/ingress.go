@@ -2,34 +2,23 @@ package storageos
 
 import (
 	"k8s.io/api/extensions/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
+const (
+	ingressName = "storageos-ingress"
+)
+
 func (s *Deployment) createIngress() error {
-	ingress := &v1beta1.Ingress{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "extensions/v1beta1",
-			Kind:       "Ingress",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "storageos-ingress",
-			Namespace: s.stos.Spec.GetResourceNS(),
-			Labels: map[string]string{
-				"app": appName,
-			},
-			Annotations: s.stos.Spec.Ingress.Annotations,
-		},
-		Spec: v1beta1.IngressSpec{
-			Backend: &v1beta1.IngressBackend{
-				ServiceName: s.stos.Spec.GetServiceName(),
-				ServicePort: intstr.IntOrString{Type: intstr.Int, IntVal: int32(s.stos.Spec.GetServiceExternalPort())},
-			},
+	spec := &v1beta1.IngressSpec{
+		Backend: &v1beta1.IngressBackend{
+			ServiceName: s.stos.Spec.GetServiceName(),
+			ServicePort: intstr.IntOrString{Type: intstr.Int, IntVal: int32(s.stos.Spec.GetServiceExternalPort())},
 		},
 	}
 
 	if s.stos.Spec.Ingress.TLS {
-		ingress.Spec.TLS = []v1beta1.IngressTLS{
+		spec.TLS = []v1beta1.IngressTLS{
 			v1beta1.IngressTLS{
 				Hosts:      []string{s.stos.Spec.Ingress.Hostname},
 				SecretName: tlsSecretName,
@@ -37,26 +26,5 @@ func (s *Deployment) createIngress() error {
 		}
 	}
 
-	return s.createOrUpdateObject(ingress)
-}
-
-func (s *Deployment) deleteIngress(name string) error {
-	return s.deleteObject(s.getIngress(name))
-}
-
-func (s *Deployment) getIngress(name string) *v1beta1.Ingress {
-	return &v1beta1.Ingress{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "extensions/v1beta1",
-			Kind:       "Ingress",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: s.stos.Spec.GetResourceNS(),
-			Labels: map[string]string{
-				"app": appName,
-			},
-			Annotations: s.stos.Spec.Ingress.Annotations,
-		},
-	}
+	return s.k8sResourceManager.Ingress(ingressName, s.stos.Spec.GetResourceNS(), s.stos.Spec.Ingress.Annotations, spec).Create()
 }

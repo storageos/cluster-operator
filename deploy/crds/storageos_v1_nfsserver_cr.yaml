@@ -1,0 +1,10 @@
+apiVersion: storageos.com/v1
+kind: NFSServer
+metadata:
+  name: example-nfsserver
+spec:
+  # nfsContainer:
+  # storageClassName: fast
+  resources:
+    requests:
+      storage: "1Gi"

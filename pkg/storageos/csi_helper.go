@@ -21,88 +21,60 @@ func (s *Deployment) createCSIHelper() error {
 	// major release, Deployment will be the default.
 	switch s.stos.Spec.GetCSIDeploymentStrategy() {
 	case deploymentKind:
-		helperDeployment := s.csiHelperDeployment(replicas)
-		return s.createOrUpdateObject(helperDeployment)
+		return s.createCSIHelperDeployment(replicas)
 	default:
-		helperStatefulSet := s.csiHelperStatefulSet(replicas)
-		return s.createOrUpdateObject(helperStatefulSet)
+		return s.createCSIHelperStatefulSet(replicas)
 	}
 }
 
 // csiHelperStatefulSet returns a CSI helper StatefulSet object.
-func (s Deployment) csiHelperStatefulSet(replicas int32) *appsv1.StatefulSet {
+func (s Deployment) createCSIHelperStatefulSet(replicas int32) error {
 	podLabels := podLabelsForCSIHelpers(s.stos.Name, statefulsetKind)
-	statefulset := &appsv1.StatefulSet{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "StatefulSet",
+	spec := &appsv1.StatefulSetSpec{
+		Replicas: &replicas,
+		Selector: &metav1.LabelSelector{
+			MatchLabels: podLabels,
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      statefulsetName,
-			Namespace: s.stos.Spec.GetResourceNS(),
-			Labels: map[string]string{
-				"app": "storageos",
+		Template: corev1.PodTemplateSpec{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: podLabels,
 			},
-		},
-		Spec: appsv1.StatefulSetSpec{
-			Replicas: &replicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: podLabels,
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: podLabels,
-				},
-				Spec: corev1.PodSpec{
-					ServiceAccountName: StatefulsetSA,
-					Containers:         s.csiHelperContainers(),
-					Volumes:            s.csiHelperVolumes(),
-				},
+			Spec: corev1.PodSpec{
+				ServiceAccountName: StatefulsetSA,
+				Containers:         s.csiHelperContainers(),
+				Volumes:            s.csiHelperVolumes(),
 			},
 		},
 	}
 
-	s.addCommonPodProperties(&statefulset.Spec.Template.Spec)
+	s.addCommonPodProperties(&spec.Template.Spec)
 
-	return statefulset
+	return s.k8sResourceManager.StatefulSet(statefulsetName, s.stos.Spec.GetResourceNS(), spec).Create()
 }
 
 // csiHelperDeployment returns a CSI helper Deployment object.
-func (s Deployment) csiHelperDeployment(replicas int32) *appsv1.Deployment {
+func (s Deployment) createCSIHelperDeployment(replicas int32) error {
 	podLabels := podLabelsForCSIHelpers(s.stos.Name, deploymentKind)
-	dep := &appsv1.Deployment{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "Deployment",
+	spec := &appsv1.DeploymentSpec{
+		Replicas: &replicas,
+		Selector: &metav1.LabelSelector{
+			MatchLabels: podLabels,
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      csiHelperName,
-			Namespace: s.stos.Spec.GetResourceNS(),
-			Labels: map[string]string{
-				"app": "storageos",
+		Template: corev1.PodTemplateSpec{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: podLabels,
 			},
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: &replicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: podLabels,
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: podLabels,
-				},
-				Spec: corev1.PodSpec{
-					ServiceAccountName: CSIHelperSA,
-					Containers:         s.csiHelperContainers(),
-					Volumes:            s.csiHelperVolumes(),
-				},
+			Spec: corev1.PodSpec{
+				ServiceAccountName: CSIHelperSA,
+				Containers:         s.csiHelperContainers(),
+				Volumes:            s.csiHelperVolumes(),
 			},
 		},
 	}
 
-	s.addCommonPodProperties(&dep.Spec.Template.Spec)
+	s.addCommonPodProperties(&spec.Template.Spec)
 
-	return dep
+	return s.k8sResourceManager.Deployment(csiHelperName, s.stos.Spec.GetResourceNS(), spec).Create()
 }
 
 // addCommonPodProperties adds common pod properties to a given pod spec. The
@@ -232,9 +204,9 @@ func (s Deployment) deleteCSIHelper() error {
 	// different kinds.
 	switch s.stos.Spec.GetCSIDeploymentStrategy() {
 	case deploymentKind:
-		return s.deleteObject(s.getDeploymentByName(csiHelperName))
+		return s.k8sResourceManager.Deployment(csiHelperName, s.stos.Spec.GetResourceNS(), nil).Delete()
 	default:
-		return s.deleteObject(s.getStatefulSetByName(statefulsetName))
+		return s.k8sResourceManager.StatefulSet(statefulsetName, s.stos.Spec.GetResourceNS(), nil).Delete()
 	}
 }
 

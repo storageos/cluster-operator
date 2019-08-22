@@ -148,6 +148,7 @@ Parameter | Description | Default
 `tolerations` | Set pod tolerations for storageos pod placement |
 `resources` | Set resource requirements for the containers |
 `k8sDistro` | The name of the Kubernetes distribution is use, e.g. `rancher` or `eks` |
+`storageClassName` | The name of the default StorageClass created for StorageOS volumes | `fast`
 
 ## Upgrading a StorageOS Cluster
 

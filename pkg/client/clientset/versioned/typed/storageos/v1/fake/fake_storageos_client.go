@@ -32,6 +32,10 @@ func (c *FakeStorageosV1) Jobs(namespace string) v1.JobInterface {
 	return &FakeJobs{c, namespace}
 }
 
+func (c *FakeStorageosV1) NFSServers(namespace string) v1.NFSServerInterface {
+	return &FakeNFSServers{c, namespace}
+}
+
 func (c *FakeStorageosV1) StorageOSClusters(namespace string) v1.StorageOSClusterInterface {
 	return &FakeStorageOSClusters{c, namespace}
 }

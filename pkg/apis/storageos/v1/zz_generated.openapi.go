@@ -16,6 +16,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/storageos/cluster-operator/pkg/apis/storageos/v1.Job":                    schema_pkg_apis_storageos_v1_Job(ref),
 		"github.com/storageos/cluster-operator/pkg/apis/storageos/v1.JobSpec":                schema_pkg_apis_storageos_v1_JobSpec(ref),
 		"github.com/storageos/cluster-operator/pkg/apis/storageos/v1.JobStatus":              schema_pkg_apis_storageos_v1_JobStatus(ref),
+		"github.com/storageos/cluster-operator/pkg/apis/storageos/v1.NFSServer":              schema_pkg_apis_storageos_v1_NFSServer(ref),
+		"github.com/storageos/cluster-operator/pkg/apis/storageos/v1.NFSServerSpec":          schema_pkg_apis_storageos_v1_NFSServerSpec(ref),
+		"github.com/storageos/cluster-operator/pkg/apis/storageos/v1.NFSServerStatus":        schema_pkg_apis_storageos_v1_NFSServerStatus(ref),
 		"github.com/storageos/cluster-operator/pkg/apis/storageos/v1.StorageOSCluster":       schema_pkg_apis_storageos_v1_StorageOSCluster(ref),
 		"github.com/storageos/cluster-operator/pkg/apis/storageos/v1.StorageOSClusterSpec":   schema_pkg_apis_storageos_v1_StorageOSClusterSpec(ref),
 		"github.com/storageos/cluster-operator/pkg/apis/storageos/v1.StorageOSClusterStatus": schema_pkg_apis_storageos_v1_StorageOSClusterStatus(ref),
@@ -178,6 +181,171 @@ func schema_pkg_apis_storageos_v1_JobStatus(ref common.ReferenceCallback) common
 	}
 }
 
+func schema_pkg_apis_storageos_v1_NFSServer(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NFSServer is the Schema for the nfsservers API",
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/storageos/cluster-operator/pkg/apis/storageos/v1.NFSServerSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/storageos/cluster-operator/pkg/apis/storageos/v1.NFSServerStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/storageos/cluster-operator/pkg/apis/storageos/v1.NFSServerSpec", "github.com/storageos/cluster-operator/pkg/apis/storageos/v1.NFSServerStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_storageos_v1_NFSServerSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NFSServerSpec defines the desired state of NFSServer",
+				Properties: map[string]spec.Schema{
+					"nfsContainer": {
+						SchemaProps: spec.SchemaProps{
+							Description: "NFSContainer is the container image to use for the NFS server.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"storageClassName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "StorageClassName is the name of the StorageClass used by the NFS volume.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"tolerations": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Tolerations is to set the placement of NFS server pods using pod toleration.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("k8s.io/api/core/v1.Toleration"),
+									},
+								},
+							},
+						},
+					},
+					"resources": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Resources represents the minimum resources required",
+							Ref:         ref("k8s.io/api/core/v1.ResourceRequirements"),
+						},
+					},
+					"annotations": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The annotations-related configuration to add/set on each Pod related object.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"export": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The parameters to configure the NFS export",
+							Ref:         ref("github.com/storageos/cluster-operator/pkg/apis/storageos/v1.ExportSpec"),
+						},
+					},
+					"persistentVolumeReclaimPolicy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Reclamation policy for the persistent volume shared to the user's pod.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"mountOptions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PV mount options. Not validated - mount of the PVs will simply fail if one is invalid.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/storageos/cluster-operator/pkg/apis/storageos/v1.ExportSpec", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.Toleration"},
+	}
+}
+
+func schema_pkg_apis_storageos_v1_NFSServerStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NFSServerStatus defines the observed state of NFSServer",
+				Properties: map[string]spec.Schema{
+					"remoteTarget": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RemoteTarget is the connection string that clients can use to access the shared filesystem.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"phase": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Phase is a simple, high-level summary of where the NFS Server is in its lifecycle. Phase will be set to Ready when the NFS Server is ready for use.  It is intended to be similar to the PodStatus Phase described at: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#podstatus-v1-core\n\nThere are five possible phase values:\n  - Pending: The NFS Server has been accepted by the Kubernetes system,\n    but one or more of the components has not been created. This includes\n    time before being scheduled as well as time spent downloading images\n    over the network, which could take a while.\n  - Running: The NFS Server has been bound to a node, and all of the\n    dependencies have been created.\n  - Succeeded: All NFS Server dependencies have terminated in success,\n    and will not be restarted.\n  - Failed: All NFS Server dependencies in the pod have terminated, and\n    at least one container has terminated in failure. The container\n    either exited with non-zero status or was terminated by the system.\n  - Unknown: For some reason the state of the NFS Server could not be\n    obtained, typically due to an error in communicating with the host of\n    the pod.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"accessModes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AccessModes is the access modes supported by the NFS server.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
 func schema_pkg_apis_storageos_v1_StorageOSCluster(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -243,6 +411,13 @@ func schema_pkg_apis_storageos_v1_StorageOSClusterSpec(ref common.ReferenceCallb
 					"namespace": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Namespace is the kubernetes Namespace where storageos resources are provisioned.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"storageClassName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "StorageClassName is the name of default StorageClass created for StorageOS volumes.",
 							Type:        []string{"string"},
 							Format:      "",
 						},

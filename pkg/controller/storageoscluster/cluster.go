@@ -29,7 +29,17 @@ func (c *StorageOSCluster) SetDeployment(r *ReconcileStorageOSCluster) {
 	// TODO: Change this after resolving the conflict between two way
 	// binding and upgrade.
 	updateIfExists := false
-	c.deployment = storageos.NewDeployment(r.client, c.cluster, r.recorder, r.scheme, r.k8sVersion, updateIfExists)
+
+	// Labels to be applied on all the k8s resources that are created for
+	// StorageOS deployment. Inherit the labels from the CR.
+	labels := c.cluster.Labels
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	// Add default labels.
+	labels["app"] = "storageos"
+
+	c.deployment = storageos.NewDeployment(r.client, c.cluster, labels, r.recorder, r.scheme, r.k8sVersion, updateIfExists)
 }
 
 // IsCurrentCluster compares the cluster attributes to check if the given

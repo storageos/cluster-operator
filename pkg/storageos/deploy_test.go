@@ -10,7 +10,6 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,7 +43,7 @@ func setupFakeDeployment() (client.Client, *Deployment) {
 		},
 	}
 
-	deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
+	deploy := NewDeployment(c, stosCluster, nil, nil, testScheme, "", false)
 	return c, deploy
 }
 
@@ -60,15 +59,6 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// func checkObjectOwner(t *testing.T, owner metav1.OwnerReference, wantGVK schema.GroupVersionKind) {
-// 	if owner.APIVersion != wantGVK.GroupVersion().String() {
-// 		t.Errorf("unexpected object owner api version:\n\t(WNT) %s\n\t(GOT) %s", wantGVK.Version, owner.APIVersion)
-// 	}
-// 	if owner.Kind != wantGVK.Kind {
-// 		t.Errorf("unexpected object owner kindL\n\t(WNT) %s\n\t(GOT) %s", wantGVK.Kind, owner.Kind)
-// 	}
-// }
-
 func TestCreateNamespace(t *testing.T) {
 	c, deploy := setupFakeDeployment()
 	if err := deploy.createNamespace(); err != nil {
@@ -80,217 +70,6 @@ func TestCreateNamespace(t *testing.T) {
 	wantNS := &corev1.Namespace{}
 	if err := c.Get(context.TODO(), nsName, wantNS); err != nil {
 		t.Fatal("failed to get the created object", err)
-	}
-
-	// owner := wantNS.GetOwnerReferences()[0]
-	// checkObjectOwner(t, owner, gvk)
-}
-
-func TestCreateServiceAccount(t *testing.T) {
-	c, deploy := setupFakeDeployment()
-	saName := "my-service-account"
-	if err := deploy.createServiceAccount(saName); err != nil {
-		t.Fatal("failed to create service account for daemonset", err)
-	}
-
-	nsName := types.NamespacedName{
-		Name:      saName,
-		Namespace: defaultNS,
-	}
-	wantServiceAccount := &corev1.ServiceAccount{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ServiceAccount",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      saName,
-			Namespace: defaultNS,
-			Labels: map[string]string{
-				"app": appName,
-			},
-		},
-	}
-	if err := c.Get(context.TODO(), nsName, wantServiceAccount); err != nil {
-		t.Fatal("failed to get the created object", err)
-	}
-
-	// owner := wantServiceAccount.GetOwnerReferences()[0]
-	// checkObjectOwner(t, owner, gvk)
-}
-
-func TestCreateRoleForKeyMgmt(t *testing.T) {
-	c, deploy := setupFakeDeployment()
-	if err := deploy.createRoleForKeyMgmt(); err != nil {
-		t.Fatal("failed to create role binding for key management", err)
-	}
-
-	nsName := types.NamespacedName{
-		Name:      KeyManagementRoleName,
-		Namespace: defaultNS,
-	}
-	wantRole := &rbacv1.Role{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "rbac.authorization.k8s.io/v1",
-			Kind:       "Role",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      KeyManagementRoleName,
-			Namespace: defaultNS,
-			Labels: map[string]string{
-				"app": appName,
-			},
-		},
-	}
-	if err := c.Get(context.TODO(), nsName, wantRole); err != nil {
-		t.Fatal("failed to get the created object", err)
-	}
-
-	// owner := wantRole.GetOwnerReferences()[0]
-	// checkObjectOwner(t, owner, gvk)
-}
-
-func TestCreateClusterRole(t *testing.T) {
-	c, deploy := setupFakeDeployment()
-	roleName := "my-cluster-role"
-	rules := []rbacv1.PolicyRule{
-		{
-			APIGroups: []string{""},
-			Resources: []string{"nodes"},
-			Verbs:     []string{"get", "update"},
-		},
-		{
-			APIGroups: []string{""},
-			Resources: []string{"events"},
-			Verbs:     []string{"list", "watch", "create", "update", "patch"},
-		},
-	}
-	if err := deploy.createClusterRole(roleName, rules); err != nil {
-		t.Fatal("failed to create cluster role", err)
-	}
-
-	nsName := types.NamespacedName{
-		Name: roleName,
-	}
-	createdClusterRole := &rbacv1.ClusterRole{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "rbac.authorization.k8s.io/v1",
-			Kind:       "ClusterRole",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: roleName,
-			Labels: map[string]string{
-				"app": appName,
-			},
-		},
-	}
-	if err := c.Get(context.TODO(), nsName, createdClusterRole); err != nil {
-		t.Fatal("failed to get the created object", err)
-	}
-
-	// owner := createdClusterRole.GetOwnerReferences()[0]
-	// checkObjectOwner(t, owner, gvk)
-	checkRulesEquality(t, rules, createdClusterRole.Rules)
-}
-
-func checkRulesEquality(t *testing.T, wantRules, gotRules []rbacv1.PolicyRule) {
-	for index, wantRule := range wantRules {
-		gotRule := gotRules[index]
-		if !reflect.DeepEqual(wantRule.APIGroups, gotRule.APIGroups) ||
-			!reflect.DeepEqual(wantRule.Resources, gotRule.Resources) ||
-			!reflect.DeepEqual(wantRule.Verbs, gotRule.Verbs) {
-			t.Errorf("unequal rules:\n\t(WNT) %v\n\t(GOT) %v", wantRules, gotRules)
-		}
-	}
-}
-
-func TestCreateRoleBindingForKeyMgmt(t *testing.T) {
-	c, deploy := setupFakeDeployment()
-	if err := deploy.createRoleBindingForKeyMgmt(); err != nil {
-		t.Fatal("failed to create role binding", err)
-	}
-
-	nsName := types.NamespacedName{
-		Name:      KeyManagementBindingName,
-		Namespace: defaultNS,
-	}
-	createdRoleBinding := &rbacv1.RoleBinding{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "rbac.authorization.k8s.io/v1",
-			Kind:       "RoleBinding",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      KeyManagementBindingName,
-			Namespace: defaultNS,
-			Labels: map[string]string{
-				"app": appName,
-			},
-		},
-	}
-	if err := c.Get(context.Background(), nsName, createdRoleBinding); err != nil {
-		t.Fatal("failed to get the created role binding", err)
-	}
-
-	// owner := createdRoleBinding.GetOwnerReferences()[0]
-	// checkObjectOwner(t, owner, gvk)
-}
-
-func TestCreateClusterRoleBinding(t *testing.T) {
-	c, deploy := setupFakeDeployment()
-	bindingName := "my-cluster-binding"
-	subjects := []rbacv1.Subject{
-		{
-			Kind:      "ServiceAccount",
-			Name:      DaemonsetSA,
-			Namespace: defaultNS,
-		},
-	}
-	roleRef := rbacv1.RoleRef{
-		Kind:     "ClusterRole",
-		Name:     CSIDriverRegistrarClusterRoleName,
-		APIGroup: "rbac.authorization.k8s.io",
-	}
-	if err := deploy.createClusterRoleBinding(bindingName, subjects, roleRef); err != nil {
-		t.Fatal("failed to create cluster role binding", err)
-	}
-
-	nsName := types.NamespacedName{
-		Name: bindingName,
-	}
-	createdClusterRoleBinding := &rbacv1.ClusterRoleBinding{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "rbac.authorization.k8s.io/v1",
-			Kind:       "ClusterRoleBinding",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: bindingName,
-			Labels: map[string]string{
-				"app": appName,
-			},
-		},
-	}
-	if err := c.Get(context.Background(), nsName, createdClusterRoleBinding); err != nil {
-		t.Fatal("failed to get the created object", err)
-	}
-
-	// owner := createdClusterRoleBinding.GetOwnerReferences()[0]
-	// checkObjectOwner(t, owner, gvk)
-	checkSubjectsEquality(t, subjects, createdClusterRoleBinding.Subjects)
-
-	if (createdClusterRoleBinding.RoleRef.Kind != roleRef.Kind) ||
-		(createdClusterRoleBinding.RoleRef.Name != roleRef.Name) ||
-		(createdClusterRoleBinding.RoleRef.APIGroup != roleRef.APIGroup) {
-		t.Errorf("unequal role ref:\n\t(WNT) %v\n\t(GOT) %v", roleRef, createdClusterRoleBinding)
-	}
-}
-
-func checkSubjectsEquality(t *testing.T, wantSubjects, gotSubjects []rbacv1.Subject) {
-	for index, wantSubject := range wantSubjects {
-		gotSubject := gotSubjects[index]
-		if !reflect.DeepEqual(wantSubject.Kind, gotSubject.Kind) ||
-			!reflect.DeepEqual(wantSubject.Name, gotSubject.Name) ||
-			!reflect.DeepEqual(wantSubject.Namespace, gotSubject.Namespace) {
-			t.Errorf("unequal subjects:\n\t(WNT) %v\n\t(GOT) %v", wantSubjects, gotSubjects)
-		}
 	}
 }
 
@@ -412,7 +191,7 @@ func TestCreateDaemonSet(t *testing.T) {
 		c := fake.NewFakeClientWithScheme(testScheme, etcdSecret)
 
 		stosCluster.Spec = tc.spec
-		deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
+		deploy := NewDeployment(c, stosCluster, nil, nil, testScheme, "", false)
 		if err := deploy.createDaemonSet(); err != nil {
 			t.Fatal("failed to create daemonset", err)
 		}
@@ -434,9 +213,6 @@ func TestCreateDaemonSet(t *testing.T) {
 		if err := c.Get(context.Background(), nsName, createdDaemonset); err != nil {
 			t.Fatal("failed to get the created object", err)
 		}
-
-		// owner := createdDaemonset.GetOwnerReferences()[0]
-		// checkObjectOwner(t, owner, gvk)
 
 		if tc.wantEnableCSI {
 			if len(createdDaemonset.Spec.Template.Spec.Containers) != 2 {
@@ -672,7 +448,7 @@ func TestCreateCSIHelper(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			c := fake.NewFakeClientWithScheme(testScheme)
-			deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
+			deploy := NewDeployment(c, stosCluster, nil, nil, testScheme, "", false)
 
 			stosCluster.Spec = tc.spec
 			if err := deploy.createCSIHelper(); err != nil {
@@ -778,7 +554,7 @@ func TestDeployLegacy(t *testing.T) {
 				t.Fatalf("failed to create storageoscluster object: %v", err)
 			}
 
-			deploy := NewDeployment(c, stosCluster, nil, testScheme, tc.k8sVersion, false)
+			deploy := NewDeployment(c, stosCluster, nil, nil, testScheme, tc.k8sVersion, false)
 			if err := deploy.Deploy(); err != nil {
 				t.Fatalf("failed to deploy cluster: %v", err)
 			}
@@ -802,9 +578,6 @@ func TestDeployLegacy(t *testing.T) {
 			if err := c.Get(context.Background(), nsName, createdDaemonset); err != nil {
 				t.Fatal("failed to get the created daemonset", err)
 			}
-
-			// owner := createdDaemonset.GetOwnerReferences()[0]
-			// checkObjectOwner(t, owner, gvk)
 
 			if len(createdDaemonset.Spec.Template.Spec.Containers) != containersCount {
 				t.Errorf("unexpected number of containers in the DaemonSet:\n\t(GOT) %d\n\t(WNT) %d", len(createdDaemonset.Spec.Template.Spec.Containers), containersCount)
@@ -880,7 +653,7 @@ func TestDeployCSI(t *testing.T) {
 				t.Fatalf("failed to create storageoscluster object: %v", err)
 			}
 
-			deploy := NewDeployment(c, stosCluster, nil, testScheme, tc.k8sVersion, false)
+			deploy := NewDeployment(c, stosCluster, nil, nil, testScheme, tc.k8sVersion, false)
 			if err := deploy.Deploy(); err != nil {
 				t.Fatalf("failed to deploy cluster: %v", err)
 			}
@@ -904,9 +677,6 @@ func TestDeployCSI(t *testing.T) {
 			if err := c.Get(context.Background(), nsName, createdDaemonset); err != nil {
 				t.Fatal("failed to get the created daemonset", err)
 			}
-
-			// owner := createdDaemonset.GetOwnerReferences()[0]
-			// checkObjectOwner(t, owner, gvk)
 
 			if len(createdDaemonset.Spec.Template.Spec.Containers) != containersCount {
 				t.Errorf("unexpected number of containers in the DaemonSet:\n\t(GOT) %d\n\t(WNT) %d", len(createdDaemonset.Spec.Template.Spec.Containers), containersCount)
@@ -959,7 +729,7 @@ func TestDeployKVBackend(t *testing.T) {
 		t.Fatalf("failed to create storageoscluster object: %v", err)
 	}
 
-	deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
+	deploy := NewDeployment(c, stosCluster, nil, nil, testScheme, "", false)
 	if err := deploy.Deploy(); err != nil {
 		t.Fatalf("failed to deploy cluster: %v", err)
 	}
@@ -1032,7 +802,7 @@ func TestDeployDebug(t *testing.T) {
 		t.Fatalf("failed to create storageoscluster object: %v", err)
 	}
 
-	deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
+	deploy := NewDeployment(c, stosCluster, nil, nil, testScheme, "", false)
 	if err := deploy.Deploy(); err != nil {
 		t.Fatalf("failed to deploy cluster: %v", err)
 	}
@@ -1109,11 +879,11 @@ func TestDeployNodeAffinity(t *testing.T) {
 		csiDeploymentStrategy string
 	}{
 		{
-			name:                  "csi helper StatefulSet",
+			name: "csi helper StatefulSet",
 			csiDeploymentStrategy: "statefulset",
 		},
 		{
-			name:                  "csi helper Deployment",
+			name: "csi helper Deployment",
 			csiDeploymentStrategy: "deployment",
 		},
 	}
@@ -1127,7 +897,7 @@ func TestDeployNodeAffinity(t *testing.T) {
 				t.Fatalf("failed to create storageoscluster object: %v", err)
 			}
 
-			deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
+			deploy := NewDeployment(c, stosCluster, nil, nil, testScheme, "", false)
 			if err := deploy.Deploy(); err != nil {
 				t.Fatalf("failed to deploy cluster: %v", err)
 			}
@@ -1257,7 +1027,7 @@ func TestDeployTolerations(t *testing.T) {
 				t.Fatalf("failed to create storageoscluster object: %v", err)
 			}
 
-			deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
+			deploy := NewDeployment(c, stosCluster, nil, nil, testScheme, "", false)
 			err := deploy.Deploy()
 			if !tc.wantError && err != nil {
 				t.Errorf("expected no error but got one: %v", err)
@@ -1329,7 +1099,7 @@ func TestDeployNodeResources(t *testing.T) {
 		t.Fatalf("failed to create storageoscluster object: %v", err)
 	}
 
-	deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
+	deploy := NewDeployment(c, stosCluster, nil, nil, testScheme, "", false)
 	if err := deploy.Deploy(); err != nil {
 		t.Fatalf("failed to deploy cluster: %v", err)
 	}
@@ -1420,7 +1190,7 @@ func TestDelete(t *testing.T) {
 				t.Fatal("expected the namespace to not exist initially", err)
 			}
 
-			deploy := NewDeployment(c, stosCluster, nil, testScheme, "1.13.0", false)
+			deploy := NewDeployment(c, stosCluster, nil, nil, testScheme, "1.13.0", false)
 			if err := deploy.Deploy(); err != nil {
 				t.Fatalf("failed to deploy cluster: %v", err)
 			}
@@ -1545,7 +1315,7 @@ func TestDeployTLSEtcdCerts(t *testing.T) {
 	}
 
 	// Deploy storageos cluster.
-	deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
+	deploy := NewDeployment(c, stosCluster, nil, nil, testScheme, "", false)
 	if err := deploy.Deploy(); err != nil {
 		t.Fatalf("failed to deploy cluster: %v", err)
 	}
@@ -1625,7 +1395,7 @@ func TestDeployPodPriorityClass(t *testing.T) {
 				t.Fatalf("failed to create storageoscluster object: %v", err)
 			}
 
-			deploy := NewDeployment(c, stosCluster, nil, testScheme, "", false)
+			deploy := NewDeployment(c, stosCluster, nil, nil, testScheme, "", false)
 			if err := deploy.Deploy(); err != nil {
 				t.Fatalf("failed to deploy cluster: %v", err)
 			}
@@ -1714,7 +1484,7 @@ func TestDeploySchedulerExtender(t *testing.T) {
 		t.Fatalf("failed to create storageoscluster object: %v", err)
 	}
 
-	deploy := NewDeployment(c, stosCluster, nil, testScheme, "1.15.0", false)
+	deploy := NewDeployment(c, stosCluster, nil, nil, testScheme, "1.15.0", false)
 	err := deploy.Deploy()
 	if err != nil {
 		t.Error("deployment failed:", err)

@@ -44,48 +44,34 @@ func (s *Deployment) createSchedulerExtender() error {
 	replicas := int32(schedulerReplicas)
 
 	// Create the deployment.
-	schedulerDeployment := s.schedulerDeployment(replicas)
-	return s.createOrUpdateObject(schedulerDeployment)
+	return s.createSchedulerDeployment(replicas)
 }
 
-// schedulerDeployment returns a scheduler extender Deployment object. This
+// createSchedulerDeployment returns a scheduler extender Deployment object. This
 // contains the deployment configuration of the external kube-scheduler.
-func (s Deployment) schedulerDeployment(replicas int32) *appsv1.Deployment {
+func (s Deployment) createSchedulerDeployment(replicas int32) error {
 	podLabels := podLabelsForScheduler(s.stos.Name)
-	dep := &appsv1.Deployment{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "Deployment",
+	spec := &appsv1.DeploymentSpec{
+		Replicas: &replicas,
+		Selector: &metav1.LabelSelector{
+			MatchLabels: podLabels,
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      schedulerExtenderName,
-			Namespace: s.stos.Spec.GetResourceNS(),
-			Labels: map[string]string{
-				"app": "storageos",
+		Template: corev1.PodTemplateSpec{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: podLabels,
 			},
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: &replicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: podLabels,
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: podLabels,
-				},
-				Spec: corev1.PodSpec{
-					ServiceAccountName: SchedulerSA,
-					Containers:         s.schedulerContainers(),
-					Volumes:            s.schedulerVolumes(),
-				},
+			Spec: corev1.PodSpec{
+				ServiceAccountName: SchedulerSA,
+				Containers:         s.schedulerContainers(),
+				Volumes:            s.schedulerVolumes(),
 			},
 		},
 	}
 
 	// Add pod toleration for quick recovery on node failure.
-	addPodTolerationForRecovery(&dep.Spec.Template.Spec)
+	addPodTolerationForRecovery(&spec.Template.Spec)
 
-	return dep
+	return s.k8sResourceManager.Deployment(schedulerExtenderName, s.stos.Spec.GetResourceNS(), spec).Create()
 }
 
 // schedulerContainers returns a list of containers that should be part of the
@@ -128,40 +114,26 @@ func (s Deployment) schedulerVolumes() []corev1.Volume {
 
 // deleteSchedulerExtender deletes all the scheduler related resources.
 func (s Deployment) deleteSchedulerExtender() error {
-	if err := s.deleteObject(s.getDeploymentByName(schedulerExtenderName)); err != nil {
+	namespace := s.stos.Spec.GetResourceNS()
+	if err := s.k8sResourceManager.Deployment(schedulerExtenderName, namespace, nil).Delete(); err != nil {
 		return err
 	}
-	if err := s.deleteObject(s.getConfigMap(policyConfigMapName)); err != nil {
+	if err := s.k8sResourceManager.ConfigMap(policyConfigMapName, namespace, nil).Delete(); err != nil {
 		return err
 	}
-	if err := s.deleteObject(s.getConfigMap(schedulerConfigConfigMapName)); err != nil {
+	if err := s.k8sResourceManager.ConfigMap(schedulerConfigConfigMapName, namespace, nil).Delete(); err != nil {
 		return err
 	}
-	if err := s.deleteClusterRoleBinding(SchedulerClusterBindingName); err != nil {
+	if err := s.k8sResourceManager.ClusterRoleBinding(SchedulerClusterBindingName, nil, nil).Delete(); err != nil {
 		return err
 	}
-	if err := s.deleteServiceAccount(SchedulerSA); err != nil {
+	if err := s.k8sResourceManager.ServiceAccount(SchedulerSA, namespace).Delete(); err != nil {
 		return err
 	}
-	if err := s.deleteClusterRole(SchedulerClusterRoleName); err != nil {
+	if err := s.k8sResourceManager.ClusterRole(SchedulerClusterRoleName, nil).Delete(); err != nil {
 		return err
 	}
 	return nil
-}
-
-// getConfigMap returns an empty ConfigMap object. This can be used while
-// creating a configmap resource.
-func (s Deployment) getConfigMap(name string) *corev1.ConfigMap {
-	return &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ConfigMap",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: s.stos.Spec.GetResourceNS(),
-		},
-	}
 }
 
 // schedulerPolicyTemplate contains fields for rendering the scheduler policy.
@@ -174,7 +146,6 @@ type schedulerPolicyTemplate struct {
 
 // createSchedulerPolicy creates a configmap with kube-scheduler policy.
 func (s Deployment) createSchedulerPolicy() error {
-	policyConfigMap := s.getConfigMap(policyConfigMapName)
 	policyConfigurationTemplate := `
     {
       "kind" : "Policy",
@@ -216,10 +187,10 @@ func (s Deployment) createSchedulerPolicy() error {
 	}
 
 	// Add the policy configuration in the configmap.
-	policyConfigMap.Data = map[string]string{
+	data := map[string]string{
 		"policy.cfg": policyConfig.String(),
 	}
-	return s.createOrUpdateObject(policyConfigMap)
+	return s.k8sResourceManager.ConfigMap(policyConfigMapName, s.stos.Spec.GetResourceNS(), data).Create()
 }
 
 // schedulerConfigTemplate contains fields for rendering the scheduler
@@ -234,7 +205,6 @@ type schedulerConfigTemplate struct {
 // createSchedulerConfiguration creates a configmap with kube-scheduler
 // configuration.
 func (s Deployment) createSchedulerConfiguration() error {
-	configConfigMap := s.getConfigMap(schedulerConfigConfigMapName)
 	configTemplate := `
     apiVersion: "kubescheduler.config.k8s.io/v1alpha1"
     kind: KubeSchedulerConfiguration
@@ -267,10 +237,10 @@ func (s Deployment) createSchedulerConfiguration() error {
 	}
 
 	// Add the configuration in the configmap.
-	configConfigMap.Data = map[string]string{
+	data := map[string]string{
 		"config.yaml": schedConfig.String(),
 	}
-	return s.createOrUpdateObject(configConfigMap)
+	return s.k8sResourceManager.ConfigMap(schedulerConfigConfigMapName, s.stos.Spec.GetResourceNS(), data).Create()
 }
 
 // podLabelsForScheduler returns labels for the scheduler pod.

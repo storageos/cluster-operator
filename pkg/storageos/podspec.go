@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/storageos/cluster-operator/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -290,16 +291,7 @@ func (s *Deployment) addNodeAffinity(podSpec *corev1.PodSpec) {
 // addTolerations adds tolerations to the given pod spec from cluster
 // spec Tolerations.
 func (s *Deployment) addTolerations(podSpec *corev1.PodSpec) error {
-	tolerations := s.stos.Spec.Tolerations
-	for i := range tolerations {
-		if tolerations[i].Operator == corev1.TolerationOpExists && tolerations[i].Value != "" {
-			return fmt.Errorf("key(%s): toleration value must be empty when `operator` is 'Exists'", tolerations[i].Key)
-		}
-	}
-	if len(tolerations) > 0 {
-		podSpec.Tolerations = s.stos.Spec.Tolerations
-	}
-	return nil
+	return util.AddTolerations(podSpec, s.stos.Spec.Tolerations)
 }
 
 // addTLSEtcdCerts adds the etcd TLS secret as a secret mount in the given

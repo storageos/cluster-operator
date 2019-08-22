@@ -20,6 +20,8 @@ package v1
 
 type JobExpansion interface{}
 
+type NFSServerExpansion interface{}
+
 type StorageOSClusterExpansion interface{}
 
 type StorageOSUpgradeExpansion interface{}
