@@ -33,6 +33,9 @@ const (
 
 	SchedulerClusterRoleName    = "storageos:scheduler-extender"
 	SchedulerClusterBindingName = "storageos:scheduler-extender"
+
+	InitClusterRoleName    = "storageos:init"
+	InitClusterBindingName = "storageos:init"
 )
 
 // getCSIHelperServiceAccountName returns the service account name of CSI helper
@@ -398,4 +401,36 @@ func (s *Deployment) createClusterRoleBindingForScheduler() error {
 		APIGroup: "rbac.authorization.k8s.io",
 	}
 	return s.k8sResourceManager.ClusterRoleBinding(SchedulerClusterBindingName, subjects, roleRef).Create()
+}
+
+// createClusterRoleForInit creates cluster role for the init container. This is
+// needed by the init container to fetch StorageOS DaemonSet and get the current
+// StorageOS node image.
+func (s *Deployment) createClusterRoleForInit() error {
+	rules := []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{"apps"},
+			Resources: []string{"daemonsets"},
+			Verbs:     []string{"get"},
+		},
+	}
+	return s.k8sResourceManager.ClusterRole(InitClusterRoleName, rules).Create()
+}
+
+// createClusterRoleBindingForInit creates a cluster role binding of the init
+// container role with daemonset service account.
+func (s *Deployment) createClusterRoleBindingForInit() error {
+	subjects := []rbacv1.Subject{
+		{
+			Kind:      "ServiceAccount",
+			Name:      DaemonsetSA,
+			Namespace: s.stos.Spec.GetResourceNS(),
+		},
+	}
+	roleRef := &rbacv1.RoleRef{
+		Kind:     "ClusterRole",
+		Name:     InitClusterRoleName,
+		APIGroup: "rbac.authorization.k8s.io",
+	}
+	return s.k8sResourceManager.ClusterRoleBinding(InitClusterBindingName, subjects, roleRef).Create()
 }

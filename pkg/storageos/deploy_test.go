@@ -879,11 +879,11 @@ func TestDeployNodeAffinity(t *testing.T) {
 		csiDeploymentStrategy string
 	}{
 		{
-			name: "csi helper StatefulSet",
+			name:                  "csi helper StatefulSet",
 			csiDeploymentStrategy: "statefulset",
 		},
 		{
-			name: "csi helper Deployment",
+			name:                  "csi helper Deployment",
 			csiDeploymentStrategy: "deployment",
 		},
 	}

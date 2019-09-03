@@ -31,6 +31,14 @@ func (s *Deployment) Delete() error {
 		return err
 	}
 
+	if err := s.k8sResourceManager.ClusterRoleBinding(InitClusterBindingName, nil, nil).Delete(); err != nil {
+		return err
+	}
+
+	if err := s.k8sResourceManager.ClusterRole(InitClusterRoleName, nil).Delete(); err != nil {
+		return err
+	}
+
 	if err := s.k8sResourceManager.RoleBinding(KeyManagementBindingName, namespace, nil, nil).Delete(); err != nil {
 		return err
 	}

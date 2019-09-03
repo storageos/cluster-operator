@@ -100,6 +100,14 @@ func (s *Deployment) Deploy() error {
 		return err
 	}
 
+	if err := s.createClusterRoleForInit(); err != nil {
+		return err
+	}
+
+	if err := s.createClusterRoleBindingForInit(); err != nil {
+		return err
+	}
+
 	if err := s.createInitSecret(); err != nil {
 		return err
 	}

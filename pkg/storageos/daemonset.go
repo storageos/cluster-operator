@@ -40,7 +40,8 @@ const (
 	kvBackendEnvVar                     = "KV_BACKEND"
 	debugEnvVar                         = "LOG_LEVEL"
 	k8sDistroEnvVar                     = "K8S_DISTRO"
-	nodeImageEnvVar                     = "NODE_IMAGE"
+	daemonSetNameEnvVar                 = "DAEMONSET_NAME"
+	daemonSetNamespaceEnvVar            = "DAEMONSET_NAMESPACE"
 
 	sysAdminCap = "SYS_ADMIN"
 	debugVal    = "xdebug"
@@ -70,9 +71,16 @@ func (s *Deployment) createDaemonSet() error {
 						Name:  "storageos-init",
 						Image: s.stos.Spec.GetInitContainerImage(),
 						Env: []corev1.EnvVar{
+							// Environmental variables for the init container to
+							// help query the DaemonSet resource and get the
+							// current StorageOS node container image.
 							{
-								Name:  nodeImageEnvVar,
-								Value: s.stos.Spec.GetNodeContainerImage(),
+								Name:  daemonSetNameEnvVar,
+								Value: daemonsetName,
+							},
+							{
+								Name:  daemonSetNamespaceEnvVar,
+								Value: s.stos.Spec.GetResourceNS(),
 							},
 						},
 						VolumeMounts: []corev1.VolumeMount{
@@ -262,6 +270,10 @@ func (s *Deployment) createDaemonSet() error {
 					},
 				},
 			},
+		},
+		// OnDelete update strategy by default.
+		UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
+			Type: appsv1.OnDeleteDaemonSetStrategyType,
 		},
 	}
 
