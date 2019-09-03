@@ -1,8 +1,8 @@
-# ARG BUILD_IMAGE=golang:1.12.5
+# ARG BUILD_IMAGE=golang:1.12.9
 # ARG BASE_IMAGE=storageos/base-image:0.1.0
 # ARG OPERATOR_IMAGE=storageos/cluster-operator:test
 
-FROM golang:1.12.5 AS build
+FROM golang:1.12.9 AS build
 # OPERATOR_IMAGE needs to be passed to build/cluster-operator for constructing
 # the ldflags.
 # ARG OPERATOR_IMAGE
@@ -16,18 +16,18 @@ RUN make build/upgrader
 
 FROM storageos/base-image:0.1.0
 LABEL name="StorageOS Cluster Operator" \
-      maintainer="support@storageos.com" \
-      vendor="StorageOS" \
-      version="1.3.0" \
-      release="1" \
-      distribution-scope="public" \
-      architecture="x86_64" \
-      url="https://docs.storageos.com" \
-      io.k8s.description="The StorageOS Cluster Operator installs and manages StorageOS within a cluster." \
-      io.k8s.display-name="StorageOS Cluster Operator" \
-      io.openshift.tags="storageos,storage,operator,pv,pvc,storageclass,persistent,csi" \
-      summary="Highly-available persistent block storage for containerized applications." \
-      description="StorageOS transforms commodity server or cloud based disk capacity into enterprise-class storage to run persistent workloads such as databases in containers. Provides high availability, low latency persistent block storage. No other hardware or software is required."
+    maintainer="support@storageos.com" \
+    vendor="StorageOS" \
+    version="1.3.0" \
+    release="1" \
+    distribution-scope="public" \
+    architecture="x86_64" \
+    url="https://docs.storageos.com" \
+    io.k8s.description="The StorageOS Cluster Operator installs and manages StorageOS within a cluster." \
+    io.k8s.display-name="StorageOS Cluster Operator" \
+    io.openshift.tags="storageos,storage,operator,pv,pvc,storageclass,persistent,csi" \
+    summary="Highly-available persistent block storage for containerized applications." \
+    description="StorageOS transforms commodity server or cloud based disk capacity into enterprise-class storage to run persistent workloads such as databases in containers. Provides high availability, low latency persistent block storage. No other hardware or software is required."
 
 # Docker is required by the upgrader to pre-load images.  Only `docker pull` is
 # used.  `podman` would be preferred but it's not available in the package repo,
