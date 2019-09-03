@@ -3,7 +3,7 @@ GO_BUILD_CMD = go build -v
 GO_ENV = GOOS=linux CGO_ENABLED=0
 SDK_VERSION = v0.8.0
 MACHINE = $(shell uname -m)
-BUILD_IMAGE = golang:1.12.5
+BUILD_IMAGE = golang:1.12.9
 BASE_IMAGE = storageos/base-image:0.1.0
 
 # When this file name is modified, the new name must be added in .travis.yml
