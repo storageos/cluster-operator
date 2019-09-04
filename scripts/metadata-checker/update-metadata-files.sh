@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+# This script reads all the configurations from OLM configmap, combines with
+# *-changes.yaml file, if applicable, and updates the CSV, CRD and package
+# files. This script is used to sync the source configmap configurations with
+# the OLM manifest files.
+
 # Extract CSV from configmap, update with community operator changes and write
 # to the final CSV file.
 yq r deploy/storageos-operators.configmap.yaml \
