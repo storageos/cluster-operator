@@ -85,6 +85,7 @@ metadata-zip:
 		deploy/olm/storageos/storageoscluster.crd.yaml \
 		deploy/olm/storageos/storageosjob.crd.yaml \
 		deploy/olm/storageos/storageosupgrade.crd.yaml \
+		deploy/olm/storageos/storageosnfsserver.crd.yaml \
 		deploy/olm/csv-rhel/storageos.v*.clusterserviceversion.yaml
 
 metadata-update:

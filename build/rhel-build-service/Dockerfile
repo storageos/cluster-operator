@@ -18,7 +18,7 @@ FROM storageos/base-image:0.1.0
 LABEL name="StorageOS Cluster Operator" \
     maintainer="support@storageos.com" \
     vendor="StorageOS" \
-    version="1.3.0" \
+    version="1.4.0" \
     release="1" \
     distribution-scope="public" \
     architecture="x86_64" \
