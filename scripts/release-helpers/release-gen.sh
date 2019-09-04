@@ -86,7 +86,11 @@ metadata.annotations.alm-examples: |-
       "spec": {
         "namespace": "kube-system",
         "secretRefName": "storageos-api",
-        "secretRefNamespace": "default"
+        "secretRefNamespace": "default",
+        "csi": {
+          "enable": true,
+          "deploymentStrategy": "deployment"
+        }
       }
     },
     {
@@ -113,6 +117,21 @@ metadata.annotations.alm-examples: |-
       },
       "spec": {
         "newImage": "registry.connect.redhat.com/storageos/node:latest"
+      }
+    },
+    {
+      "apiVersion": "storageos.com/v1",
+      "kind": "NFSServer",
+      "metadata": {
+        "name": "example-nfsserver",
+        "namespace": "default"
+      },
+      "spec": {
+        "resources": {
+          "requests": {
+            "storage": "1Gi"
+          }
+        }
       }
     }
   ]

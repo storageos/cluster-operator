@@ -613,7 +613,11 @@ data:
                 "spec": {
                   "namespace": "kube-system",
                   "secretRefName": "storageos-api",
-                  "secretRefNamespace": "default"
+                  "secretRefNamespace": "default",
+                  "csi": {
+                    "enable": true,
+                    "deploymentStrategy": "deployment"
+                  }
                 }
               },
               {
@@ -1122,7 +1126,10 @@ data:
             version: v1
             kind: NFSServer
             displayName: NFS Server
-            description: NFS Server creates a NFS Ganesha server.
+            description: StorageOS NFS Server provides support for shared
+             volumes. The StorageOS control plane will automatically create and
+             manage NFS Server instances when a PersistentVolumeClaim requests a
+             volume with AccessMode=ReadWriteMany.
             specDescriptors:
             - description: The container image of the NFS server.
               displayName: Image
