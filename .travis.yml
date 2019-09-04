@@ -8,7 +8,7 @@ go:
 env:
   global:
     - CHANGE_MINIKUBE_NONE_USER=true
-    - K8S_VERSION="v1.10.0"
+    - K8S_VERSION="v1.15.3"
     - MINIKUBE_VERSION="v0.28.2"
     - IMAGE_NAME=storageos/cluster-operator
     - IMAGE_TAG=test
