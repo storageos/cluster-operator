@@ -20,6 +20,7 @@ declare -a metadatafiles=(
   "${OLM_ROOT}/storageoscluster.crd.yaml"
   "${OLM_ROOT}/storageosjob.crd.yaml"
   "${OLM_ROOT}/storageosupgrade.crd.yaml"
+  "${OLM_ROOT}/storageosnfsserver.crd.yaml"
   "${OLM_ROOT}/storageos.v${VERSION}.clusterserviceversion.yaml"
 )
 
