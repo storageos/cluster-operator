@@ -12,6 +12,8 @@ env:
     - MINIKUBE_VERSION="v0.28.2"
     - IMAGE_NAME=storageos/cluster-operator
     - IMAGE_TAG=test
+    - CI_CONTAINER_REGISTRY=stosci
+    - CONTAINER_REPO_NAME=cluster-operator
 
 before_install:
   - |
@@ -32,43 +34,66 @@ install: true
 
 jobs:
   include:
-    - go: "1.11"
+    - stage: build
+      go: "1.12.9"
+      name: Build container image
+      script:
+        - make image/cluster-operator OPERATOR_IMAGE=$CI_CONTAINER_REGISTRY/$CONTAINER_REPO_NAME:$TRAVIS_BUILD_ID
+        - docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS"
+        - docker push $CI_CONTAINER_REGISTRY/$CONTAINER_REPO_NAME:$TRAVIS_BUILD_ID
+    - stage: test
+      go: "1.12.9"
       sudo: required
       env:
         - "TEST_CLUSTER=kind"
         - "INSTALL_METHOD=olm"
       name: OLM on KinD (k8s-1.13)
-      script: ./test/e2e.sh $TEST_CLUSTER $INSTALL_METHOD
-    - go: "1.11"
+      script:
+        - docker pull $CI_CONTAINER_REGISTRY/$CONTAINER_REPO_NAME:$TRAVIS_BUILD_ID
+        - docker tag $CI_CONTAINER_REGISTRY/$CONTAINER_REPO_NAME:$TRAVIS_BUILD_ID $IMAGE_NAME:$IMAGE_TAG
+        - ./test/e2e.sh $TEST_CLUSTER $INSTALL_METHOD
+    - stage: test
+      go: "1.12.9"
       sudo: required
       env:
         - "TEST_CLUSTER=openshift"
         - "INSTALL_METHOD=olm"
       name: OLM on OpenShift (k8s-1.11)
-      script: ./test/e2e.sh $TEST_CLUSTER $INSTALL_METHOD
+      script:
+        - docker pull $CI_CONTAINER_REGISTRY/$CONTAINER_REPO_NAME:$TRAVIS_BUILD_ID
+        - docker tag $CI_CONTAINER_REGISTRY/$CONTAINER_REPO_NAME:$TRAVIS_BUILD_ID $IMAGE_NAME:$IMAGE_TAG
+        - ./test/e2e.sh $TEST_CLUSTER $INSTALL_METHOD
     - &base-test
-      go: "1.11"
+      stage: test
+      go: "1.12.9"
       sudo: required
       env:
         - "TEST_CLUSTER=openshift"
         - "INSTALL_METHOD=none"
       name: OpenShift-3.11 (k8s-1.11)
-      script: ./test/e2e.sh $TEST_CLUSTER $INSTALL_METHOD
+      script:
+        - docker pull $CI_CONTAINER_REGISTRY/$CONTAINER_REPO_NAME:$TRAVIS_BUILD_ID
+        - docker tag $CI_CONTAINER_REGISTRY/$CONTAINER_REPO_NAME:$TRAVIS_BUILD_ID $IMAGE_NAME:$IMAGE_TAG
+        - ./test/e2e.sh $TEST_CLUSTER $INSTALL_METHOD
     - <<: *base-test
       env:
         - "TEST_CLUSTER=kind"
         - "INSTALL_METHOD=none"
       name: KinD (k8s-1.14)
     - stage: deploy
-      go: "1.11"
+      go: "1.12.9"
       sudo: required
       env:
         - "TEST_CLUSTER=kind"
         - "INSTALL_METHOD=none"
       name: Publish Container Image
       script:
-        - make image/cluster-operator
+        # Pull the container from CI container registry and retag it.
+        - docker pull $CI_CONTAINER_REGISTRY/$CONTAINER_REPO_NAME:$TRAVIS_BUILD_ID
+        - docker tag $CI_CONTAINER_REGISTRY/$CONTAINER_REPO_NAME:$TRAVIS_BUILD_ID $IMAGE_NAME:$IMAGE_TAG
+        # Generate OLM metadata zip for rhel operator marketplace.
         - make metadata-zip
+        # Generate uber manifest file.
         - OPERATOR_IMAGE=storageos/cluster-operator:$TRAVIS_TAG make generate-install-manifest
       before_deploy:
         - docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS"

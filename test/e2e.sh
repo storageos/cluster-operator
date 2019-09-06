@@ -243,15 +243,11 @@ main() {
 
     NODE_NAME=$(kubectl get nodes --no-headers=true -o=name)
 
-    # Build the operator container image.
-    # This would build a container with tag storageos/cluster-operator:test,
-    # which is used in the e2e test setup below.
-    make image/cluster-operator
-
     # Move the operator container inside Kind container so that the image is
     # available to the docker in docker environment.
     if [ "$1" = "kind" ]; then
         x=$(docker ps -f name=kind-1-control-plane -q)
+        # This container image is built separately before running the e2e tests.
         docker save storageos/cluster-operator:test > cluster-operator.tar
         docker cp cluster-operator.tar $x:/cluster-operator.tar
 
