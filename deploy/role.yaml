@@ -58,6 +58,7 @@ rules:
   - configmaps
   - replicationcontrollers
   - pods/binding
+  - pods/log
   - endpoints
   verbs:
   - create
