@@ -24,8 +24,10 @@ func (s *Deployment) updateStatus(status *storageosv1.NFSServerStatus) error {
 			}
 		}
 	}
+
+	// Update subresource status.
 	s.nfsServer.Status = *status
-	return s.client.Update(context.Background(), s.nfsServer)
+	return s.client.Status().Update(context.Background(), s.nfsServer)
 }
 
 // getStatus determines the status of the NFS Server deployment.

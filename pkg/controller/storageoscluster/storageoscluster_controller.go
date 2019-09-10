@@ -157,7 +157,7 @@ func (r *ReconcileStorageOSCluster) Reconcile(request reconcile.Request) (reconc
 	}
 
 	if err := r.reconcile(instance); err != nil {
-		log.V(4).Info("Reconcile failed", "error", err)
+		log.Info("Reconcile failed", "error", err)
 		return reconcileResult, nil
 	}
 
@@ -178,9 +178,9 @@ func (r *ReconcileStorageOSCluster) reconcile(m *storageosv1.StorageOSCluster) e
 	if m.Spec.Join != join {
 		m.Spec.Join = join
 		// Update Nodes as well, because updating StorageOS with null Nodes
-		// results in invalid config.
+		// results in invalid config (status subresource).
 		m.Status.Nodes = strings.Split(join, ",")
-		if err := r.client.Update(context.Background(), m); err != nil {
+		if err := r.client.Status().Update(context.Background(), m); err != nil {
 			return err
 		}
 		// Update current cluster.
