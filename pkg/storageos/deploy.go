@@ -100,6 +100,14 @@ func (s *Deployment) Deploy() error {
 		return err
 	}
 
+	if err := s.createClusterRoleForNFS(); err != nil {
+		return err
+	}
+
+	if err := s.createClusterRoleBindingForNFS(); err != nil {
+		return err
+	}
+
 	if err := s.createClusterRoleForInit(); err != nil {
 		return err
 	}
