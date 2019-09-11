@@ -952,6 +952,19 @@ data:
                       ports:
                       - containerPort: 8080
                         name: metrics
+                    - name: scorecard-proxy
+                      image: quay.io/operator-framework/scorecard-proxy:v0.10.0
+                      imagePullPolicy: IfNotPresent
+                      command:
+                      - scorecard-proxy
+                      ports:
+                      - containerPort: 8889
+                        name: proxy
+                      env:
+                      - name: WATCH_NAMESPACE
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.namespace
         customresourcedefinitions:
           owned:
           - name: storageosclusters.storageos.com
