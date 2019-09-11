@@ -358,6 +358,47 @@ spec:
       description: StorageOS Cluster installs StorageOS in the cluster. It contains
         all the configuration for setting up a StorageOS cluster and also shows the
         status of the running StorageOS cluster.
+      resources:
+      - kind: Namespace
+        version: v1
+      - kind: ServiceAccount
+        version: v1
+      - kind: Role
+        version: rbac.authorization.k8s.io/v1
+      - kind: RoleBinding
+        version: rbac.authorization.k8s.io/v1
+      - kind: ClusterRole
+        version: rbac.authorization.k8s.io/v1
+      - kind: ClusterRoleBinding
+        version: rbac.authorization.k8s.io/v1
+      - kind: Secret
+        version: v1
+      - kind: DaemonSet
+        version: apps/v1
+      - kind: Service
+        version: v1
+      - kind: Ingress
+        version: extensions/v1beta1
+      - kind: Deployment
+        version: apps/v1
+      - kind: StatefulSet
+        version: apps/v1
+      - kind: StorageClass
+        version: storage.k8s.io/v1
+      - kind: StorageOSCluster
+        version: v1
+      - kind: Job
+        version: v1
+      - kind: StorageOSUpgrade
+        version: v1
+      - kind: NFSServer
+        version: v1
+      - kind: Node
+        version: v1
+      - kind: StatefulSet
+        version: v1
+      - kind: DaemonSet
+        version: v1
       specDescriptors:
       - description: Defines the various container images used in the cluster.
         displayName: Images
@@ -482,6 +523,9 @@ spec:
       description: StorageOS Job creates special pods that run on all the node and
         perform an administrative task. This could be used for cluster maintenance
         tasks.
+      resources:
+      - kind: DaemonSet
+        version: apps/v1
       specDescriptors:
       - description: The container image to run as the job.
         displayName: Image
@@ -519,6 +563,15 @@ spec:
       displayName: StorageOS Upgrade
       description: StorageOS Upgrade automatically upgrades an existing StorageOS
         cluster as per the upgrade configuration.
+      resources:
+      - kind: ServiceAccount
+        version: v1
+      - kind: ClusterRole
+        version: rbac.authorization.k8s.io/v1
+      - kind: ClusterRoleBinding
+        version: rbac.authorization.k8s.io/v1
+      - kind: Job
+        version: batch/v1
       specDescriptors:
       - description: The StorageOS Node image to upgrade to. e.g. `registry.connect.redhat.com/storageos/node:latest`
         displayName: New Image
@@ -534,8 +587,45 @@ spec:
       description: StorageOS NFS Server provides support for shared volumes. The StorageOS
         control plane will automatically create and manage NFS Server instances when
         a PersistentVolumeClaim requests a volume with AccessMode=ReadWriteMany.
+      resources:
+      - kind: Service
+        version: v1
+      - kind: ConfigMap
+        version: v1
+      - kind: ServiceAccount
+        version: v1
+      - kind: ClusterRoleBinding
+        version: rbac.authorization.k8s.io/v1
+      - kind: StatefulSet
+        version: apps/v1
       specDescriptors:
+      - description: The annotations-related configuration to add/set on each Pod
+          related object.
+        displayName: Pod annotations
+        path: annotations
+      - description: The parameters to configure the NFS export.
+        displayName: NFS export
+        path: export
+      - description: PV mount options. Not validated - mount of the PVs will simply
+          fail if one is invalid.
+        displayName: Mount Options
+        path: mountOptions
       - description: The container image of the NFS server.
         displayName: Image
         path: nfsContainer
+      - description: Reclamation policy for the persistent volume shared to the user's
+          pod.
+        displayName: PVC Reclaimation Policy
+        path: persistentVolumeReclaimPolicy
+      - description: Resources represents the minimum resources required.
+        displayName: Resources
+        path: resources
+      - description: StorageClassName is the name of the StorageClass used by the
+          NFS volume.
+        displayName: StorageClass Name
+        path: storageClassName
+      - description: Tolerations is to set the placement of NFS server pods using
+          pod toleration.
+        displayName: Pod Tolerations.
+        path: tolerations
   replaces: storageosoperator.v1.3.0
