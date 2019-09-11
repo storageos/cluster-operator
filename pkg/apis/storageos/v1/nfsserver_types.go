@@ -140,6 +140,7 @@ type NFSServerStatus struct {
 // +kubebuilder:printcolumn:name="storageclass",type="string",JSONPath=".spec.storageClassName",description="StorageClass used for creating the NFS volume."
 // +kubebuilder:printcolumn:name="age",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:resource:path=nfsservers,shortName=nfsserver
+// +kubebuilder:subresource:status
 type NFSServer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

@@ -33,6 +33,8 @@ data:
           - stos
           singular: storageoscluster
         scope: Namespaced
+        subresources:
+          status: {}
         validation:
           openAPIV3Schema:
             properties:
@@ -320,6 +322,8 @@ data:
           plural: jobs
           singular: job
         scope: Namespaced
+        subresources:
+          status: {}
         validation:
           openAPIV3Schema:
             properties:
@@ -403,6 +407,8 @@ data:
           plural: storageosupgrades
           singular: storageosupgrade
         scope: Namespaced
+        subresources:
+          status: {}
         validation:
           openAPIV3Schema:
             properties:
@@ -475,6 +481,8 @@ data:
           - nfsserver
           singular: nfsserver
         scope: Namespaced
+        subresources:
+          status: {}
         validation:
           openAPIV3Schema:
             properties:
@@ -796,9 +804,13 @@ data:
                 - storageos.com
                 resources:
                 - storageosclusters
+                - storageosclusters/status
                 - storageosupgrades
+                - storageosupgrades/status
                 - jobs
+                - jobs/status
                 - nfsservers
+                - nfsservers/status
                 verbs:
                 - "*"
               - apiGroups:

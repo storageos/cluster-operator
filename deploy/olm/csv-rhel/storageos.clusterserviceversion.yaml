@@ -201,9 +201,13 @@ spec:
           - storageos.com
           resources:
           - storageosclusters
+          - storageosclusters/status
           - storageosupgrades
+          - storageosupgrades/status
           - jobs
+          - jobs/status
           - nfsservers
+          - nfsservers/status
           verbs:
           - '*'
         - apiGroups:

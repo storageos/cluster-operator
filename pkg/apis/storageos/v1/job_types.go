@@ -66,6 +66,7 @@ type JobStatus struct {
 // Job is the Schema for the jobs API
 // +k8s:openapi-gen=true
 // +kubebuilder:singular=job
+// +kubebuilder:subresource:status
 type Job struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

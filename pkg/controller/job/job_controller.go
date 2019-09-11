@@ -156,9 +156,9 @@ func (r *ReconcileJob) Reconcile(request reconcile.Request) (reconcile.Result, e
 		return reconcileResult, err
 	}
 
-	// Update the Completed status of the Job.
+	// Update the Completed status of the Job (status subresource).
 	instance.Status.Completed = completed
-	if err := r.client.Update(context.Background(), instance); err != nil {
+	if err := r.client.Status().Update(context.Background(), instance); err != nil {
 		return reconcileResult, err
 	}
 
