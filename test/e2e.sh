@@ -4,10 +4,7 @@ set -Eeuxo pipefail
 
 readonly REPO_ROOT="${REPO_ROOT:-$(git rev-parse --show-toplevel)}"
 readonly K8S_LATEST="v1.15.3"
-readonly K8S_1_13="v1.13.2"
-# Two different versions of KinD due to a breaking change between the versions.
-readonly KIND_LATEST_LINK="https://github.com/kubernetes-sigs/kind/releases/download/v0.5.1/kind-linux-amd64"
-readonly KIND_1_13_LINK="https://docs.google.com/uc?export=download&id=1C_Jrj68Y685N5KcOqDQtfjeAZNW2UvNB"
+readonly KIND_LINK="https://github.com/kubernetes-sigs/kind/releases/download/v0.5.1/kind-linux-amd64"
 
 enable_lio() {
     echo "Enable LIO"
@@ -22,12 +19,6 @@ enable_lio() {
 
 run_kind() {
     echo "Download kind binary..."
-
-    if [ "$1" == "$K8S_1_13" ]; then
-        KIND_LINK=$KIND_1_13_LINK
-    else
-        KIND_LINK=$KIND_LATEST_LINK
-    fi
 
     # docker run --rm -it -v "$(pwd)":/go/bin golang go get sigs.k8s.io/kind && sudo mv kind /usr/local/bin/
     wget -O kind $KIND_LINK --no-check-certificate && chmod +x kind && sudo mv kind /usr/local/bin/
@@ -224,17 +215,7 @@ main() {
         # Update CR with k8sDistro set to openshift
         yq w -i deploy/storageos-operators.olm.cr.yaml spec.k8sDistro openshift
     elif [ "$1" = "kind" ]; then
-        # OLM installation fails on k8s 1.14 with error "failed to connect
-        # service" in CI only. Works fine locally.
-        # Refer: https://github.com/operator-framework/operator-lifecycle-manager/issues/740
-        # Using k8s 1.13 with old KinD for OLM until that's fixed.
-        # New KinD with k8s 1.14 uses containerd and has an incompatible node
-        # image.
-        if [ "$2" = "olm" ]; then
-            run_kind $K8S_1_13
-        else
-            run_kind $K8S_LATEST
-        fi
+        run_kind $K8S_LATEST
     fi
 
     install_operatorsdk
@@ -255,14 +236,8 @@ main() {
         docker save storageos/cluster-operator:test > cluster-operator.tar
         docker cp cluster-operator.tar $x:/cluster-operator.tar
 
-        if [ "$2" = "olm" ]; then
-            # kind-olm runs on old KinD with docker.
-            # Docker load image from tar archive (KinD with docker).
-            docker exec $x bash -c "docker load < /cluster-operator.tar"
-        else
-            # containerd load image from tar archive (KinD with containerd).
-            docker exec $x bash -c "ctr -n k8s.io images import --base-name docker.io/storageos/cluster-operator:test /cluster-operator.tar"
-        fi
+        # containerd load image from tar archive (KinD with containerd).
+        docker exec $x bash -c "ctr -n k8s.io images import --base-name docker.io/storageos/cluster-operator:test /cluster-operator.tar"
     fi
 
     if [ "$2" = "olm" ]; then
