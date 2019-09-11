@@ -261,6 +261,10 @@ main() {
 
         # Install storageos with CSI helpers as Deployment.
         install_storageos_csi_deployment
+
+        # Run scorecard tests on the olm-deployed operator.
+        make scorecard-test
+
         uninstall_storageos
     else
         # Add taint on the node.

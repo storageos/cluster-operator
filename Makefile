@@ -113,3 +113,8 @@ release:
 # Create a single manifest for installing the operator.
 generate-install-manifest: install-yq
 	bash scripts/create-manifest.sh $(OPERATOR_IMAGE)
+
+# Runs the operator-sdk scorecard tests. Expects the operator to be installed
+# using OLM first.
+scorecard-test:
+	bash test/scorecard-test.sh
