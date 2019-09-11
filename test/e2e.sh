@@ -3,10 +3,10 @@
 set -Eeuxo pipefail
 
 readonly REPO_ROOT="${REPO_ROOT:-$(git rev-parse --show-toplevel)}"
-readonly K8S_1_14="v1.14.2"
+readonly K8S_LATEST="v1.15.3"
 readonly K8S_1_13="v1.13.2"
 # Two different versions of KinD due to a breaking change between the versions.
-readonly KIND_1_14_LINK="https://docs.google.com/uc?export=download&id=1-oy-ui0ZE_T3Fglz1c8ZgnW8U-A4yS8u"
+readonly KIND_LATEST_LINK="https://github.com/kubernetes-sigs/kind/releases/download/v0.5.1/kind-linux-amd64"
 readonly KIND_1_13_LINK="https://docs.google.com/uc?export=download&id=1C_Jrj68Y685N5KcOqDQtfjeAZNW2UvNB"
 
 enable_lio() {
@@ -26,7 +26,7 @@ run_kind() {
     if [ "$1" == "$K8S_1_13" ]; then
         KIND_LINK=$KIND_1_13_LINK
     else
-        KIND_LINK=$KIND_1_14_LINK
+        KIND_LINK=$KIND_LATEST_LINK
     fi
 
     # docker run --rm -it -v "$(pwd)":/go/bin golang go get sigs.k8s.io/kind && sudo mv kind /usr/local/bin/
@@ -233,7 +233,7 @@ main() {
         if [ "$2" = "olm" ]; then
             run_kind $K8S_1_13
         else
-            run_kind $K8S_1_14
+            run_kind $K8S_LATEST
         fi
     fi
 
