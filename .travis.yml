@@ -8,7 +8,7 @@ go:
 env:
   global:
     - CHANGE_MINIKUBE_NONE_USER=true
-    - K8S_VERSION="v1.10.0"
+    - K8S_VERSION="v1.15.3"
     - MINIKUBE_VERSION="v0.28.2"
     - IMAGE_NAME=storageos/cluster-operator
     - IMAGE_TAG=test
@@ -37,7 +37,7 @@ jobs:
       env:
         - "TEST_CLUSTER=kind"
         - "INSTALL_METHOD=olm"
-      name: OLM on KinD (k8s-1.13)
+      name: OLM on KinD (k8s-1.15)
       script: ./test/e2e.sh $TEST_CLUSTER $INSTALL_METHOD
     - go: "1.11"
       sudo: required
@@ -58,7 +58,7 @@ jobs:
       env:
         - "TEST_CLUSTER=kind"
         - "INSTALL_METHOD=none"
-      name: KinD (k8s-1.14)
+      name: KinD (k8s-1.15)
     - stage: deploy
       go: "1.11"
       sudo: required
