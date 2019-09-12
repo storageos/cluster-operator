@@ -17,15 +17,19 @@ const (
 
 	// DefaultNFSPort is the default port for NFS server.
 	DefaultNFSPort = 2049
-	// DefaultMetricsPort is the default port for NFS mertics.
-	DefaultMetricsPort = 9587
+	// DefaultHTTPPort is the default port for NFS server health and metrics.
+	DefaultHTTPPort = 80
+
+	// HealthEndpointPath is the path to query on the HTTP Port for health.
+	// This is hardcoded in the NFS container and not settable by the user.
+	HealthEndpointPath = "/healthz"
 )
 
 var log = logf.Log.WithName("storageos.nfsserver")
 
 // Deploy deploys a NFS server.
 func (d *Deployment) Deploy() error {
-	err := d.ensureService(DefaultNFSPort, DefaultMetricsPort)
+	err := d.ensureService(DefaultNFSPort, DefaultHTTPPort)
 	if err != nil {
 		return err
 	}
@@ -49,7 +53,7 @@ func (d *Deployment) Deploy() error {
 	requestedCapacity := d.nfsServer.Spec.GetRequestedCapacity()
 	size := &requestedCapacity
 
-	if err := d.createStatefulSet(size, DefaultNFSPort, DefaultMetricsPort); err != nil {
+	if err := d.createStatefulSet(size, DefaultNFSPort, DefaultHTTPPort); err != nil {
 		return err
 	}
 

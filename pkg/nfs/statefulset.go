@@ -7,6 +7,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (
@@ -18,7 +19,7 @@ const (
 	PVCNamePrefix = "nfs-data"
 )
 
-func (d *Deployment) createStatefulSet(size *resource.Quantity, nfsPort int, metricsPort int) error {
+func (d *Deployment) createStatefulSet(size *resource.Quantity, nfsPort int, httpPort int) error {
 
 	replicas := int32(1)
 
@@ -30,7 +31,7 @@ func (d *Deployment) createStatefulSet(size *resource.Quantity, nfsPort int, met
 		Selector: &metav1.LabelSelector{
 			MatchLabels: d.labelsForStatefulSet(d.nfsServer.Name, d.nfsServer.Labels),
 		},
-		Template:             d.createPodTemplateSpec(nfsPort, metricsPort, d.nfsServer.Labels),
+		Template:             d.createPodTemplateSpec(nfsPort, httpPort, d.nfsServer.Labels),
 		VolumeClaimTemplates: d.createVolumeClaimTemplateSpecs(size, d.nfsServer.Labels),
 	}
 
@@ -67,7 +68,7 @@ func (d *Deployment) createVolumeClaimTemplateSpecs(size *resource.Quantity, lab
 	return []corev1.PersistentVolumeClaim{claim}
 }
 
-func (d *Deployment) createPodTemplateSpec(nfsPort int, metricsPort int, labels map[string]string) corev1.PodTemplateSpec {
+func (d *Deployment) createPodTemplateSpec(nfsPort int, httpPort int, labels map[string]string) corev1.PodTemplateSpec {
 
 	return corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
@@ -100,8 +101,8 @@ func (d *Deployment) createPodTemplateSpec(nfsPort int, metricsPort int, labels 
 							ContainerPort: int32(nfsPort),
 						},
 						{
-							Name:          "metrics-port",
-							ContainerPort: int32(metricsPort),
+							Name:          "http-port",
+							ContainerPort: int32(httpPort),
 						},
 					},
 					VolumeMounts: []corev1.VolumeMount{
@@ -119,6 +120,14 @@ func (d *Deployment) createPodTemplateSpec(nfsPort int, metricsPort int, labels 
 							Add: []corev1.Capability{
 								"SYS_ADMIN",
 								"DAC_READ_SEARCH",
+							},
+						},
+					},
+					ReadinessProbe: &corev1.Probe{
+						Handler: corev1.Handler{
+							HTTPGet: &corev1.HTTPGetAction{
+								Port: intstr.FromInt(httpPort),
+								Path: HealthEndpointPath,
 							},
 						},
 					},
