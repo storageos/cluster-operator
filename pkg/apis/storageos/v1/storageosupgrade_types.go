@@ -33,6 +33,7 @@ type StorageOSUpgradeStatus struct {
 // StorageOSUpgrade is the Schema for the storageosupgrades API
 // +k8s:openapi-gen=true
 // +kubebuilder:singular=storageosupgrade
+// +kubebuilder:subresource:status
 type StorageOSUpgrade struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

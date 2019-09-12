@@ -222,6 +222,7 @@ type StorageOSClusterStatus struct {
 // +kubebuilder:printcolumn:name="age",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:resource:path=storageosclusters,shortName=stos
 // +kubebuilder:singular=storageoscluster
+// +kubebuilder:subresource:status
 type StorageOSCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
