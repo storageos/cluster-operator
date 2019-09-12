@@ -201,6 +201,9 @@ operator-sdk-e2e-cleanup() {
         storageos:k8s-driver-registrar storageos:openshift-scc \
         storageos:pod-fencer storageos:scheduler-extender \
         storageos:init storageos:nfs-provisioner --ignore-not-found=true
+
+    # Delete NFSServer statefulset.
+    kubectl delete statefulset.apps/example-nfsserver --ignore-not-found=true
 }
 
 main() {

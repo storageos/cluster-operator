@@ -66,9 +66,6 @@ func TestClusterInTreePlugin(t *testing.T) {
 		t.Errorf("unexpected number of daemonset pod containers:\n\t(GOT) %d\n\t(WNT) %d", len(daemonset.Spec.Template.Spec.Containers), 2)
 	}
 
-	// Test NFSServer deployment.
-	testutil.NFSServerTest(t, ctx)
-
 	// Test node label sync.
 	testutil.NodeLabelSyncTest(t, f.KubeClient)
 }
