@@ -193,14 +193,14 @@ operator-sdk-e2e-cleanup() {
         storageos:csi-provisioner storageos:driver-registrar \
         storageos:openshift-scc storageos:pod-fencer \
         storageos:scheduler-extender storageos:init \
-        --ignore-not-found=true
+        storageos:nfs-provisioner --ignore-not-found=true
 
     # Delete all the cluster role bindings.
     kubectl delete clusterrolebinding storageos:csi-attacher \
         storageos:csi-provisioner storageos:driver-registrar \
         storageos:k8s-driver-registrar storageos:openshift-scc \
         storageos:pod-fencer storageos:scheduler-extender \
-        storageos:init --ignore-not-found=true
+        storageos:init storageos:nfs-provisioner --ignore-not-found=true
 }
 
 main() {
