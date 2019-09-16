@@ -60,9 +60,9 @@ func DeployNFSServer(t *testing.T, ctx *framework.TestCtx, nfsServer *storageos.
 
 	// NOTE: Temporary resource creation check only. Remove once the above check
 	// is added.
-	// Wait for 5 seconds here because there's no wait for the StatefulSet to be
+	// Wait for 10 seconds here because there's no wait for the StatefulSet to be
 	// ready. This will provide time for the PVC to be provisioned.
-	time.Sleep(5 * time.Second)
+	time.Sleep(10 * time.Second)
 	statefulset := &appsv1.StatefulSet{}
 	namespacedName := types.NamespacedName{
 		Name:      nfsServer.Name,

@@ -201,6 +201,9 @@ operator-sdk-e2e-cleanup() {
         storageos:k8s-driver-registrar storageos:openshift-scc \
         storageos:pod-fencer storageos:scheduler-extender \
         storageos:init storageos:nfs-provisioner --ignore-not-found=true
+
+    # Delete NFSServer statefulset.
+    kubectl delete statefulset.apps/example-nfsserver --ignore-not-found=true
 }
 
 main() {
@@ -261,6 +264,10 @@ main() {
 
         # Install storageos with CSI helpers as Deployment.
         install_storageos_csi_deployment
+
+        # Run scorecard tests on the olm-deployed operator.
+        make scorecard-test
+
         uninstall_storageos
     else
         # Add taint on the node.

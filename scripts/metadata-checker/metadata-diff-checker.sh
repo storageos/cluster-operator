@@ -31,7 +31,9 @@ targetfile=deploy/olm/storageos/storageos.clusterserviceversion.yaml
 # Generate a community CSV file.
 yq r deploy/storageos-operators.configmap.yaml \
     data.clusterServiceVersions | yq r - [0] | \
-    yq w -s deploy/olm/community-changes.yaml - > $csvfile
+    yq w -s deploy/olm/community-changes.yaml - | \
+    yq d - 'spec.install.spec.deployments[0].spec.template.spec.containers[1]' \
+    > $csvfile
 check_diff $targetfile $csvfile
 
 # Check rhel CSV file.
@@ -40,7 +42,9 @@ targetfile=deploy/olm/csv-rhel/storageos.clusterserviceversion.yaml
 # Generate a rhel CSV file.
 yq r deploy/storageos-operators.configmap.yaml \
     data.clusterServiceVersions | yq r - [0] | \
-    yq w -s deploy/olm/rhel-changes.yaml - > $csvfile
+    yq w -s deploy/olm/rhel-changes.yaml - | \
+    yq d - 'spec.install.spec.deployments[0].spec.template.spec.containers[1]' \
+    > $csvfile
 check_diff $targetfile $csvfile
 
 
