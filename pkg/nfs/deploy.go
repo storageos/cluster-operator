@@ -23,6 +23,18 @@ const (
 	// HealthEndpointPath is the path to query on the HTTP Port for health.
 	// This is hardcoded in the NFS container and not settable by the user.
 	HealthEndpointPath = "/healthz"
+
+	// VolumeFeatureReplicasKey is the label key used to set the number of
+	// replicas of a StorageOS volume.
+	VolumeFeatureReplicasKey = "storageos.com/replicas"
+
+	// PodFeatureFencingKey is the label key used to enable pod fencing on a
+	// pod.
+	PodFeatureFencingKey = "storageos.com/fenced"
+
+	// DefaultNFSVolumeReplicas is the default value for the NFS volume
+	// replicas.
+	DefaultNFSVolumeReplicas = "1"
 )
 
 var log = logf.Log.WithName("storageos.nfsserver")
@@ -82,8 +94,12 @@ func (d *Deployment) labelsForStatefulSet(name string, labels map[string]string)
 	labels["app"] = appName
 	labels["nfsserver"] = name
 
+	// When fencing is enable in the cluster, set the fencing properties on the
+	// NFS server pods.
+	// TODO: Make the number of NFS volume replica configurable.
 	if !d.cluster.Spec.DisableFencing {
-		labels["storageos.com/fenced"] = "true"
+		labels[PodFeatureFencingKey] = "true"
+		labels[VolumeFeatureReplicasKey] = DefaultNFSVolumeReplicas
 	}
 
 	return labels
