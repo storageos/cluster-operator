@@ -1,10 +1,11 @@
 OPERATOR_IMAGE ?= storageos/cluster-operator:test
 GO_BUILD_CMD = go build -v
 GO_ENV = GOOS=linux CGO_ENABLED=0
-SDK_VERSION = v0.8.0
+SDK_VERSION = v0.10.0
 MACHINE = $(shell uname -m)
 BUILD_IMAGE = golang:1.13.0
 BASE_IMAGE = storageos/base-image:0.1.0
+GOPATH := $(firstword $(subst :, ,$(shell go env GOPATH)))
 
 # When this file name is modified, the new name must be added in .travis.yml
 # file as well for publishing the file at release.
@@ -27,12 +28,24 @@ build/cluster-operator:
 		./cmd/manager
 
 # Generate APIs, CRD specs and CRD clientset.
-generate:
-	./build/operator-sdk generate k8s
-	./build/operator-sdk generate openapi
-	./vendor/k8s.io/code-generator/generate-groups.sh "deepcopy,client" \
+generate: generate-operator-sdk generate-clientset
+
+generate-operator-sdk: operator-sdk
+	GO111MODULE=on ./build/operator-sdk generate k8s
+	GO111MODULE=on ./build/operator-sdk generate openapi
+
+generate-clientset: $(GOPATH)/src/k8s.io/code-generator/go.mod
+	# Must be run from GOPATH
+	GOPATH=$(GOPATH) $(GOPATH)/src/k8s.io/code-generator/generate-groups.sh "deepcopy,client" \
 		github.com/storageos/cluster-operator/pkg/client \
 		github.com/storageos/cluster-operator/pkg/apis storageos:v1
+
+$(GOPATH)/src/k8s.io/code-generator/go.mod:
+	# Install into GOPATH, will be compiled as-needed by scripts.
+	GOPATH=$(GOPATH) GO111MODULE=off go get -d k8s.io/code-generator/... && \
+	(cd $(GOPATH)/src/k8s.io/code-generator && \
+	 git checkout kubernetes-1.13.4 && \
+	 go mod init)
 
 image/cluster-operator: operator-sdk
 	docker build \
