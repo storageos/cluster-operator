@@ -56,7 +56,7 @@ func TestClusterCSIDeployment(t *testing.T) {
 
 	f := framework.Global
 
-	err = f.Client.Get(goctx.TODO(), types.NamespacedName{Name: "example-storageos", Namespace: namespace}, testStorageOS)
+	err = f.Client.Get(goctx.TODO(), types.NamespacedName{Name: testutil.TestClusterCRName, Namespace: namespace}, testStorageOS)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,6 +85,9 @@ func TestClusterCSIDeployment(t *testing.T) {
 			t.Errorf("unexpected number of daemonset pod containers:\n\t(GOT) %d\n\t(WNT) %d", len(daemonset.Spec.Template.Spec.Containers), 2)
 		}
 	}
+
+	// Test StorageOSCluster CR attributes.
+	testutil.StorageOSClusterCRAttributesTest(t, testutil.TestClusterCRName, namespace)
 
 	// Test NFSServer deployment.
 	testutil.NFSServerTest(t, ctx)

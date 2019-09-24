@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 )
@@ -27,6 +28,9 @@ const (
 	CleanupTimeout       = time.Second * 15
 )
 
+// TestClusterCRName is the name of StorageOSCluster CR used in the tests.
+const TestClusterCRName string = "example-storageos"
+
 // NewStorageOSCluster returns a StorageOSCluster object, created using a given
 // cluster spec.
 func NewStorageOSCluster(namespace string, clusterSpec storageos.StorageOSClusterSpec) *storageos.StorageOSCluster {
@@ -36,7 +40,7 @@ func NewStorageOSCluster(namespace string, clusterSpec storageos.StorageOSCluste
 			APIVersion: "storageos.com/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "example-storageos",
+			Name:      TestClusterCRName,
 			Namespace: namespace,
 		},
 		Spec: clusterSpec,
@@ -258,5 +262,30 @@ func NodeLabelSyncTest(t *testing.T, kubeclient kubernetes.Interface) {
 	if err != nil {
 		t.Errorf("failed to cleanup node labels: %v", err)
 		return
+	}
+}
+
+// StorageOSClusterCRAttributesTest fetches a StorageOSCluster CR object and
+// checks if the CR properties are unset.
+func StorageOSClusterCRAttributesTest(t *testing.T, crName string, crNamespace string) {
+	f := framework.Global
+
+	testStorageOS := &storageos.StorageOSCluster{}
+	err := f.Client.Get(goctx.TODO(), types.NamespacedName{Name: crName, Namespace: crNamespace}, testStorageOS)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Check if the CR has the defaults and inferred attributes in the spec.
+	if testStorageOS.Spec.Join == "" {
+		t.Errorf("spec.join must not be empty")
+	}
+
+	if testStorageOS.Spec.Namespace == "" {
+		t.Errorf("spec.namespace must not be empty")
+	}
+
+	if testStorageOS.Spec.Service.Name == "" {
+		t.Errorf("spec.service.name must not be empty")
 	}
 }

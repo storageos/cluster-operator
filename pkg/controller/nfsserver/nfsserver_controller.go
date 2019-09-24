@@ -164,7 +164,16 @@ func (r *ReconcileNFSServer) reconcile(instance *storageosv1.NFSServer) error {
 	}
 
 	// Update NFS spec with values inferred from the StorageOS cluster.
-	instance.Spec.StorageClassName = instance.Spec.GetStorageClassName(stosCluster.Spec.GetStorageClassName())
+	updated, err := r.updateSpec(instance, stosCluster)
+	if err != nil {
+		return err
+	}
+
+	// Return here if the CR has been updated as the current instance is
+	// outdated.
+	if updated {
+		return nil
+	}
 
 	// Prepare for NFS deployment.
 
@@ -221,6 +230,32 @@ func (r *ReconcileNFSServer) addFinalizer(instance *storageosv1.NFSServer) error
 		return err
 	}
 	return nil
+}
+
+// updateSpec takes a NFSServer CR and a StorageOSCluster CR and updates
+// NFSServer if needed. It returns true if there was an update. This result can
+// be used to decide if the caller should continue with reconcile or return from
+// reconcile due to an outdated CR instance.
+func (r *ReconcileNFSServer) updateSpec(instance *storageosv1.NFSServer, cluster *storageosv1.StorageOSCluster) (bool, error) {
+	needUpdate := false
+
+	// Check if any CR property needs to be updated.
+
+	sc := instance.Spec.GetStorageClassName(cluster.Spec.GetStorageClassName())
+	if instance.Spec.StorageClassName != sc {
+		instance.Spec.StorageClassName = sc
+		needUpdate = true
+	}
+
+	if needUpdate {
+		// Update CR.
+		err := r.client.Update(context.TODO(), instance)
+		if err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	return false, nil
 }
 
 // getCurrentStorageOSCluster returns a running StorageOS cluster.

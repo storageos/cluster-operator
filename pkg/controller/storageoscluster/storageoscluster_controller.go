@@ -170,52 +170,19 @@ func (r *ReconcileStorageOSCluster) reconcile(m *storageosv1.StorageOSCluster) e
 		return nil
 	}
 
-	join, err := r.generateJoinToken(m)
+	// Update the spec values. This ensures that the default values are applied
+	// when fields are not set in the spec.
+	updated, err := r.updateSpec(m)
 	if err != nil {
 		return err
 	}
 
-	if m.Spec.Join != join {
-		m.Spec.Join = join
-		// Update Nodes as well, because updating StorageOS with null Nodes
-		// results in invalid config (status subresource).
-		m.Status.Nodes = strings.Split(join, ",")
-		if err := r.client.Status().Update(context.Background(), m); err != nil {
-			return err
-		}
-		// Update current cluster.
+	// If updated, update the current cluster and return, as the current
+	// instance is outdated.
+	if updated {
 		r.SetCurrentCluster(m)
+		return nil
 	}
-
-	// Update the spec values. This ensures that the default values are applied
-	// when fields are not set in the spec.
-	m.Spec.Namespace = m.Spec.GetResourceNS()
-	m.Spec.Images.NodeContainer = m.Spec.GetNodeContainerImage()
-	m.Spec.Images.InitContainer = m.Spec.GetInitContainerImage()
-
-	if !m.Spec.DisableScheduler {
-		m.Spec.Images.HyperkubeContainer = m.Spec.GetHyperkubeImage(r.k8sVersion)
-	}
-
-	if m.Spec.CSI.Enable {
-		m.Spec.Images.CSINodeDriverRegistrarContainer = m.Spec.GetCSINodeDriverRegistrarImage(storageos.CSIV1Supported(r.k8sVersion))
-		if storageos.CSIV1Supported((r.k8sVersion)) {
-			m.Spec.Images.CSIClusterDriverRegistrarContainer = m.Spec.GetCSIClusterDriverRegistrarImage()
-			m.Spec.Images.CSILivenessProbeContainer = m.Spec.GetCSILivenessProbeImage()
-		}
-		m.Spec.Images.CSIExternalProvisionerContainer = m.Spec.GetCSIExternalProvisionerImage(storageos.CSIV1Supported(r.k8sVersion))
-		m.Spec.Images.CSIExternalAttacherContainer = m.Spec.GetCSIExternalAttacherImage(storageos.CSIV1Supported(r.k8sVersion))
-		m.Spec.CSI.DeploymentStrategy = m.Spec.GetCSIDeploymentStrategy()
-	}
-
-	if m.Spec.Ingress.Enable {
-		m.Spec.Ingress.Hostname = m.Spec.GetIngressHostname()
-	}
-
-	m.Spec.Service.Name = m.Spec.GetServiceName()
-	m.Spec.Service.Type = m.Spec.GetServiceType()
-	m.Spec.Service.ExternalPort = m.Spec.GetServiceExternalPort()
-	m.Spec.Service.InternalPort = m.Spec.GetServiceInternalPort()
 
 	// Finalizers are set when an object should be deleted. Apply deploy only
 	// when finalizers is empty.
@@ -263,6 +230,100 @@ func (r *ReconcileStorageOSCluster) reconcile(m *storageosv1.StorageOSCluster) e
 	}
 
 	return nil
+}
+
+// updateSpec takes a StorageOSCluster CR and updates the CR properties with
+// defaults and inferred values. It returns true if there was an update. This
+// result can be used to decide if the caller should continue with reconcile or
+// return from reconcile due to an outdated CR instance.
+func (r *ReconcileStorageOSCluster) updateSpec(m *storageosv1.StorageOSCluster) (bool, error) {
+	needUpdate := false
+
+	// Check updates for string properties.
+
+	join, err := r.generateJoinToken(m)
+	if err != nil {
+		return false, err
+	}
+
+	properties := map[*string]string{
+		&m.Spec.Namespace:            m.Spec.GetResourceNS(),
+		&m.Spec.Images.NodeContainer: m.Spec.GetNodeContainerImage(),
+		&m.Spec.Images.InitContainer: m.Spec.GetInitContainerImage(),
+		&m.Spec.Service.Name:         m.Spec.GetServiceName(),
+		&m.Spec.Service.Type:         m.Spec.GetServiceType(),
+		&m.Spec.Join:                 join,
+	}
+
+	if !m.Spec.DisableScheduler {
+		properties[&m.Spec.Images.HyperkubeContainer] = m.Spec.GetHyperkubeImage(r.k8sVersion)
+	}
+
+	if m.Spec.CSI.Enable {
+		properties[&m.Spec.Images.CSINodeDriverRegistrarContainer] = m.Spec.GetCSINodeDriverRegistrarImage(storageos.CSIV1Supported(r.k8sVersion))
+		if storageos.CSIV1Supported((r.k8sVersion)) {
+			properties[&m.Spec.Images.CSIClusterDriverRegistrarContainer] = m.Spec.GetCSIClusterDriverRegistrarImage()
+			properties[&m.Spec.Images.CSILivenessProbeContainer] = m.Spec.GetCSILivenessProbeImage()
+		}
+		properties[&m.Spec.Images.CSIExternalProvisionerContainer] = m.Spec.GetCSIExternalProvisionerImage(storageos.CSIV1Supported(r.k8sVersion))
+		properties[&m.Spec.Images.CSIExternalAttacherContainer] = m.Spec.GetCSIExternalAttacherImage(storageos.CSIV1Supported(r.k8sVersion))
+		properties[&m.Spec.CSI.DeploymentStrategy] = m.Spec.GetCSIDeploymentStrategy()
+	}
+
+	if m.Spec.Ingress.Enable {
+		properties[&m.Spec.Ingress.Hostname] = m.Spec.GetIngressHostname()
+	}
+
+	for k, v := range properties {
+		if updateString(k, v) {
+			needUpdate = true
+		}
+	}
+
+	// Check updates for int properties.
+
+	intProperties := map[*int]int{
+		&m.Spec.Service.ExternalPort: m.Spec.GetServiceExternalPort(),
+		&m.Spec.Service.InternalPort: m.Spec.GetServiceInternalPort(),
+	}
+
+	for k, v := range intProperties {
+		if updateInt(k, v) {
+			needUpdate = true
+		}
+	}
+
+	if needUpdate {
+		// Update CR.
+		err := r.client.Update(context.TODO(), m)
+		if err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	return false, nil
+}
+
+// updateString compares the string value of valA with valB and if there's a
+// mismatch, assigns valB as the value of valA and returns true. If the values
+// are equal, false is returned.
+func updateString(valA *string, valB string) bool {
+	if *valA != valB {
+		*valA = valB
+		return true
+	}
+	return false
+}
+
+// updateInt compares the int value of valA with valB and if there's a mismatch,
+// assigns valB as the value of valA and returns true. If the values are equal,
+// false is returned.
+func updateInt(valA *int, valB int) bool {
+	if *valA != valB {
+		*valA = valB
+		return true
+	}
+	return false
 }
 
 // generateJoinToken performs node selection based on NodeSelectorTerms if
