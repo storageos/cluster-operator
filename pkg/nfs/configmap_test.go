@@ -1,6 +1,7 @@
 package nfs
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -183,5 +184,95 @@ EXPORT {
 		if strings.TrimSpace(tc.wantConfig) != strings.TrimSpace(gotConfig) {
 			t.Errorf("unexpected nfs config:\n\t(WNT) %s\n\t(GOT) %s", tc.wantConfig, gotConfig)
 		}
+	}
+}
+
+func TestGetExportSpec(t *testing.T) {
+	defaultExportSpecServer := storageosv1.ServerSpec{
+		AccessMode: DefaultAccessType,
+		Squash:     DefaultSquash,
+	}
+
+	nfsServerName := "testNFSServer"
+
+	testcases := []struct {
+		name           string
+		nfsServerSpec  storageosv1.NFSServerSpec
+		wantExportSpec storageosv1.ExportSpec
+	}{
+		{
+			name:          "Default export spec",
+			nfsServerSpec: storageosv1.NFSServerSpec{},
+			wantExportSpec: storageosv1.ExportSpec{
+				Name:   DefaultExportName,
+				Server: defaultExportSpecServer,
+				PersistentVolumeClaim: corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: nfsServerName,
+					ReadOnly:  DefaultExportPVCReadOnly,
+				},
+			},
+		},
+		{
+			name: "External PVC",
+			nfsServerSpec: storageosv1.NFSServerSpec{
+				PersistentVolumeClaim: corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: "testPVC",
+					ReadOnly:  true,
+				},
+			},
+			wantExportSpec: storageosv1.ExportSpec{
+				Name:   DefaultExportName,
+				Server: defaultExportSpecServer,
+				PersistentVolumeClaim: corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: "testPVC",
+					ReadOnly:  true,
+				},
+			},
+		},
+		{
+			name: "Export spec specified",
+			nfsServerSpec: storageosv1.NFSServerSpec{
+				Export: storageosv1.ExportSpec{
+					Name: "test-export",
+					Server: storageosv1.ServerSpec{
+						AccessMode: "fooaccess",
+						Squash:     "foosquash",
+					},
+					PersistentVolumeClaim: corev1.PersistentVolumeClaimVolumeSource{
+						ClaimName: "test-export-pvc",
+						ReadOnly:  true,
+					},
+				},
+			},
+			wantExportSpec: storageosv1.ExportSpec{
+				Name: "test-export",
+				Server: storageosv1.ServerSpec{
+					AccessMode: "fooaccess",
+					Squash:     "foosquash",
+				},
+				PersistentVolumeClaim: corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: "test-export-pvc",
+					ReadOnly:  true,
+				},
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			nfsServer := &storageosv1.NFSServer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      nfsServerName,
+					Namespace: "default",
+				},
+				Spec: tc.nfsServerSpec,
+			}
+
+			gotExport := getExportSpec(nfsServer)
+
+			if !reflect.DeepEqual(gotExport, tc.wantExportSpec) {
+				t.Errorf("unexpected export spec:\n\t(WNT) %v\n\t(GOT) %v", tc.wantExportSpec, gotExport)
+			}
+		})
 	}
 }

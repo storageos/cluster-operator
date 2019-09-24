@@ -7,15 +7,18 @@ import (
 	"text/template"
 
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // NFS server configuration constants.
 const (
-	DefaultAccessType = "readwrite"
-	DefaultSquash     = "none"
-	DefaultLogLevel   = "DEBUG"
-	DefaultGraceless  = true
-	DefaultFsidDevice = true
+	DefaultExportName        = "NFSExport"
+	DefaultExportPVCReadOnly = false
+	DefaultAccessType        = "readwrite"
+	DefaultSquash            = "none"
+	DefaultLogLevel          = "DEBUG"
+	DefaultGraceless         = true
+	DefaultFsidDevice        = true
 )
 
 func createConfig(instance *storageosv1.NFSServer) (string, error) {
@@ -24,22 +27,14 @@ func createConfig(instance *storageosv1.NFSServer) (string, error) {
 	id := 57
 
 	var exportCfg string
-	// If no export specified, create a default export.
-	if instance.Spec.Export.Name == "" {
-		export, err := exportConfig(id, instance.Name, DefaultAccessType, DefaultSquash)
-		if err != nil {
-			return "", err
-		}
-		exportCfg = export
-	} else {
-		// Otherwise create export with the given export configuration.
-		exportSpec := instance.Spec.Export
-		export, err := exportConfig(id, exportSpec.PersistentVolumeClaim.ClaimName, exportSpec.Server.AccessMode, exportSpec.Server.Squash)
-		if err != nil {
-			return "", err
-		}
-		exportCfg = export
+
+	// Get export spec and obtain export config.
+	exportSpec := getExportSpec(instance)
+	export, err := exportConfig(id, exportSpec.PersistentVolumeClaim.ClaimName, exportSpec.Server.AccessMode, exportSpec.Server.Squash)
+	if err != nil {
+		return "", err
 	}
+	exportCfg = export
 
 	globalCfg, err := globalConfig(DefaultGraceless, DefaultFsidDevice)
 	if err != nil {
@@ -52,6 +47,35 @@ func createConfig(instance *storageosv1.NFSServer) (string, error) {
 	}
 
 	return fmt.Sprintf("%s\n%s\n%s", globalCfg, logCfg, exportCfg), nil
+}
+
+// getExportSpec returns a NFS ExportSpec based on the NFSServer instance.
+func getExportSpec(instance *storageosv1.NFSServer) storageosv1.ExportSpec {
+	// Default export spec using the instance name as the PVC name.
+	// ExportSpec.Name is not used anywhere, use a default name.
+	exportSpec := storageosv1.ExportSpec{
+		Name: DefaultExportName,
+		PersistentVolumeClaim: corev1.PersistentVolumeClaimVolumeSource{
+			ClaimName: instance.Name,
+			ReadOnly:  DefaultExportPVCReadOnly,
+		},
+		Server: storageosv1.ServerSpec{
+			AccessMode: DefaultAccessType,
+			Squash:     DefaultSquash,
+		},
+	}
+
+	// If PVC is specified in the spec, use the specified PVC.
+	if instance.Spec.PersistentVolumeClaim.ClaimName != "" {
+		exportSpec.PersistentVolumeClaim = instance.Spec.PersistentVolumeClaim
+	}
+
+	// If Export is specified in the spec, use the specified export.
+	if instance.Spec.Export.Name != "" {
+		exportSpec = instance.Spec.Export
+	}
+
+	return exportSpec
 }
 
 // nfsExportConfig is the NFS server export configuration.
