@@ -12,7 +12,7 @@ required = [
 
 [[override]]
   name = "k8s.io/code-generator"
-  version = "kubernetes-1.13.1"
+  version = "kubernetes-1.13.4"
 
 [[override]]
   name = "k8s.io/kube-openapi"
@@ -28,19 +28,19 @@ required = [
 
 [[override]]
   name = "k8s.io/api"
-  version = "kubernetes-1.13.1"
+  version = "kubernetes-1.13.4"
 
 [[override]]
   name = "k8s.io/apiextensions-apiserver"
-  version = "kubernetes-1.13.1"
+  version = "kubernetes-1.13.4"
 
 [[override]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.13.1"
+  version = "kubernetes-1.13.4"
 
 [[override]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.13.1"
+  version = "kubernetes-1.13.4"
 
 [[override]]
   name = "sigs.k8s.io/controller-runtime"
@@ -50,7 +50,7 @@ required = [
   name = "github.com/operator-framework/operator-sdk"
   # The version rule is used for a specific release and the master branch for in between releases.
   # branch = "master" #osdk_branch_annotation
-  version = "=v0.8.0" #osdk_version_annotation
+  version = "=v0.10.0" #osdk_version_annotation
 
 [[constraint]]
   name = "github.com/storageos/go-api"
@@ -59,6 +59,10 @@ required = [
 [[constraint]]
   name = "github.com/blang/semver"
   version = "v3.6.1"
+
+[[override]]
+  name = "github.com/coreos/prometheus-operator"
+  version = "v0.29.0"
 
 [prune]
   go-tests = true
