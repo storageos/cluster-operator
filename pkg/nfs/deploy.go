@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	"github.com/storageos/cluster-operator/pkg/storageos"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/client-go/rest"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
@@ -82,6 +84,10 @@ func (d *Deployment) Deploy() error {
 		log.Error(err, "Failed to update status")
 	}
 
+	if err := d.createServiceMonitor(); err != nil {
+		log.Error(err, "Failed to create service monitor for metrics")
+	}
+
 	return nil
 }
 
@@ -131,4 +137,28 @@ func (d *Deployment) getServiceAccountName() string {
 
 func (d *Deployment) createServiceAccountForNFSServer() error {
 	return d.k8sResourceManager.ServiceAccount(d.getServiceAccountName(), d.nfsServer.Namespace).Create()
+}
+
+func (d *Deployment) createServiceMonitor() error {
+
+	nfsService, err := d.getService()
+	if err != nil {
+		return err
+	}
+
+	// Get a k8s client config
+	cfg, err := rest.InClusterConfig()
+	if err != nil {
+		return err
+	}
+
+	// Pass the Service(s) to the helper function, which in turn returns the array of `ServiceMonitor` objects.
+	serviceMonitors, err := metrics.CreateServiceMonitors(cfg, d.nfsServer.Namespace, []*corev1.Service{nfsService})
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("tmp log serviceMonitors: %#v", serviceMonitors)
+
+	return nil
 }

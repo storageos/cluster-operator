@@ -6,11 +6,12 @@ import (
 )
 
 func (d *Deployment) ensureService(nfsPort int, httpPort int) error {
-	_, err := d.k8sResourceManager.Service(d.nfsServer.Name, d.nfsServer.Namespace, nil, nil).Get()
+
 	// If no error in getting the service, service already exists, do nothing.
-	if err == nil {
+	if _, err := d.getService(); err == nil {
 		return nil
 	}
+
 	// Couldn't get any existing service. Create a new service.
 	if err := d.createService(nfsPort, httpPort); err != nil {
 		return err
@@ -37,4 +38,8 @@ func (d *Deployment) createService(nfsPort int, httpPort int) error {
 	}
 
 	return d.k8sResourceManager.Service(d.nfsServer.Name, d.nfsServer.Namespace, nil, spec).Create()
+}
+
+func (d *Deployment) getService() (*corev1.Service, error) {
+	return d.k8sResourceManager.Service(d.nfsServer.Name, d.nfsServer.Namespace, nil, nil).Get()
 }
