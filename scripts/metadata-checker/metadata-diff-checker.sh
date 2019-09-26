@@ -4,6 +4,8 @@ set -e
 # This script generates metadata files and compares them with the checked-in
 # metadata files. Any difference in the generated matadata files and checked-in
 # files results in failure.
+# Whenever a new custom resource is added, a diff checker for that CR must be
+# added here.
 
 TMP_DIR="/tmp"
 OLM_CONFIGMAP_FILE="deploy/storageos-operators.configmap.yaml"
@@ -91,6 +93,19 @@ yq r $OLM_CONFIGMAP_FILE \
 for f in "${targetfiles[@]}"
 do
     check_diff $f $upgradefile
+done
+
+# Check nfsserver CRD file.
+nfsfile=$TMP_DIR/nfsserver.crd.yaml
+targetfiles=(
+    deploy/crds/storageos_v1_nfsserver_crd.yaml
+    deploy/olm/storageos/storageosnfsserver.crd.yaml
+)
+yq r $OLM_CONFIGMAP_FILE \
+    data.customResourceDefinitions | yq r - [3] > $nfsfile
+for f in "${targetfiles[@]}"
+do
+    check_diff $f $nfsfile
 done
 
 
