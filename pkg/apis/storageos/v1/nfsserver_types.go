@@ -55,6 +55,10 @@ type NFSServerSpec struct {
 	// PV mount options. Not validated - mount of the PVs will simply fail if
 	// one is invalid.
 	MountOptions []string `json:"mountOptions,omitempty"`
+
+	// PersistentVolumeClaim is the PVC source of the PVC to be used with the
+	// NFS Server. If not specified, a new PVC is provisioned and used.
+	PersistentVolumeClaim corev1.PersistentVolumeClaimVolumeSource `json:"persistentVolumeClaim,omitempty"`
 }
 
 // GetStorageClassName returns the name of the StorageClass to be used for the

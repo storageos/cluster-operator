@@ -5,6 +5,9 @@ metadata:
 spec:
   # nfsContainer:
   # storageClassName: fast
+  # persistentVolumeClaim:
+  #   claimName: pv1
+  #   readOnly: false
   resources:
     requests:
       storage: "1Gi"

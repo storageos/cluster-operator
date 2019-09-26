@@ -282,6 +282,7 @@ func (in *NFSServerSpec) DeepCopyInto(out *NFSServerSpec) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	out.PersistentVolumeClaim = in.PersistentVolumeClaim
 	return
 }
 
