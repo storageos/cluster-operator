@@ -54,7 +54,7 @@ func (d *Deployment) createStatefulSet(size *resource.Quantity, nfsPort int, htt
 }
 
 func (d *Deployment) createVolumeClaimTemplateSpecs(size *resource.Quantity) []corev1.PersistentVolumeClaim {
-	scName := d.nfsServer.Spec.StorageClassName
+	scName := d.nfsServer.Spec.GetStorageClassName(d.cluster.Spec.GetStorageClassName())
 
 	claim := corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
@@ -91,7 +91,7 @@ func (d *Deployment) createPodTemplateSpec(nfsPort int, httpPort int) corev1.Pod
 				{
 					ImagePullPolicy: "IfNotPresent",
 					Name:            "nfsd",
-					Image:           d.nfsServer.Spec.GetContainerImage(),
+					Image:           d.nfsServer.Spec.GetContainerImage(d.cluster.Spec.GetNFSServerImage()),
 					Env: []corev1.EnvVar{
 						{
 							Name:  "GANESHA_CONFIGFILE",

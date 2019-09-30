@@ -40,6 +40,7 @@ const (
 	CSIv0DriverRegistrarContainerImage        = "quay.io/k8scsi/driver-registrar:v0.4.2"
 	CSIv0ExternalProvisionerContainerImage    = "storageos/csi-provisioner:v0.4.2"
 	CSIv0ExternalAttacherContainerImage       = "quay.io/k8scsi/csi-attacher:v0.4.2"
+	DefaultNFSContainerImage                  = "storageos/nfs:test"
 
 	DefaultHyperkubeContainerRegistry = "gcr.io/google_containers/hyperkube"
 
@@ -347,6 +348,15 @@ func (s StorageOSClusterSpec) GetHyperkubeImage(k8sVersion string) string {
 	return fmt.Sprintf("%s:v%s", DefaultHyperkubeContainerRegistry, k8sVersion)
 }
 
+// GetNFSServerImage returns NFS server container image used as the default
+// image in the cluster.
+func (s StorageOSClusterSpec) GetNFSServerImage() string {
+	if s.Images.NFSContainer != "" {
+		return s.Images.NFSContainer
+	}
+	return DefaultNFSContainerImage
+}
+
 // GetServiceName returns the service name.
 func (s StorageOSClusterSpec) GetServiceName() string {
 	if s.Service.Name != "" {
@@ -501,6 +511,7 @@ type ContainerImages struct {
 	CSIExternalAttacherContainer       string `json:"csiExternalAttacherContainer,omitempty"`
 	CSILivenessProbeContainer          string `json:"csiLivenessProbeContainer,omitempty"`
 	HyperkubeContainer                 string `json:"hyperkubeContainer,omitempty"`
+	NFSContainer                       string `json:"nfsContainer,omitempty"`
 }
 
 // StorageOSClusterCSI contains CSI configurations.

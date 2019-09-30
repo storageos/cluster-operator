@@ -21,6 +21,7 @@ spec:
   #   csiExternalAttacherContainer:
   #   csiLivenessProbeContainer:
   #   hyperkubeContainer:
+  #   nfsContainer:
   csi:
     enable: true
   #   endpoint: /var/lib/kubelet/device-plugins/

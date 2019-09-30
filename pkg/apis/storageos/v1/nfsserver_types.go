@@ -11,9 +11,6 @@ import (
 
 // Constants for NFSServer default values and different phases.
 const (
-	// DefaultNFSContainerImage is the name of the Ganesha container to run.
-	DefaultNFSContainerImage = "storageos/nfs:test"
-
 	DefaultNFSVolumeCapacity = "1Gi"
 
 	PhasePending = "Pending"
@@ -74,11 +71,11 @@ func (s NFSServerSpec) GetStorageClassName(clusterSCName string) string {
 }
 
 // GetContainerImage returns the NFS server container image.
-func (s NFSServerSpec) GetContainerImage() string {
+func (s NFSServerSpec) GetContainerImage(clusterNFSImage string) string {
 	if s.NFSContainer != "" {
 		return s.NFSContainer
 	}
-	return DefaultNFSContainerImage
+	return clusterNFSImage
 }
 
 // GetRequestedCapacity returns the requested capacity for the NFS volume.

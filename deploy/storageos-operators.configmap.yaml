@@ -146,6 +146,8 @@ data:
                         type: string
                       initContainer:
                         type: string
+                      nfsContainer:
+                        type: string
                       nodeContainer:
                         type: string
                     type: object
