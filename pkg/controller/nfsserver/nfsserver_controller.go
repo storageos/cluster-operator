@@ -268,6 +268,12 @@ func (r *ReconcileNFSServer) getCurrentStorageOSCluster() (*storageosv1.StorageO
 		return currentCluster, err
 	}
 
+	// If there's only one cluster, select it as the current cluster.
+	if len(stosClusters.Items) == 1 {
+		currentCluster = &stosClusters.Items[0]
+	}
+
+	// If there are multiple clusters, consider the status of the cluster.
 	for _, cluster := range stosClusters.Items {
 		// Only one cluster can be in running phase at a time.
 		if cluster.Status.Phase == storageosv1.ClusterPhaseRunning {
