@@ -247,6 +247,12 @@ func (r *ReconcileNFSServer) updateSpec(instance *storageosv1.NFSServer, cluster
 		needUpdate = true
 	}
 
+	image := instance.Spec.GetContainerImage(cluster.Spec.GetNFSServerImage())
+	if instance.Spec.NFSContainer != image {
+		instance.Spec.NFSContainer = image
+		needUpdate = true
+	}
+
 	if needUpdate {
 		// Update CR.
 		err := r.client.Update(context.TODO(), instance)
