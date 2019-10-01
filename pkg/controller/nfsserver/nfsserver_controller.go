@@ -135,8 +135,8 @@ func (r *ReconcileNFSServer) Reconcile(request reconcile.Request) (reconcile.Res
 	}
 
 	if err := r.reconcile(instance); err != nil {
-		reqLogger.V(4).Info("Reconcile failed", "error", err)
-		return reconcileResult, err
+		reqLogger.Info("Reconcile failed", "error", err)
+		return reconcileResult, nil
 	}
 
 	return reconcileResult, nil

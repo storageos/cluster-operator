@@ -7,6 +7,7 @@ import (
 
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 )
 
 func (s *Deployment) updateStatus(status *storageosv1.NFSServerStatus) error {
@@ -41,13 +42,26 @@ func (s *Deployment) getStatus() (*storageosv1.NFSServerStatus, error) {
 
 	ss, err := s.k8sResourceManager.StatefulSet(s.nfsServer.Name, s.nfsServer.Namespace, nil).Get()
 	if err != nil {
+		if errors.IsNotFound(err) {
+			// Return empty status without any error. Resources haven't been
+			// created yet.
+			return status, nil
+		}
 		return status, err
 	}
 
 	svc, err := s.k8sResourceManager.Service(s.nfsServer.Name, s.nfsServer.Namespace, nil, nil).Get()
 	if err != nil {
+		if errors.IsNotFound(err) {
+			// Return empty status without any error. Resources haven't been
+			// created yet.
+			return status, nil
+		}
 		return status, err
 	}
+
+	// We got both StatefulSet and Service without error, so upgrade to Pending.
+	status.Phase = storageosv1.PhasePending
 
 	// Set access mode.
 	if s.nfsServer.Spec.Export.Name == "" {
@@ -55,9 +69,6 @@ func (s *Deployment) getStatus() (*storageosv1.NFSServerStatus, error) {
 	} else {
 		status.AccessModes = getAccessMode(s.nfsServer.Spec.Export.Server.AccessMode)
 	}
-
-	// We got both without error, so upgrade to Pending.
-	status.Phase = storageosv1.PhasePending
 
 	// If the service is created, set the cluster address as the endpoint.
 	if svc.Spec.ClusterIP != "" {
