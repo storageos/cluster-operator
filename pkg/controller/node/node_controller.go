@@ -122,12 +122,12 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 	// Sync labels to StorageOS node object.
 	if err = r.syncLabels(instance.Name, instance.Labels); err != nil {
 		if storageoserror.ErrorKind(err) == storageoserror.APIUncontactable {
-			log.V(4).Info("Waiting for StorageOS API to become ready")
+			log.Info("Waiting for StorageOS API to become ready")
 			return reconcileResult, nil
 		}
 
 		// Error syncing labels - requeue the request.
-		log.V(4).Info("Failed to sync node labels", "error", err)
+		log.Info("Failed to sync node labels", "error", err)
 		return reconcileResult, nil
 	}
 
