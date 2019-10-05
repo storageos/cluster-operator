@@ -227,23 +227,18 @@ main() {
 
     NODE_NAME=$(kubectl get nodes --no-headers=true -o=name)
 
-    # Build the operator container image.
-    # This would build a container with tag storageos/cluster-operator:test,
-    # which is used in the e2e test setup below.
-    make image/cluster-operator
-
-    # Move the operator container inside Kind container so that the image is
-    # available to the docker in docker environment.
-    if [ "$1" = "kind" ]; then
-        x=$(docker ps -f name=kind-1-control-plane -q)
-        docker save storageos/cluster-operator:test > cluster-operator.tar
-        docker cp cluster-operator.tar $x:/cluster-operator.tar
-
-        # containerd load image from tar archive (KinD with containerd).
-        docker exec $x bash -c "ctr -n k8s.io images import --base-name docker.io/storageos/cluster-operator:test /cluster-operator.tar"
-    fi
-
     if [ "$2" = "olm" ]; then
+        # Build the operator container image.
+        # This would build a container with tag storageos/cluster-operator:test,
+        # which is used in the e2e test setup below.
+        make image/cluster-operator
+
+        # Move the operator container inside Kind container so that the image is
+        # available to the docker in docker environment.
+        if [ "$1" = "kind" ]; then
+            kind load docker-image storageos/cluster-operator:test --name kind-1
+        fi
+
         # Lint the OLM CSV bundle.
         make olm-lint
 
@@ -294,13 +289,13 @@ main() {
         # NOTE: Append this test command with `|| true` to debug by inspecting the
         # resource details. Also comment `defer ctx.Cleanup()` in the cluster to
         # avoid resouce cleanup.
-        operator-sdk test local ./test/e2e --go-test-flags "-v -tags csi" --namespace storageos-operator
+        operator-sdk test local ./test/e2e --up-local --go-test-flags "-v -tags csi" --namespace storageos-operator
         operator-sdk-e2e-cleanup
 
-        operator-sdk test local ./test/e2e --go-test-flags "-v -tags csideployment" --namespace storageos-operator
+        operator-sdk test local ./test/e2e --up-local --go-test-flags "-v -tags csideployment" --namespace storageos-operator
         operator-sdk-e2e-cleanup
 
-        operator-sdk test local ./test/e2e --go-test-flags "-v -tags intree" --namespace storageos-operator
+        operator-sdk test local ./test/e2e --up-local --go-test-flags "-v -tags intree" --namespace storageos-operator
         operator-sdk-e2e-cleanup
 
         # echo "**** Resource details for storageos-operator namespace ****"
