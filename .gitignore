@@ -4,7 +4,7 @@ build/_test
 build/operator-sdk
 build/yq
 deploy/test
-test/olm
+olm
 storageos-operator.yaml
 # Created by https://www.gitignore.io/api/go,vim,emacs,visualstudiocode
 ### Emacs ###
