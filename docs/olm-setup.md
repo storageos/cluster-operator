@@ -5,9 +5,11 @@ To setup OLM in an existing cluster:
 2. Install OLM by running: `olm_quick_install`. This will install OLM in `olm`
 namespace.
 
-`olm_quick_install` command clones the olm repository in `test/olm` directory. Once OLM is installed, the OLM console can be started by running the script
+Once OLM is installed, the OLM console can be started by coloning the olm repo
+and running the run_coneole_local.sh script:
 ```
-$ ./test/olm/scripts/run_console_local.sh
+$ git clone --depth 1 https://github.com/operator-framework/operator-lifecycle-manager olm
+$ ./olm/scripts/run_console_local.sh
 ```
 This starts a web UI for OLM at http://localhost:9000.
 
