@@ -40,7 +40,7 @@ const (
 	CSIv0DriverRegistrarContainerImage        = "quay.io/k8scsi/driver-registrar:v0.4.2"
 	CSIv0ExternalProvisionerContainerImage    = "storageos/csi-provisioner:v0.4.2"
 	CSIv0ExternalAttacherContainerImage       = "quay.io/k8scsi/csi-attacher:v0.4.2"
-	DefaultNFSContainerImage                  = "storageos/nfs:test"
+	DefaultNFSContainerImage                  = "storageos/nfs:1.0.0"
 
 	DefaultHyperkubeContainerRegistry = "gcr.io/google_containers/hyperkube"
 
