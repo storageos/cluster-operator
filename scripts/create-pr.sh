@@ -48,10 +48,20 @@ done
 
 # Create branch, commit and create a PR.
 MESSAGE="Update StorageOS Operator to version ${VERSION}"
+PR_TEMPLATE="### Update to existing Operators
+
+* [x] Is your new CSV pointing to the previous version with the replaces property?
+* [x] Is your new CSV referenced in the appropriate channel defined in the package.yaml ?
+* [x] Have you tested an update to your Operator when deployed via OLM?"
+
 pushd $COMMUNITY_REPO_PATH
 hub remote add fork https://github.com/$GITHUB_USER/community-operators
 git checkout -b $VERSION
 git add *
 git commit -m "$MESSAGE"
 git push fork $VERSION
-hub pull-request -m "$MESSAGE"
+# Create PR message by combining commit message and PR template.
+PR_MESSAGE="${MESSAGE}
+
+${PR_TEMPLATE}"
+hub pull-request -m "$PR_MESSAGE"
