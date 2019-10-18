@@ -1335,6 +1335,14 @@ func TestDeployTLSEtcdCerts(t *testing.T) {
 		t.Fatalf("expected %q secret to exist, but not found", stosEtcdSecret)
 	}
 
+	// Check the created secret type because the fake k8s client doesn't
+	// validate the type of secret and the data fields.
+	// For example, it allows creating a TLS type secret with opaque type data.
+	// TLS type secret can have only `tls.key` and `tls.crt` data fields.
+	if etcdSecret.Type != stosEtcdSecret.Type {
+		t.Errorf("unexpected secret type:\n\t(WNT) %s\n\t(GOT) %s", etcdSecret.Type, stosEtcdSecret.Type)
+	}
+
 	// Check if the data in the new secret is the same as the source secret.
 	if !reflect.DeepEqual(stosEtcdSecret.Data, etcdSecret.Data) {
 		t.Errorf("unexpected secret data:\n\t(WNT) %v\n\t(GOT) %v", etcdSecret.Data, stosEtcdSecret.Data)

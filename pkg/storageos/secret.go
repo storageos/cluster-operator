@@ -167,8 +167,7 @@ func (s *Deployment) createTLSEtcdSecret() error {
 	if err != nil {
 		return err
 	}
-	data := secret.Data
 
 	// Create new secret with etcd TLS secret data.
-	return s.k8sResourceManager.Secret(TLSEtcdSecretName, s.stos.Spec.GetResourceNS(), corev1.SecretTypeTLS, data).Create()
+	return s.k8sResourceManager.Secret(TLSEtcdSecretName, s.stos.Spec.GetResourceNS(), secret.Type, secret.Data).Create()
 }

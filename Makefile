@@ -53,7 +53,7 @@ lint:
 	go vet ./...
 
 unittest:
-	go test -v -race `go list -v ./... | grep -v test/e2e | grep -v test/olm`
+	go test -v -race `go list -v ./... | grep -v test/e2e | grep -v olm`
 
 operator-sdk:
 	# Download sdk only if it's not available.
