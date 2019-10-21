@@ -13,6 +13,15 @@ import (
 )
 
 const (
+	// SchedulerExtenderName is the name of StorageOS scheduler.
+	SchedulerExtenderName = "storageos-scheduler"
+	// IntreeProvisionerName is the name of the k8s native provisioner.
+	IntreeProvisionerName = "kubernetes.io/storageos"
+	// CSIProvisionerName is the name of the CSI provisioner.
+	CSIProvisionerName = "storageos"
+)
+
+const (
 	initSecretName                 = "init-secret"
 	tlsSecretName                  = "tls-secret"
 	csiProvisionerSecretName       = "csi-provisioner-secret"
@@ -24,16 +33,12 @@ const (
 	statefulsetKind = "statefulset"
 	deploymentKind  = "deployment"
 
-	daemonsetName         = "storageos-daemonset"
-	statefulsetName       = "storageos-statefulset"
-	csiHelperName         = "storageos-csi-helper"
-	schedulerExtenderName = "storageos-scheduler"
+	daemonsetName   = "storageos-daemonset"
+	statefulsetName = "storageos-statefulset"
+	csiHelperName   = "storageos-csi-helper"
 
 	tlsSecretType       = "kubernetes.io/tls"
 	storageosSecretType = "kubernetes.io/storageos"
-
-	intreeProvisionerName = "kubernetes.io/storageos"
-	csiProvisionerName    = "storageos"
 
 	defaultFSType                            = "ext4"
 	secretNamespaceKey                       = "adminSecretNamespace"
