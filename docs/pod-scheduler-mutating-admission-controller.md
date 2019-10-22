@@ -49,7 +49,7 @@ mutating are:
 - The pod has at least one volume that is managed by StorageOS.
 - The StorageOS cluster has the scheduler enabled.
 
-Both the above conditions must be true for the mutation to applied.
+Both the above conditions must be true for the mutation to be applied.
 
 ## Deployment
 
