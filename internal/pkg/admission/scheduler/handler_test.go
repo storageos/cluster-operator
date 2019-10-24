@@ -18,9 +18,12 @@ import (
 )
 
 func TestMutatePodFn(t *testing.T) {
+	// Test values only.
 	storageosSchedulerName := "storageos-scheduler"
 	storageosCSIProvisioner := "storageos"
 	storageosNativeProvisioner := "kubernetes.io/storageos"
+	defaultSchedulerName := "default-scheduler"
+	schedulerAnnotationKey := "storageos.com/scheduler"
 
 	// Create a new scheme and add all the types from different clientsets.
 	scheme := runtime.NewScheme()
@@ -63,6 +66,7 @@ func TestMutatePodFn(t *testing.T) {
 
 	testcases := []struct {
 		name              string
+		annotations       map[string]string
 		volumeClaimNames  []string
 		schedulerDisabled bool
 		wantSchedulerName string
@@ -77,16 +81,19 @@ func TestMutatePodFn(t *testing.T) {
 			name:              "pod with storageos volume, scheduler disabled",
 			volumeClaimNames:  []string{stosPVC.Name},
 			schedulerDisabled: true,
+			wantSchedulerName: defaultSchedulerName,
 		},
 		{
 			name:              "pod without storageos volume, scheduler enabled",
 			volumeClaimNames:  []string{fooPVC.Name},
 			schedulerDisabled: false,
+			wantSchedulerName: defaultSchedulerName,
 		},
 		{
 			name:              "pod without storageos volume, scheduler disabled",
 			volumeClaimNames:  []string{fooPVC.Name},
 			schedulerDisabled: true,
+			wantSchedulerName: defaultSchedulerName,
 		},
 		{
 			// Using the PVC that uses the native provisioner StorageClass.
@@ -99,6 +106,34 @@ func TestMutatePodFn(t *testing.T) {
 			name:              "pod with non-storageos and storageos volumes, scheduler disabled",
 			volumeClaimNames:  []string{stosPVC.Name, fooPVC.Name},
 			schedulerDisabled: true,
+			wantSchedulerName: defaultSchedulerName,
+		},
+		{
+			name: "pod with scheduler annotation false",
+			annotations: map[string]string{
+				schedulerAnnotationKey: "false",
+			},
+			volumeClaimNames:  []string{stosPVC.Name},
+			schedulerDisabled: false,
+			wantSchedulerName: defaultSchedulerName,
+		},
+		{
+			name: "pod with scheduler annotation true",
+			annotations: map[string]string{
+				schedulerAnnotationKey: "true",
+			},
+			volumeClaimNames:  []string{stosPVC.Name},
+			schedulerDisabled: false,
+			wantSchedulerName: storageosSchedulerName,
+		},
+		{
+			name: "pod with scheduler annotation invalid value",
+			annotations: map[string]string{
+				schedulerAnnotationKey: "foo",
+			},
+			volumeClaimNames:  []string{stosPVC.Name},
+			schedulerDisabled: false,
+			wantSchedulerName: storageosSchedulerName,
 		},
 	}
 
@@ -118,11 +153,13 @@ func TestMutatePodFn(t *testing.T) {
 			// Pod that uses PVCs.
 			pod := &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "pod1",
-					Namespace: "default",
+					Name:        "pod1",
+					Namespace:   "default",
+					Annotations: tc.annotations,
 				},
 				Spec: corev1.PodSpec{
-					Volumes: []corev1.Volume{},
+					SchedulerName: defaultSchedulerName,
+					Volumes:       []corev1.Volume{},
 					Containers: []corev1.Container{
 						{
 							Name:  "some-app",
@@ -154,7 +191,8 @@ func TestMutatePodFn(t *testing.T) {
 					storageosCSIProvisioner,
 					storageosNativeProvisioner,
 				},
-				SchedulerName: storageosSchedulerName,
+				SchedulerName:          storageosSchedulerName,
+				SchedulerAnnotationKey: schedulerAnnotationKey,
 			}
 
 			// Pass the created pod to the mutatePodFn and check if the schedulerName in

@@ -45,6 +45,9 @@ const (
 	// podSchedulerWebhookPort is the port at which the pod scheduler webhook
 	// server runs.
 	podSchedulerWebhookPort = 5720
+	// podSchedulerAnnotationKey is the pod annotation key that can be set to
+	// skip pod scheduler name mutation.
+	podSchedulerAnnotationKey = "storageos.com/scheduler"
 )
 
 func main() {
@@ -104,8 +107,9 @@ func main() {
 		// Configure a pod scheduler webhook handler with StorageOS provisioner
 		// and scheduler.
 		webhookHandler := &scheduler.PodSchedulerSetter{
-			Provisioners:  []string{storageos.CSIProvisionerName, storageos.IntreeProvisionerName},
-			SchedulerName: storageos.SchedulerExtenderName,
+			Provisioners:           []string{storageos.CSIProvisionerName, storageos.IntreeProvisionerName},
+			SchedulerName:          storageos.SchedulerExtenderName,
+			SchedulerAnnotationKey: podSchedulerAnnotationKey,
 		}
 
 		// Enable webhook config installer.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -22,6 +23,9 @@ type PodSchedulerSetter struct {
 	Provisioners []string
 	// SchedulerName is the name of the scheduler to mutate pods with.
 	SchedulerName string
+	// SchedulerAnnotationKey is the pod annotation that can be set to skip or
+	// apply the mutation.
+	SchedulerAnnotationKey string
 }
 
 // Check if the Handler interface is implemented.
@@ -45,6 +49,15 @@ func (p *PodSchedulerSetter) Handle(ctx context.Context, req types.Request) type
 // mutatePodFn mutates a given pod with a configured scheduler name if the pod
 // is associated with volumes managed by the configured provisioners.
 func (p *PodSchedulerSetter) mutatePodsFn(ctx context.Context, pod *corev1.Pod) error {
+	// Skip mutation if the pod annotation has false schedule annotation.
+	if val, exists := pod.ObjectMeta.Annotations[p.SchedulerAnnotationKey]; exists {
+		boolVal, err := strconv.ParseBool(val)
+		// No error in parsing and the value is false, skip the pod.
+		if err == nil && !boolVal {
+			return nil
+		}
+	}
+
 	managedVols := []corev1.Volume{}
 
 	// Find all the managed volumes.
