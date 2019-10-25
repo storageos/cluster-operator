@@ -21,6 +21,7 @@ if [ "$1" = "tagged" ]; then
         -e GITHUB_USER=$GH_USER \
         -e GITHUB_EMAIL=$GH_EMAIL \
         -e GITHUB_TOKEN=$API_TOKEN \
+        -e SIGN_OFF_NAME=$SIGN_OFF_NAME \
         -e VERSION=$TRAVIS_TAG \
         -e TARGET_REPO="https://github.com/operator-framework/community-operators/" \
         -e COMMUNITY_REPO_PATH="/go/src/github.com/operator-framework/community-operators/" \
