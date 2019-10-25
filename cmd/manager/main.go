@@ -26,8 +26,8 @@ var log = logf.Log.WithName("storageos.setup")
 
 const (
 	// Env vars.
-	enableSchedulerEnvVar = "ENABLE_SCHEDULER"
-	podNamespaceEnvVar    = "POD_NAMESPACE"
+	disableSchedulerWebhookEnvVar = "DISABLE_SCHEDULER_WEBHOOK"
+	podNamespaceEnvVar            = "POD_NAMESPACE"
 
 	// operatorNameLabel is the "name" label in the operator's deployment
 	// config. This is needed for proper operator pod selection by webhook
@@ -91,19 +91,19 @@ func main() {
 		fatal(err)
 	}
 
-	// Check if storageos scheduler should be enabled.
-	enableScheduler := false
-	enableSchedulerEnvVarVal := os.Getenv(enableSchedulerEnvVar)
-	if len(enableSchedulerEnvVarVal) > 0 {
+	// Check if storageos pod scheduler webhook should be disabled.
+	disableSchedulerWebhook := false
+	disableSchedulerEnvVarVal := os.Getenv(disableSchedulerWebhookEnvVar)
+	if len(disableSchedulerEnvVarVal) > 0 {
 		var parseError error
-		enableScheduler, parseError = strconv.ParseBool(enableSchedulerEnvVarVal)
+		disableSchedulerWebhook, parseError = strconv.ParseBool(disableSchedulerEnvVarVal)
 		if parseError != nil {
 			log.Error(parseError, "unable to parse ENABLE_SCHEDULER val")
 			fatal(parseError)
 		}
 	}
 
-	if enableScheduler {
+	if !disableSchedulerWebhook {
 		// Configure a pod scheduler webhook handler with StorageOS provisioner
 		// and scheduler.
 		webhookHandler := &scheduler.PodSchedulerSetter{

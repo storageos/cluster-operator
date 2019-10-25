@@ -40,8 +40,8 @@ spec:
                   fieldPath: metadata.namespace
             - name: OPERATOR_NAME
               value: "cluster-operator"
-            - name: ENABLE_SCHEDULER
-              value: "true"
+            - name: DISABLE_SCHEDULER_WEBHOOK
+              value: "false"
       tolerations:
       - key: "key"
         operator: "Equal"
