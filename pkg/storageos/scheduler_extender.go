@@ -71,7 +71,7 @@ func (s Deployment) createSchedulerDeployment(replicas int32) error {
 	// Add pod toleration for quick recovery on node failure.
 	addPodTolerationForRecovery(&spec.Template.Spec)
 
-	return s.k8sResourceManager.Deployment(schedulerExtenderName, s.stos.Spec.GetResourceNS(), spec).Create()
+	return s.k8sResourceManager.Deployment(SchedulerExtenderName, s.stos.Spec.GetResourceNS(), spec).Create()
 }
 
 // schedulerContainers returns a list of containers that should be part of the
@@ -115,7 +115,7 @@ func (s Deployment) schedulerVolumes() []corev1.Volume {
 // deleteSchedulerExtender deletes all the scheduler related resources.
 func (s Deployment) deleteSchedulerExtender() error {
 	namespace := s.stos.Spec.GetResourceNS()
-	if err := s.k8sResourceManager.Deployment(schedulerExtenderName, namespace, nil).Delete(); err != nil {
+	if err := s.k8sResourceManager.Deployment(SchedulerExtenderName, namespace, nil).Delete(); err != nil {
 		return err
 	}
 	if err := s.k8sResourceManager.ConfigMap(policyConfigMapName, namespace, nil).Delete(); err != nil {
@@ -220,7 +220,7 @@ func (s Deployment) createSchedulerConfiguration() error {
       lockObjectNamespace: {{.Namespace}}
 `
 	schedConfigData := schedulerConfigTemplate{
-		SchedulerName:  schedulerExtenderName,
+		SchedulerName:  SchedulerExtenderName,
 		PolicyName:     policyConfigMapName,
 		Namespace:      s.stos.Spec.GetResourceNS(),
 		LeaderElection: true,

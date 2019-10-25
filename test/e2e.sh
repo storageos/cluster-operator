@@ -204,6 +204,12 @@ operator-sdk-e2e-cleanup() {
 
     # Delete NFSServer statefulset.
     kubectl delete statefulset.apps/example-nfsserver --ignore-not-found=true
+
+    # Delete webhook service.
+    kubectl -n storageos-operator delete service/storageos-scheduler-webhook --ignore-not-found=true
+
+    # Delete webhook config.
+    kubectl delete mutatingwebhookconfigurations storageos-scheduler-webhook --ignore-not-found=true
 }
 
 main() {

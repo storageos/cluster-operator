@@ -28,6 +28,11 @@ LABEL name="StorageOS Cluster Operator" \
     summary="Highly-available persistent block storage for containerized applications." \
     description="StorageOS transforms commodity server or cloud based disk capacity into enterprise-class storage to run persistent workloads such as databases in containers. Provides high availability, low latency persistent block storage. No other hardware or software is required."
 
+# Create a working directory that's writable by non-root users. This is needed
+# for writing the certificate generation.
+WORKDIR /home/operator
+RUN chmod -R g+rwX /home/operator
+
 # Docker is required by the upgrader to pre-load images.  Only `docker pull` is
 # used.  `podman` would be preferred but it's not available in the package repo,
 # and there isn't a binary release that we can easily download into the image.
@@ -42,3 +47,6 @@ COPY --from=build /go/src/github.com/storageos/cluster-operator/LICENSE /license
 COPY --from=build /go/src/github.com/storageos/cluster-operator/build/_output/bin/cluster-operator /usr/local/bin/cluster-operator
 COPY --from=build /go/src/github.com/storageos/cluster-operator/build/_output/bin/upgrader /usr/local/bin/upgrader
 COPY --from=build /go/src/github.com/storageos/cluster-operator/cmd/image-puller/docker-puller.sh /usr/local/bin/docker-puller.sh
+
+# Set a non-root default user.
+USER 1001

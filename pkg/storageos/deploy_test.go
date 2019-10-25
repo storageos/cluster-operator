@@ -1541,7 +1541,7 @@ func TestDeploySchedulerExtender(t *testing.T) {
 	// Check the attributes of the scheduler deployment.
 	schedDeployment := &appsv1.Deployment{}
 	schedDeploymentNSName := types.NamespacedName{
-		Name:      schedulerExtenderName,
+		Name:      SchedulerExtenderName,
 		Namespace: defaultNS,
 	}
 

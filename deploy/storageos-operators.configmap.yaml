@@ -930,6 +930,12 @@ data:
                 - use
                 resourceNames:
                 - privileged
+              - apiGroups:
+                - admissionregistration.k8s.io
+                resources:
+                - mutatingwebhookconfigurations
+                verbs:
+                - '*'
             deployments:
             - name: storageos-operator
               spec:
@@ -956,9 +962,17 @@ data:
                             fieldPath: metadata.annotations['olm.targetNamespaces']
                       - name: OPERATOR_NAME
                         value: "cluster-operator"
+                      - name: POD_NAMESPACE
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.namespace
+                      - name: DISABLE_SCHEDULER_WEBHOOK
+                        value: "false"
                       ports:
                       - containerPort: 8080
                         name: metrics
+                      - containerPort: 5720
+                        name: podschedwebhook
                     - name: scorecard-proxy
                       image: quay.io/operator-framework/scorecard-proxy:v0.10.0
                       imagePullPolicy: IfNotPresent

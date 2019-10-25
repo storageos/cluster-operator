@@ -4,18 +4,51 @@ import (
 	"flag"
 	"os"
 	"runtime"
+	"strconv"
 
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
+	"github.com/storageos/cluster-operator/internal/pkg/admission"
+	"github.com/storageos/cluster-operator/internal/pkg/admission/scheduler"
 	"github.com/storageos/cluster-operator/pkg/apis"
 	"github.com/storageos/cluster-operator/pkg/controller"
+	"github.com/storageos/cluster-operator/pkg/storageos"
+	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
+	webhookAdmission "sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 var log = logf.Log.WithName("storageos.setup")
+
+const (
+	// Env vars.
+	disableSchedulerWebhookEnvVar = "DISABLE_SCHEDULER_WEBHOOK"
+	podNamespaceEnvVar            = "POD_NAMESPACE"
+
+	// operatorNameLabel is the "name" label in the operator's deployment
+	// config. This is needed for proper operator pod selection by webhook
+	// service.
+	// NOTE: If the operator's deployment changes the name label, this must be
+	// updated.
+	operatorNameLabel = "storageos-cluster-operator"
+
+	// podSchedulerWebhookName is a fully qualified name of the pod scheduler
+	// admission webhook.
+	podSchedulerWebhookName = "podscheduler.storageos.com"
+	// podSchedulerResourceName is the name of webhook server, service,
+	// mutatingwebhookconfig and other related resources.
+	podSchedulerResourceName = "storageos-scheduler-webhook"
+	// podSchedulerWebhookPort is the port at which the pod scheduler webhook
+	// server runs.
+	podSchedulerWebhookPort = 5720
+	// podSchedulerAnnotationKey is the pod annotation key that can be set to
+	// skip pod scheduler name mutation.
+	podSchedulerAnnotationKey = "storageos.com/scheduler"
+)
 
 func main() {
 
@@ -56,6 +89,55 @@ func main() {
 	// Setup all Controllers
 	if err := controller.AddToManager(mgr); err != nil {
 		fatal(err)
+	}
+
+	// Check if storageos pod scheduler webhook should be disabled.
+	disableSchedulerWebhook := false
+	disableSchedulerEnvVarVal := os.Getenv(disableSchedulerWebhookEnvVar)
+	if len(disableSchedulerEnvVarVal) > 0 {
+		var parseError error
+		disableSchedulerWebhook, parseError = strconv.ParseBool(disableSchedulerEnvVarVal)
+		if parseError != nil {
+			log.Error(parseError, "unable to parse ENABLE_SCHEDULER val")
+			fatal(parseError)
+		}
+	}
+
+	if !disableSchedulerWebhook {
+		// Configure a pod scheduler webhook handler with StorageOS provisioner
+		// and scheduler.
+		webhookHandler := &scheduler.PodSchedulerSetter{
+			Provisioners:           []string{storageos.CSIProvisionerName, storageos.IntreeProvisionerName},
+			SchedulerName:          storageos.SchedulerExtenderName,
+			SchedulerAnnotationKey: podSchedulerAnnotationKey,
+		}
+
+		// Enable webhook config installer.
+		disableWebhookConfigInstaller := false
+
+		// Create a mutating webhook for mutating pods that have volumes managed
+		// by StorageOS and set them to use storageos pod scheduler.
+		mutatingWebhook := &admission.MutatingWebhook{
+			Name:        podSchedulerWebhookName,
+			Namespace:   os.Getenv(podNamespaceEnvVar),
+			ServerName:  podSchedulerResourceName,
+			ServiceName: podSchedulerResourceName,
+			ServiceSelector: map[string]string{
+				"name": operatorNameLabel,
+			},
+			Port: podSchedulerWebhookPort,
+			Operations: []admissionregistrationv1beta1.OperationType{
+				admissionregistrationv1beta1.Create,
+			},
+			Manager:                mgr,
+			ObjectType:             &corev1.Pod{},
+			Handlers:               []webhookAdmission.Handler{webhookHandler},
+			DisableConfigInstaller: &disableWebhookConfigInstaller,
+		}
+
+		if err := mutatingWebhook.SetupWebhook(); err != nil {
+			fatal(err)
+		}
 	}
 
 	log.Info("Starting the StorageOS Operator")

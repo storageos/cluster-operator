@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
-	storageos "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
+	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	testutil "github.com/storageos/cluster-operator/test/e2e/util"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,7 +24,7 @@ func TestClusterInTreePlugin(t *testing.T) {
 		t.Fatalf("could not get namespace: %v", err)
 	}
 
-	clusterSpec := storageos.StorageOSClusterSpec{
+	clusterSpec := storageosv1.StorageOSClusterSpec{
 		SecretRefName:      "storageos-api",
 		SecretRefNamespace: "default",
 		Namespace:          resourceNS,
@@ -65,6 +65,12 @@ func TestClusterInTreePlugin(t *testing.T) {
 	if len(daemonset.Spec.Template.Spec.Containers) != 1 {
 		t.Errorf("unexpected number of daemonset pod containers:\n\t(GOT) %d\n\t(WNT) %d", len(daemonset.Spec.Template.Spec.Containers), 2)
 	}
+
+	// Test pod scheduler mutating admission contoller.
+	// This test creates a StorageOS consumer pod which will fail for CSI
+	// deployments on openshift 3.11. Therefore, run this test with native
+	// driver only.
+	testutil.PodSchedulerAdmissionControllerTest(t, ctx)
 
 	// Test node label sync.
 	testutil.NodeLabelSyncTest(t, f.KubeClient)
