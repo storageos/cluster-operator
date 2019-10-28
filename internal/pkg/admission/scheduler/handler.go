@@ -3,6 +3,7 @@ package scheduler
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -38,9 +39,15 @@ func (p *PodSchedulerSetter) Handle(ctx context.Context, req types.Request) type
 	if err := p.decoder.Decode(req, pod); err != nil {
 		return admission.ErrorResponse(http.StatusBadRequest, err)
 	}
+	// Get the request namespace. This is needed because sometimes the decoded
+	// pod object lacks namespace info.
+	namespace := req.AdmissionRequest.Namespace
+
 	// Create a copy of the pod to mutate.
 	copy := pod.DeepCopy()
-	if err := p.mutatePodsFn(ctx, copy); err != nil {
+	if err := p.mutatePodsFn(ctx, copy, namespace); err != nil {
+		// TODO: Add support for structured logging in this package.
+		log.Printf("failed to mutate pod: %v", err)
 		return admission.ErrorResponse(http.StatusInternalServerError, err)
 	}
 	return admission.PatchResponse(pod, copy)
@@ -48,7 +55,7 @@ func (p *PodSchedulerSetter) Handle(ctx context.Context, req types.Request) type
 
 // mutatePodFn mutates a given pod with a configured scheduler name if the pod
 // is associated with volumes managed by the configured provisioners.
-func (p *PodSchedulerSetter) mutatePodsFn(ctx context.Context, pod *corev1.Pod) error {
+func (p *PodSchedulerSetter) mutatePodsFn(ctx context.Context, pod *corev1.Pod, namespace string) error {
 	// Skip mutation if the pod annotation has false schedule annotation.
 	if val, exists := pod.ObjectMeta.Annotations[p.SchedulerAnnotationKey]; exists {
 		boolVal, err := strconv.ParseBool(val)
@@ -62,7 +69,7 @@ func (p *PodSchedulerSetter) mutatePodsFn(ctx context.Context, pod *corev1.Pod) 
 
 	// Find all the managed volumes.
 	for _, vol := range pod.Spec.Volumes {
-		ok, err := p.IsManagedVolume(vol, pod.Namespace)
+		ok, err := p.IsManagedVolume(vol, namespace)
 		if err != nil {
 			return fmt.Errorf("failed to determine if the volume is managed: %v", err)
 		}

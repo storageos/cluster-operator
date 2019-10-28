@@ -55,14 +55,16 @@ func TestMutatePodFn(t *testing.T) {
 		Provisioner: "foo-provisioner",
 	}
 
+	testNamespace := "default"
+
 	// PVC that uses StorageOS StorageClass.
-	stosPVC := createPVC("pv1", "default", stosSC.Name)
+	stosPVC := createPVC("pv1", testNamespace, stosSC.Name)
 
 	// PVC that uses StorageOS native StorageClass.
-	stosNativePVC := createPVC("pv2", "default", stosNativeSC.Name)
+	stosNativePVC := createPVC("pv2", testNamespace, stosNativeSC.Name)
 
 	// PVC that uses non-StorageOS StorageClass.
-	fooPVC := createPVC("pv3", "default", fooSC.Name)
+	fooPVC := createPVC("pv3", testNamespace, fooSC.Name)
 
 	testcases := []struct {
 		name              string
@@ -143,7 +145,7 @@ func TestMutatePodFn(t *testing.T) {
 			stosCluster := &storageosv1.StorageOSCluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "stos",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: storageosv1.StorageOSClusterSpec{
 					DisableScheduler: tc.schedulerDisabled,
@@ -154,7 +156,7 @@ func TestMutatePodFn(t *testing.T) {
 			pod := &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        "pod1",
-					Namespace:   "default",
+					Namespace:   testNamespace,
 					Annotations: tc.annotations,
 				},
 				Spec: corev1.PodSpec{
@@ -197,7 +199,7 @@ func TestMutatePodFn(t *testing.T) {
 
 			// Pass the created pod to the mutatePodFn and check if the schedulerName in
 			// podSpec changed.
-			if err := podSchedulerSetter.mutatePodsFn(context.Background(), pod); err != nil {
+			if err := podSchedulerSetter.mutatePodsFn(context.Background(), pod, testNamespace); err != nil {
 				t.Fatalf("failed to mutate pod: %v", err)
 			}
 
