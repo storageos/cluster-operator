@@ -23,7 +23,17 @@ func (d *Deployment) Delete() error {
 		return err
 	}
 
-	// Maybe delete PVC as well.
+	// Delete PVC if it was not specified and dynamically created for NFS
+	// Server.
+	// NOTE: Reclaim policy is not respected here because NFS Server need not
+	// have its own reclaim policy options. The StorageClass reclaim policy
+	// must be used to set volume reclaim policy. NFS Server spec reclaim policy
+	// will be removed in StorageOS cluster-operator v2 APIs.
+	if d.nfsServer.Spec.PersistentVolumeClaim.ClaimName == "" {
+		if err := d.k8sResourceManager.PersistentVolumeClaim(d.nfsServer.Name, d.nfsServer.Namespace, nil).Delete(); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

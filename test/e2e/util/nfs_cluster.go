@@ -2,13 +2,11 @@ package util
 
 import (
 	goctx "context"
-	"fmt"
 	"testing"
 	"time"
 
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	storageos "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
-	nfs "github.com/storageos/cluster-operator/pkg/nfs"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -114,8 +112,7 @@ func NFSServerTest(t *testing.T, ctx *framework.TestCtx) {
 	// server is deleted.
 	pvc := &corev1.PersistentVolumeClaim{}
 	pvcNSName := types.NamespacedName{
-		// PVC name format: <pvc-prefix>-<statefulset-pod-name>
-		Name:      fmt.Sprintf("%s-%s-%s", nfs.PVCNamePrefix, nfsServerName, "0"),
+		Name:      testNFSServer.Name,
 		Namespace: defaultNS,
 	}
 	if err := f.Client.Get(goctx.TODO(), pvcNSName, pvc); err != nil {

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/storageos/cluster-operator/pkg/storageos"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
@@ -53,7 +54,22 @@ func (d *Deployment) Deploy() error {
 	requestedCapacity := d.nfsServer.Spec.GetRequestedCapacity()
 	size := &requestedCapacity
 
-	if err := d.createStatefulSet(size, DefaultNFSPort, DefaultHTTPPort); err != nil {
+	pvcVS := d.nfsServer.Spec.PersistentVolumeClaim
+
+	// If no existing PVC Volume Source is specified in the spec, create a new
+	// PVC with NFS Server name.
+	if pvcVS.ClaimName == "" {
+		// Create a PVC with the same name as the NFS Server.
+		if err := d.createPVC(size); err != nil {
+			return err
+		}
+		pvcVS = corev1.PersistentVolumeClaimVolumeSource{
+			ClaimName: d.nfsServer.Name,
+		}
+	}
+
+	// Create a StatefulSet NFS Server with PVC Volume Source.
+	if err := d.createStatefulSet(&pvcVS, DefaultNFSPort, DefaultHTTPPort); err != nil {
 		return err
 	}
 

@@ -4,21 +4,16 @@ import (
 	"github.com/storageos/cluster-operator/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (
-	// PVCNamePrefix is the prefix of the PVC names used by the NFS StatefulSet.
-	// The PVC names are of the format <prefix>-<statefulset-pod-name>.
-	// If the NFS server statefulset name is "example-nfsserver" and the pod is
-	// named "example-nfsserver-0", the PVC will be named
-	// "nfs-data-example-nfsserver-0"
-	PVCNamePrefix = "nfs-data"
+	// DataVolName is the NFS data volume name.
+	DataVolName = "nfs-data"
 )
 
-func (d *Deployment) createStatefulSet(size *resource.Quantity, nfsPort int, httpPort int) error {
+func (d *Deployment) createStatefulSet(pvcVS *corev1.PersistentVolumeClaimVolumeSource, nfsPort int, httpPort int) error {
 
 	replicas := int32(1)
 
@@ -31,53 +26,19 @@ func (d *Deployment) createStatefulSet(size *resource.Quantity, nfsPort int, htt
 		Template: d.createPodTemplateSpec(nfsPort, httpPort),
 	}
 
-	// If no existing PVC is specified in the spec, create volume claim template
-	// for a new PVC.
-	if d.nfsServer.Spec.PersistentVolumeClaim.ClaimName == "" {
-		spec.VolumeClaimTemplates = d.createVolumeClaimTemplateSpecs(size)
-	} else {
-		// If a PVC is provided in the NFSServer CR, add a reference to the PVC
-		// in the volumes list.
-		pvc := corev1.Volume{
-			Name: PVCNamePrefix,
-			VolumeSource: corev1.VolumeSource{
-				PersistentVolumeClaim: &d.nfsServer.Spec.PersistentVolumeClaim,
-			},
-		}
-		spec.Template.Spec.Volumes = append(spec.Template.Spec.Volumes, pvc)
+	// Add the block volume in the pod spec volumes.
+	vol := corev1.Volume{
+		Name: DataVolName,
+		VolumeSource: corev1.VolumeSource{
+			PersistentVolumeClaim: pvcVS,
+		},
 	}
+	spec.Template.Spec.Volumes = append(spec.Template.Spec.Volumes, vol)
 
 	// TODO: Add node affinity support for NFS server pods.
 	util.AddTolerations(&spec.Template.Spec, d.nfsServer.Spec.Tolerations)
 
 	return d.k8sResourceManager.StatefulSet(d.nfsServer.Name, d.nfsServer.Namespace, spec).Create()
-}
-
-func (d *Deployment) createVolumeClaimTemplateSpecs(size *resource.Quantity) []corev1.PersistentVolumeClaim {
-	scName := d.nfsServer.Spec.GetStorageClassName(d.cluster.Spec.GetStorageClassName())
-
-	claim := corev1.PersistentVolumeClaim{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      PVCNamePrefix,
-			Namespace: d.nfsServer.Namespace,
-			Labels:    d.nfsServer.Labels,
-		},
-		Spec: corev1.PersistentVolumeClaimSpec{
-			AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-			StorageClassName: &scName,
-			Resources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{},
-			},
-		},
-	}
-
-	if size != nil {
-		claim.Spec.Resources.Requests = corev1.ResourceList{
-			corev1.ResourceName(corev1.ResourceStorage): *size,
-		}
-	}
-
-	return []corev1.PersistentVolumeClaim{claim}
 }
 
 func (d *Deployment) createPodTemplateSpec(nfsPort int, httpPort int) corev1.PodTemplateSpec {
@@ -122,7 +83,7 @@ func (d *Deployment) createPodTemplateSpec(nfsPort int, httpPort int) corev1.Pod
 							MountPath: "/config",
 						},
 						{
-							Name:      PVCNamePrefix,
+							Name:      DataVolName,
 							MountPath: "/export",
 						},
 					},

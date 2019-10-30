@@ -8,6 +8,7 @@ spec:
   # persistentVolumeClaim:
   #   claimName: pv1
   #   readOnly: false
+  # persistentVolumeReclaimPolicy: "Delete"
   resources:
     requests:
       storage: "1Gi"
