@@ -1,5 +1,5 @@
 # ARG BUILD_IMAGE=golang:1.12.9
-# ARG BASE_IMAGE=storageos/base-image:0.1.0
+# ARG BASE_IMAGE=storageos/base-image:0.2.0
 # ARG OPERATOR_IMAGE=storageos/cluster-operator:test
 
 FROM golang:1.12.9 AS build
@@ -14,7 +14,7 @@ RUN make generate
 RUN make build/cluster-operator OPERATOR_IMAGE=registry.connect.redhat.com/storageos/cluster-operator:1.1.0
 RUN make build/upgrader
 
-FROM storageos/base-image:0.1.0
+FROM storageos/base-image:0.2.0
 LABEL name="StorageOS Cluster Operator" \
     maintainer="support@storageos.com" \
     vendor="StorageOS" \
