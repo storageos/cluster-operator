@@ -8,6 +8,13 @@ import (
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	// nfsServerPodLabelSelector is the label that can be used to select all the
+	// pods of NFS Server.
+	nfsServerPodLabelSelector = "nfsserver"
 )
 
 func (s *Deployment) updateStatus(status *storageosv1.NFSServerStatus) error {
@@ -40,7 +47,8 @@ func (s *Deployment) getStatus() (*storageosv1.NFSServerStatus, error) {
 		AccessModes:  "",
 	}
 
-	ss, err := s.k8sResourceManager.StatefulSet(s.nfsServer.Name, s.nfsServer.Namespace, nil).Get()
+	// Check if the StatefulSet exists.
+	_, err := s.k8sResourceManager.StatefulSet(s.nfsServer.Name, s.nfsServer.Namespace, nil).Get()
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Return empty status without any error. Resources haven't been
@@ -50,6 +58,7 @@ func (s *Deployment) getStatus() (*storageosv1.NFSServerStatus, error) {
 		return status, err
 	}
 
+	// Check if the Service exists.
 	svc, err := s.k8sResourceManager.Service(s.nfsServer.Name, s.nfsServer.Namespace, nil, nil).Get()
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -74,10 +83,21 @@ func (s *Deployment) getStatus() (*storageosv1.NFSServerStatus, error) {
 	if svc.Spec.ClusterIP != "" {
 		status.RemoteTarget = svc.Spec.ClusterIP
 
-		// If the NFS pod is also ready, then we can mark the NFS Server as
+		// Get the NFS Server pods and check their status.
+		listOpts := &client.ListOptions{}
+		listOpts.SetLabelSelector(fmt.Sprintf("%s=%s", nfsServerPodLabelSelector, s.nfsServer.Name))
+		podList := &corev1.PodList{}
+		if err := s.client.List(context.Background(), listOpts, podList); err != nil {
+			return status, err
+		}
+
+		// If any of the NFS pods are ready, then we can mark the NFS Server as
 		// online.
-		if ss.Status.ReadyReplicas > 0 {
-			status.Phase = storageosv1.PhaseRunning
+		for _, pod := range podList.Items {
+			if pod.Status.Phase == corev1.PodRunning {
+				status.Phase = storageosv1.PhaseRunning
+				break
+			}
 		}
 	}
 
