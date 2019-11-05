@@ -163,6 +163,16 @@ func TestResourceManager(t *testing.T) {
 			},
 			wantResource: &storagev1.StorageClass{},
 		},
+		{
+			name: resource.PVCKind,
+			create: func(rm *ResourceManager, nsName types.NamespacedName) error {
+				return rm.PersistentVolumeClaim(nsName.Name, nsName.Namespace, &corev1.PersistentVolumeClaimSpec{}).Create()
+			},
+			delete: func(rm *ResourceManager, nsName types.NamespacedName) error {
+				return rm.PersistentVolumeClaim(nsName.Name, nsName.Namespace, nil).Delete()
+			},
+			wantResource: &corev1.PersistentVolumeClaim{},
+		},
 	}
 
 	for _, tc := range testcases {
@@ -171,9 +181,6 @@ func TestResourceManager(t *testing.T) {
 
 			labels := map[string]string{"app": "testapp"}
 			rm := NewResourceManager(client).SetLabels(labels)
-
-			rm.ServiceAccount("some-service-account", "some-ns").Create()
-			rm.Role("some-role", "some-ns", []rbacv1.PolicyRule{}).Create()
 
 			// Create resource.
 			if err := tc.create(rm, nsName); err != nil {

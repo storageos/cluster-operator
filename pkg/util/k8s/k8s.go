@@ -115,3 +115,8 @@ func (r ResourceManager) StatefulSet(name, namespace string, spec *appsv1.Statef
 func (r ResourceManager) StorageClass(name string, provisioner string, params map[string]string) *resource.StorageClass {
 	return resource.NewStorageClass(r.client, name, r.labels, provisioner, params)
 }
+
+// PersistentVolumeClaim returns a PersistentVolumeClaim object.
+func (r ResourceManager) PersistentVolumeClaim(name, namespace string, spec *corev1.PersistentVolumeClaimSpec) *resource.PVC {
+	return resource.NewPVC(r.client, name, namespace, r.labels, spec)
+}
