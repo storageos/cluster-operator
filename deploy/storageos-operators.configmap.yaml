@@ -936,6 +936,12 @@ data:
                 - mutatingwebhookconfigurations
                 verbs:
                 - '*'
+              - apiGroups:
+                - monitoring.coreos.com
+                resources:
+                - servicemonitors
+                verbs:
+                - '*'
             deployments:
             - name: storageos-operator
               spec:

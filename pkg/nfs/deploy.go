@@ -8,6 +8,7 @@ import (
 	"github.com/storageos/cluster-operator/pkg/storageos"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/rest"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
@@ -85,7 +86,10 @@ func (d *Deployment) Deploy() error {
 	}
 
 	if err := d.createServiceMonitor(); err != nil {
-		log.Error(err, "Failed to create service monitor for metrics")
+		// Ignore if the ServiceMonitor already exists.
+		if !errors.IsAlreadyExists(err) {
+			log.Error(err, "Failed to create service monitor for metrics")
+		}
 	}
 
 	return nil
@@ -153,12 +157,10 @@ func (d *Deployment) createServiceMonitor() error {
 	}
 
 	// Pass the Service(s) to the helper function, which in turn returns the array of `ServiceMonitor` objects.
-	serviceMonitors, err := metrics.CreateServiceMonitors(cfg, d.nfsServer.Namespace, []*corev1.Service{nfsService})
+	_, err = metrics.CreateServiceMonitors(cfg, d.nfsServer.Namespace, []*corev1.Service{nfsService})
 	if err != nil {
 		return err
 	}
-
-	fmt.Printf("tmp log serviceMonitors: %#v", serviceMonitors)
 
 	return nil
 }
