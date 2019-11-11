@@ -23,6 +23,13 @@ const (
 	DefaultNFSPort = 2049
 	// DefaultHTTPPort is the default port for NFS server health and metrics.
 	DefaultHTTPPort = 80
+	// NFSPortName is the name of the port that exposes the NFS server.
+	NFSPortName = "nfs"
+	// MetricsPortName is the name of the port that exposes the NFS metrics.
+	MetricsPortName = "metrics"
+
+	// componentLabel is used to label component name of a resource.
+	componentLabel = "app.kubernetes.io/component"
 
 	// HealthEndpointPath is the path to query on the HTTP Port for health.
 	// This is hardcoded in the NFS container and not settable by the user.
@@ -33,10 +40,18 @@ var log = logf.Log.WithName("storageos.nfsserver")
 
 // Deploy deploys a NFS server.
 func (d *Deployment) Deploy() error {
-	err := d.ensureService(DefaultNFSPort, DefaultHTTPPort)
+	err := d.ensureService(DefaultNFSPort)
 	if err != nil {
 		return err
 	}
+
+	// Create metrics service.
+	// Since we use ServiceMonitor, a separate service dedicated to metrics
+	// ports helps avoid Prometheus targets endpoints that don't serve metrics.
+	if err := d.createMetricsService(DefaultHTTPPort); err != nil {
+		return err
+	}
+
 	if err := d.createNFSConfigMap(); err != nil {
 		return err
 	}
@@ -145,7 +160,7 @@ func (d *Deployment) createServiceAccountForNFSServer() error {
 
 func (d *Deployment) createServiceMonitor() error {
 
-	nfsService, err := d.getService()
+	metricsService, err := d.getMetricsService()
 	if err != nil {
 		return err
 	}
@@ -156,8 +171,8 @@ func (d *Deployment) createServiceMonitor() error {
 		return err
 	}
 
-	// Pass the Service(s) to the helper function, which in turn returns the array of `ServiceMonitor` objects.
-	_, err = metrics.CreateServiceMonitors(cfg, d.nfsServer.Namespace, []*corev1.Service{nfsService})
+	// Create the ServiceMonitor resource for the metrics service.
+	_, err = metrics.CreateServiceMonitors(cfg, d.nfsServer.Namespace, []*corev1.Service{metricsService})
 	if err != nil {
 		return err
 	}

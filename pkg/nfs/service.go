@@ -1,45 +1,67 @@
 package nfs
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func (d *Deployment) ensureService(nfsPort int, httpPort int) error {
+func (d *Deployment) ensureService(nfsPort int) error {
 
 	// If no error in getting the service, service already exists, do nothing.
-	if _, err := d.getService(); err == nil {
+	if _, err := d.getServerService(); err == nil {
 		return nil
 	}
 
+	labels := map[string]string{
+		componentLabel: "server",
+	}
+
 	// Couldn't get any existing service. Create a new service.
-	if err := d.createService(nfsPort, httpPort); err != nil {
+	if err := d.createService(d.nfsServer.Name, NFSPortName, nfsPort, labels); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (d *Deployment) createService(nfsPort int, httpPort int) error {
+// createMetricsService creates a Service for metrics at the given port number.
+func (d *Deployment) createMetricsService(metricsPort int) error {
+	labels := map[string]string{
+		componentLabel: "metrics",
+	}
+	if err := d.createService(d.getMetricsServiceName(), MetricsPortName, metricsPort, labels); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *Deployment) createService(name string, portName string, port int, labels map[string]string) error {
 	spec := &corev1.ServiceSpec{
 		Selector: d.labelsForStatefulSet(d.nfsServer.Name, map[string]string{}),
 		Type:     corev1.ServiceTypeClusterIP,
 		Ports: []corev1.ServicePort{
 			{
-				Name:       "nfs",
-				Port:       int32(nfsPort),
-				TargetPort: intstr.FromInt(int(nfsPort)),
-			},
-			{
-				Name:       "metrics",
-				Port:       int32(httpPort),
-				TargetPort: intstr.FromInt(int(httpPort)),
+				Name:       portName,
+				Port:       int32(port),
+				TargetPort: intstr.FromInt(int(port)),
 			},
 		},
 	}
-
-	return d.k8sResourceManager.Service(d.nfsServer.Name, d.nfsServer.Namespace, nil, spec).Create()
+	return d.k8sResourceManager.Service(name, d.nfsServer.Namespace, labels, nil, spec).Create()
 }
 
-func (d *Deployment) getService() (*corev1.Service, error) {
-	return d.k8sResourceManager.Service(d.nfsServer.Name, d.nfsServer.Namespace, nil, nil).Get()
+// getServerService returns the NFS Server endpoint service.
+func (d *Deployment) getServerService() (*corev1.Service, error) {
+	return d.k8sResourceManager.Service(d.nfsServer.Name, d.nfsServer.Namespace, nil, nil, nil).Get()
+}
+
+// getMetricsServiceName returns the name of the metrics service.
+func (d *Deployment) getMetricsServiceName() string {
+	return fmt.Sprintf("%s-%s", d.nfsServer.Name, MetricsPortName)
+}
+
+// getMetricsService returns the NFS Server metrics endpoint service.
+func (d *Deployment) getMetricsService() (*corev1.Service, error) {
+	return d.k8sResourceManager.Service(d.getMetricsServiceName(), d.nfsServer.Namespace, nil, nil, nil).Get()
 }

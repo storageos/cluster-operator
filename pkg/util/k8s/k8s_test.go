@@ -136,10 +136,10 @@ func TestResourceManager(t *testing.T) {
 		{
 			name: resource.ServiceKind,
 			create: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.Service(nsName.Name, nsName.Namespace, map[string]string{}, &corev1.ServiceSpec{}).Create()
+				return rm.Service(nsName.Name, nsName.Namespace, map[string]string{}, map[string]string{}, &corev1.ServiceSpec{}).Create()
 			},
 			delete: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.Service(nsName.Name, nsName.Namespace, nil, nil).Delete()
+				return rm.Service(nsName.Name, nsName.Namespace, nil, nil, nil).Delete()
 			},
 			wantResource: &corev1.Service{},
 		},
