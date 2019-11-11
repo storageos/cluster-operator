@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
 	"github.com/storageos/cluster-operator/pkg/apis"
@@ -61,6 +62,19 @@ func SetupOperator(t *testing.T, ctx *framework.TestCtx) {
 	err := framework.AddToFrameworkScheme(apis.AddToScheme, clusterList)
 	if err != nil {
 		t.Fatalf("failed to add custom resource scheme to framework: %v", err)
+	}
+
+	// Add ServiceMonitor Scheme to framework's scheme to be used with the
+	// dynamic client.
+	serviceMonitorList := &monitoringv1.ServiceMonitorList{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ServiceMonitor",
+			APIVersion: "monitoring.coreos.com/v1",
+		},
+	}
+	err = framework.AddToFrameworkScheme(monitoringv1.AddToScheme, serviceMonitorList)
+	if err != nil {
+		t.Fatalf("failed to add custom resource scheme ServiceMonitor to framework: %v", err)
 	}
 
 	err = ctx.InitializeClusterResources(&framework.CleanupOptions{TestContext: ctx, Timeout: CleanupTimeout, RetryInterval: CleanupRetryInterval})
