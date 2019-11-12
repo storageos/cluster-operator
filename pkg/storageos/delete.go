@@ -19,7 +19,7 @@ func (s *Deployment) Delete() error {
 		return err
 	}
 
-	if err := s.k8sResourceManager.Service(s.stos.Spec.GetServiceName(), namespace, nil, nil).Delete(); err != nil {
+	if err := s.k8sResourceManager.Service(s.stos.Spec.GetServiceName(), namespace, nil, nil, nil).Delete(); err != nil {
 		return err
 	}
 

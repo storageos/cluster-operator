@@ -29,7 +29,7 @@ func (s *Deployment) createService() error {
 		},
 	}
 
-	if err := s.k8sResourceManager.Service(s.stos.Spec.GetServiceName(), s.stos.Spec.GetResourceNS(), s.stos.Spec.Service.Annotations, spec).Create(); err != nil {
+	if err := s.k8sResourceManager.Service(s.stos.Spec.GetServiceName(), s.stos.Spec.GetResourceNS(), nil, s.stos.Spec.Service.Annotations, spec).Create(); err != nil {
 		return err
 	}
 
@@ -40,7 +40,7 @@ func (s *Deployment) createService() error {
 			return err
 		}
 
-		svc, err := s.k8sResourceManager.Service(s.stos.Spec.GetServiceName(), s.stos.Spec.GetResourceNS(), nil, nil).Get()
+		svc, err := s.k8sResourceManager.Service(s.stos.Spec.GetServiceName(), s.stos.Spec.GetResourceNS(), nil, nil, nil).Get()
 		if err != nil {
 			return err
 		}

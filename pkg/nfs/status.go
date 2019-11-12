@@ -59,7 +59,7 @@ func (s *Deployment) getStatus() (*storageosv1.NFSServerStatus, error) {
 	}
 
 	// Check if the Service exists.
-	svc, err := s.k8sResourceManager.Service(s.nfsServer.Name, s.nfsServer.Namespace, nil, nil).Get()
+	svc, err := s.k8sResourceManager.Service(s.nfsServer.Name, s.nfsServer.Namespace, nil, nil, nil).Get()
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Return empty status without any error. Resources haven't been

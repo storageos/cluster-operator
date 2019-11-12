@@ -13,7 +13,10 @@ func (d *Deployment) Delete() error {
 	if err := d.k8sResourceManager.ConfigMap(d.nfsServer.Name, d.nfsServer.Namespace, nil).Delete(); err != nil {
 		return err
 	}
-	if err := d.k8sResourceManager.Service(d.nfsServer.Name, d.nfsServer.Namespace, nil, nil).Delete(); err != nil {
+	if err := d.k8sResourceManager.Service(d.nfsServer.Name, d.nfsServer.Namespace, nil, nil, nil).Delete(); err != nil {
+		return err
+	}
+	if err := d.k8sResourceManager.Service(d.getMetricsServiceName(), d.nfsServer.Namespace, nil, nil, nil).Delete(); err != nil {
 		return err
 	}
 	if err := d.k8sResourceManager.ClusterRoleBinding(d.getClusterRoleBindingName(), nil, nil).Delete(); err != nil {

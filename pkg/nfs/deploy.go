@@ -4,9 +4,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	"github.com/storageos/cluster-operator/pkg/storageos"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/rest"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
@@ -20,6 +23,13 @@ const (
 	DefaultNFSPort = 2049
 	// DefaultHTTPPort is the default port for NFS server health and metrics.
 	DefaultHTTPPort = 80
+	// NFSPortName is the name of the port that exposes the NFS server.
+	NFSPortName = "nfs"
+	// MetricsPortName is the name of the port that exposes the NFS metrics.
+	MetricsPortName = "metrics"
+
+	// componentLabel is used to label component name of a resource.
+	componentLabel = "app.kubernetes.io/component"
 
 	// HealthEndpointPath is the path to query on the HTTP Port for health.
 	// This is hardcoded in the NFS container and not settable by the user.
@@ -30,10 +40,18 @@ var log = logf.Log.WithName("storageos.nfsserver")
 
 // Deploy deploys a NFS server.
 func (d *Deployment) Deploy() error {
-	err := d.ensureService(DefaultNFSPort, DefaultHTTPPort)
+	err := d.ensureService(DefaultNFSPort)
 	if err != nil {
 		return err
 	}
+
+	// Create metrics service.
+	// Since we use ServiceMonitor, a separate service dedicated to metrics
+	// ports helps avoid Prometheus targets endpoints that don't serve metrics.
+	if err := d.createMetricsService(DefaultHTTPPort); err != nil {
+		return err
+	}
+
 	if err := d.createNFSConfigMap(); err != nil {
 		return err
 	}
@@ -80,6 +98,13 @@ func (d *Deployment) Deploy() error {
 
 	if err := d.updateStatus(status); err != nil {
 		log.Error(err, "Failed to update status")
+	}
+
+	if err := d.createServiceMonitor(); err != nil {
+		// Ignore if the ServiceMonitor already exists.
+		if !errors.IsAlreadyExists(err) {
+			log.Error(err, "Failed to create service monitor for metrics")
+		}
 	}
 
 	return nil
@@ -131,4 +156,26 @@ func (d *Deployment) getServiceAccountName() string {
 
 func (d *Deployment) createServiceAccountForNFSServer() error {
 	return d.k8sResourceManager.ServiceAccount(d.getServiceAccountName(), d.nfsServer.Namespace).Create()
+}
+
+func (d *Deployment) createServiceMonitor() error {
+
+	metricsService, err := d.getMetricsService()
+	if err != nil {
+		return err
+	}
+
+	// Get a k8s client config
+	cfg, err := rest.InClusterConfig()
+	if err != nil {
+		return err
+	}
+
+	// Create the ServiceMonitor resource for the metrics service.
+	_, err = metrics.CreateServiceMonitors(cfg, d.nfsServer.Namespace, []*corev1.Service{metricsService})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

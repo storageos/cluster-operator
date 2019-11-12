@@ -102,8 +102,15 @@ func (r ResourceManager) Secret(name, namespace string, secType corev1.SecretTyp
 }
 
 // Service returns a Service object.
-func (r ResourceManager) Service(name, namespace string, annotations map[string]string, spec *corev1.ServiceSpec) *resource.Service {
-	return resource.NewService(r.client, name, namespace, r.labels, annotations, spec)
+func (r ResourceManager) Service(name, namespace string, labels map[string]string, annotations map[string]string, spec *corev1.ServiceSpec) *resource.Service {
+	// Combine the common labels and resource specific labels.
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	for k, v := range r.labels {
+		labels[k] = v
+	}
+	return resource.NewService(r.client, name, namespace, labels, annotations, spec)
 }
 
 // StatefulSet returns a StatefulSet object.

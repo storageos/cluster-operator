@@ -2,9 +2,11 @@ package util
 
 import (
 	goctx "context"
+	"fmt"
 	"testing"
 	"time"
 
+	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	storageos "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -101,6 +103,18 @@ func NFSServerTest(t *testing.T, ctx *framework.TestCtx) {
 	err := DeployNFSServer(t, ctx, testNFSServer)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// Check if a ServiceMonitor was created.
+	// ServiceMonitor is only created when the ServiceMonitor CRD is known in
+	// the cluster.
+	serviceMonitor := &monitoringv1.ServiceMonitor{}
+	smNSName := types.NamespacedName{
+		Name:      fmt.Sprintf("%s-%s", testNFSServer.Name, "metrics"),
+		Namespace: defaultNS,
+	}
+	if err := f.Client.Get(goctx.TODO(), smNSName, serviceMonitor); err != nil {
+		t.Error("failed to get NFS metrics ServiceMonitor", err)
 	}
 
 	// Delete the NFS server.

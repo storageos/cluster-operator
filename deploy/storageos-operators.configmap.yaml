@@ -860,6 +860,7 @@ data:
                 - serviceaccounts
                 - secrets
                 - services
+                - services/finalizers
                 - persistentvolumeclaims
                 - persistentvolumes
                 - configmaps
@@ -934,6 +935,12 @@ data:
                 - admissionregistration.k8s.io
                 resources:
                 - mutatingwebhookconfigurations
+                verbs:
+                - '*'
+              - apiGroups:
+                - monitoring.coreos.com
+                resources:
+                - servicemonitors
                 verbs:
                 - '*'
             deployments:

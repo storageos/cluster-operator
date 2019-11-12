@@ -285,6 +285,9 @@ main() {
         # other namespace will result in permission errors.
         kubectl create ns storageos-operator
 
+        # Apply Prometheus ServiceMonitor CRD.
+        kubectl apply -f deploy/monitoring_coreos_v1_servicemonitor_crd.yaml
+
         # Run the e2e test in the created namespace.
         #
         # Tags are passed to test local command to run e2e test packages only with

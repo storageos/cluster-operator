@@ -57,6 +57,7 @@ rules:
   - serviceaccounts
   - secrets
   - services
+  - services/finalizers
   - persistentvolumeclaims
   - persistentvolumes
   - configmaps
@@ -131,5 +132,11 @@ rules:
   - admissionregistration.k8s.io
   resources:
   - mutatingwebhookconfigurations
+  verbs:
+  - '*'
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
   verbs:
   - '*'
