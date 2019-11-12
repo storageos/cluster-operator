@@ -250,6 +250,7 @@ spec:
           - serviceaccounts
           - secrets
           - services
+          - services/finalizers
           - persistentvolumeclaims
           - persistentvolumes
           - configmaps
