@@ -17,7 +17,7 @@ FROM ${BASE_IMAGE}
 LABEL name="StorageOS Cluster Operator" \
     maintainer="support@storageos.com" \
     vendor="StorageOS" \
-    version="1.4.1" \
+    version="1.5.0" \
     release="1" \
     distribution-scope="public" \
     architecture="x86_64" \
