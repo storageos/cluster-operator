@@ -58,13 +58,13 @@ func TestMutatePodFn(t *testing.T) {
 	testNamespace := "default"
 
 	// PVC that uses StorageOS StorageClass.
-	stosPVC := createPVC("pv1", testNamespace, stosSC.Name)
+	stosPVC := createPVC("pv1", testNamespace, stosSC.Name, false)
 
 	// PVC that uses StorageOS native StorageClass.
-	stosNativePVC := createPVC("pv2", testNamespace, stosNativeSC.Name)
+	stosNativePVC := createPVC("pv2", testNamespace, stosNativeSC.Name, false)
 
 	// PVC that uses non-StorageOS StorageClass.
-	fooPVC := createPVC("pv3", testNamespace, fooSC.Name)
+	fooPVC := createPVC("pv3", testNamespace, fooSC.Name, false)
 
 	testcases := []struct {
 		name              string
@@ -211,17 +211,17 @@ func TestMutatePodFn(t *testing.T) {
 }
 
 // createPVC creates and returns a PVC object.
-func createPVC(name, namespace, storageClassName string) *corev1.PersistentVolumeClaim {
-	return &corev1.PersistentVolumeClaim{
+func createPVC(name, namespace, storageClassName string, betaAnnotation bool) *corev1.PersistentVolumeClaim {
+	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
+			Name:        name,
+			Namespace:   namespace,
+			Annotations: make(map[string]string),
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
 			AccessModes: []corev1.PersistentVolumeAccessMode{
 				corev1.ReadWriteOnce,
 			},
-			StorageClassName: &storageClassName,
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceStorage: resource.MustParse("1Gi"),
@@ -229,4 +229,12 @@ func createPVC(name, namespace, storageClassName string) *corev1.PersistentVolum
 			},
 		},
 	}
+
+	if betaAnnotation {
+		pvc.ObjectMeta.Annotations["volume.beta.kubernetes.io/storage-class"] = storageClassName
+	} else {
+		pvc.Spec.StorageClassName = &storageClassName
+	}
+
+	return pvc
 }
