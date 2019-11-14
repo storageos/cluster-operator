@@ -140,3 +140,11 @@ rules:
   - servicemonitors
   verbs:
   - '*'
+- apiGroups:
+  - apps
+  resources:
+  - deployments/finalizers
+  resourceNames:
+  - storageos-cluster-operator
+  verbs:
+  - update

@@ -445,6 +445,7 @@
     "internal/util/projutil",
     "internal/util/yamlutil",
     "pkg/k8sutil",
+    "pkg/kube-metrics",
     "pkg/metrics",
     "pkg/test",
     "pkg/test/e2eutil",
@@ -1148,6 +1149,18 @@
   revision = "0cf8f7e6ed1d2e3d47d02e3b6e559369af24d803"
 
 [[projects]]
+  digest = "1:1d309e59a3f963aac5bc26b0e9ead40f74e568f7e3ebbb46b3b10054fe03dc43"
+  name = "k8s.io/kube-state-metrics"
+  packages = [
+    "pkg/collector",
+    "pkg/metric",
+    "pkg/metrics_store",
+  ]
+  pruneopts = "NT"
+  revision = "de19ed4f12d471fccc79f9a9fee73f7c107ecd33"
+  version = "v1.6.0"
+
+[[projects]]
   digest = "1:21c23272171c749230b32cf3d797db213414dc4bed6abcd457946230d002418f"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
@@ -1223,6 +1236,8 @@
     "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1",
     "github.com/go-logr/logr",
     "github.com/go-openapi/spec",
+    "github.com/operator-framework/operator-sdk/pkg/k8sutil",
+    "github.com/operator-framework/operator-sdk/pkg/kube-metrics",
     "github.com/operator-framework/operator-sdk/pkg/metrics",
     "github.com/operator-framework/operator-sdk/pkg/test",
     "github.com/operator-framework/operator-sdk/pkg/test/e2eutil",

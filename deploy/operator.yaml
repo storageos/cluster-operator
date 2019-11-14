@@ -18,8 +18,10 @@ spec:
         - name: storageos-cluster-operator
           image: storageos/cluster-operator:test
           ports:
-          - containerPort: 60000
+          - containerPort: 8383
             name: metrics
+          - containerPort: 8686
+            name: operatormetrics
           - containerPort: 5720
             name: podschedwebhook
           command:
@@ -39,7 +41,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
             - name: OPERATOR_NAME
-              value: "cluster-operator"
+              value: "storageos-cluster-operator"
             - name: DISABLE_SCHEDULER_WEBHOOK
               value: "false"
       tolerations:

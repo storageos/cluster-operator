@@ -608,7 +608,7 @@ data:
         name: storageosoperator.0.0.0
         namespace: olm
         annotations:
-          capabilities: Full Lifecycle
+          capabilities: Deep Insights
           categories: "Storage"
           description: Cloud-native, persistent storage for containers.
           containerImage: storageos/cluster-operator:test
@@ -943,6 +943,14 @@ data:
                 - servicemonitors
                 verbs:
                 - '*'
+              - apiGroups:
+                - apps
+                resources:
+                - deployments/finalizers
+                resourceNames:
+                - storageos-cluster-operator
+                verbs:
+                - update
             deployments:
             - name: storageos-operator
               spec:
@@ -968,7 +976,7 @@ data:
                           fieldRef:
                             fieldPath: metadata.annotations['olm.targetNamespaces']
                       - name: OPERATOR_NAME
-                        value: "cluster-operator"
+                        value: "storageos-cluster-operator"
                       - name: POD_NAME
                         valueFrom:
                           fieldRef:
@@ -980,8 +988,10 @@ data:
                       - name: DISABLE_SCHEDULER_WEBHOOK
                         value: "false"
                       ports:
-                      - containerPort: 8080
+                      - containerPort: 8383
                         name: metrics
+                      - containerPort: 8686
+                        name: operatormetrics
                       - containerPort: 5720
                         name: podschedwebhook
                     - name: scorecard-proxy
