@@ -1,0 +1,12 @@
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: prometheus-storageos-operator
+  namespace: storageos-operator
+spec:
+  image: quay.io/prometheus/prometheus:v2.13.1
+  serviceAccountName: prometheus-storageos-operator
+  serviceMonitorSelector:
+    matchLabels:
+      name: storageos-cluster-operator
+  enableAdminAPI: false
