@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -43,6 +44,7 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	storageos := stosClientset.NewForConfigOrDie(mgr.GetConfig())
 	return &ReconcileNFSServer{
 		client:        mgr.GetClient(),
+		kConfig:       mgr.GetConfig(),
 		scheme:        mgr.GetScheme(),
 		recorder:      mgr.GetRecorder("storageos-nfsserver"),
 		stosClientset: storageos,
@@ -100,6 +102,10 @@ type ReconcileNFSServer struct {
 	stosClientset stosClientset.Interface
 	scheme        *runtime.Scheme
 	recorder      record.EventRecorder
+	// k8s rest config is needed for creating a k8s discovery client, used by
+	// the osdk's metrics helpers to create Prometheus ServiceMonitor for NFS
+	// Server.
+	kConfig *rest.Config
 }
 
 // Reconcile reads that state of the cluster for a NFSServer object and makes changes based on the state read
@@ -180,7 +186,7 @@ func (r *ReconcileNFSServer) reconcile(instance *storageosv1.NFSServer) error {
 	// Add default labels.
 	labels["app"] = "storageos"
 
-	d := nfs.NewDeployment(r.client, stosCluster, instance, labels, r.recorder, r.scheme)
+	d := nfs.NewDeployment(r.client, r.kConfig, stosCluster, instance, labels, r.recorder, r.scheme)
 
 	// If the CR has not been marked for deletion, ensure it is deployed.
 	if instance.GetDeletionTimestamp() == nil {
