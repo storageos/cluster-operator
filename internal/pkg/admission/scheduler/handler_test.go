@@ -231,7 +231,7 @@ func createPVC(name, namespace, storageClassName string, betaAnnotation bool) *c
 	}
 
 	if betaAnnotation {
-		pvc.ObjectMeta.Annotations["volume.beta.kubernetes.io/storage-class"] = storageClassName
+		pvc.ObjectMeta.Annotations[pvcStorageClassKey] = storageClassName
 	} else {
 		pvc.Spec.StorageClassName = &storageClassName
 	}

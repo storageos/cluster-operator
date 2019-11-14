@@ -18,7 +18,7 @@ var ErrNoCluster = errors.New("no storageos cluster found")
 // pvcStorageClassKey is the annotation used to refer to the StorageClass when
 // the PVC storageClassName wasn't used.  This is now deprecated but should
 // still be checked as k8s still supports it.
-var pvcStorageClassKey = "volume.beta.kubernetes.io/storage-class"
+const pvcStorageClassKey = "volume.beta.kubernetes.io/storage-class"
 
 // IsManagedVolume inspects a given volume to find if it's managed by the given
 // provisioners.
