@@ -9,7 +9,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/rest"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
@@ -165,14 +164,8 @@ func (d *Deployment) createServiceMonitor() error {
 		return err
 	}
 
-	// Get a k8s client config
-	cfg, err := rest.InClusterConfig()
-	if err != nil {
-		return err
-	}
-
 	// Create the ServiceMonitor resource for the metrics service.
-	_, err = metrics.CreateServiceMonitors(cfg, d.nfsServer.Namespace, []*corev1.Service{metricsService})
+	_, err = metrics.CreateServiceMonitors(d.kConfig, d.nfsServer.Namespace, []*corev1.Service{metricsService})
 	if err != nil {
 		return err
 	}

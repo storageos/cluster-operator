@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
@@ -41,6 +42,7 @@ func TestDeploy(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			client := fake.NewFakeClient()
+			kConfig := &rest.Config{}
 
 			// NFSServer config.
 			nfsServer := &storageosv1.NFSServer{
@@ -61,7 +63,7 @@ func TestDeploy(t *testing.T) {
 			}
 
 			// NFSServer deployment.
-			deployment := NewDeployment(client, stosCluster, nfsServer, nil, nil, nil)
+			deployment := NewDeployment(client, kConfig, stosCluster, nfsServer, nil, nil, nil)
 
 			// Deploy NFS Server.
 			if err := deployment.Deploy(); err != nil {
