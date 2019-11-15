@@ -31,6 +31,7 @@ LABEL name="StorageOS Cluster Operator" \
 
 # Create a working directory that's writable by non-root users. This is needed
 # for writing the certificate generation.
+RUN mkdir -p /home/operator
 WORKDIR /home/operator
 RUN chmod -R g+rwX /home/operator
 
