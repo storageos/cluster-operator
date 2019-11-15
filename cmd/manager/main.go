@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 	"runtime"
 	"strconv"
 
+	"github.com/operator-framework/operator-sdk/pkg/leader"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	"github.com/storageos/cluster-operator/internal/pkg/admission"
 	"github.com/storageos/cluster-operator/internal/pkg/admission/scheduler"
@@ -68,6 +70,13 @@ func main() {
 
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
+	if err != nil {
+		fatal(err)
+	}
+
+	ctx := context.TODO()
+	// Become the leader before proceeding.
+	err = leader.Become(ctx, "storageos-operator-lock")
 	if err != nil {
 		fatal(err)
 	}
