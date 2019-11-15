@@ -969,6 +969,10 @@ data:
                             fieldPath: metadata.annotations['olm.targetNamespaces']
                       - name: OPERATOR_NAME
                         value: "cluster-operator"
+                      - name: POD_NAME
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.name
                       - name: POD_NAMESPACE
                         valueFrom:
                           fieldRef:
