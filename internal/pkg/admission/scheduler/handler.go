@@ -12,6 +12,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission/types"
+
+	"github.com/storageos/cluster-operator/internal/pkg/storageoscluster"
 )
 
 // PodSchedulerSetter is responsible for mutating and setting pod scheduler
@@ -81,7 +83,7 @@ func (p *PodSchedulerSetter) mutatePodsFn(ctx context.Context, pod *corev1.Pod, 
 	// Set scheduler name only if there are managed volumes.
 	if len(managedVols) > 0 {
 		// Check if StorageOS scheduler is enabled before setting the scheduler.
-		cluster, err := p.getCurrentStorageOSCluster()
+		cluster, err := storageoscluster.GetCurrentStorageOSCluster(p.client)
 		if err != nil {
 			return err
 		}
