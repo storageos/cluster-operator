@@ -4,6 +4,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/storageos/cluster-operator/pkg/util/k8s"
 )
 
 const (
@@ -213,9 +215,11 @@ func (s Deployment) deleteCSIHelper() error {
 // podLabelsForCSIHelpers takes the name of a cluster custom resource and the
 // kind of helper, and returns labels for the pods of the helpers.
 func podLabelsForCSIHelpers(name, kind string) map[string]string {
-	return map[string]string{
+	// Combine CSI Helper specific labels with the default app labels.
+	labels := map[string]string{
 		"app":          appName,
 		"storageos_cr": name,
 		"kind":         kind,
 	}
+	return k8s.AddDefaultAppLabels(name, labels)
 }

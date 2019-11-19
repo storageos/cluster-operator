@@ -8,6 +8,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/storageos/cluster-operator/pkg/util/k8s"
 )
 
 const (
@@ -245,9 +247,11 @@ func (s Deployment) createSchedulerConfiguration() error {
 
 // podLabelsForScheduler returns labels for the scheduler pod.
 func podLabelsForScheduler(name string) map[string]string {
-	return map[string]string{
+	// Combine CSI Helper specific labels with the default app labels.
+	labels := map[string]string{
 		"app":          appName,
 		"storageos_cr": name,
 		"kind":         deploymentKind,
 	}
+	return k8s.AddDefaultAppLabels(name, labels)
 }

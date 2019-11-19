@@ -5,11 +5,13 @@ import (
 	"strings"
 
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
-	"github.com/storageos/cluster-operator/pkg/storageos"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+
+	"github.com/storageos/cluster-operator/pkg/storageos"
+	"github.com/storageos/cluster-operator/pkg/util/k8s"
 )
 
 const (
@@ -126,7 +128,8 @@ func (d *Deployment) labelsForStatefulSet(name string, labels map[string]string)
 		labels["storageos.com/fenced"] = "true"
 	}
 
-	return labels
+	// Add default resource labels.
+	return k8s.AddDefaultAppLabels(d.cluster.Name, labels)
 }
 
 func (d *Deployment) createClusterRoleBindingForSCC() error {

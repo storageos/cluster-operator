@@ -189,7 +189,15 @@ func (r *ReconcileNFSServer) reconcile(instance *storageosv1.NFSServer) error {
 		labels = map[string]string{}
 	}
 	// Add default labels.
+	// TODO: This is legacy label. Remove this with care. Ensure it's not used
+	// by any label selectors.
 	labels["app"] = "storageos"
+
+	// Set the app component.
+	labels[k8s.AppComponent] = appComponent
+
+	// Add default resource app labels.
+	labels = k8s.AddDefaultAppLabels(stosCluster.Name, labels)
 
 	d := nfs.NewDeployment(r.client, r.kConfig, stosCluster, instance, labels, r.recorder, r.scheme)
 

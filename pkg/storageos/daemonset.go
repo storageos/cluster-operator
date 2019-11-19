@@ -7,6 +7,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"github.com/storageos/cluster-operator/pkg/util/k8s"
 )
 
 const (
@@ -343,9 +345,11 @@ func (s *Deployment) addDebugEnvVars(env []corev1.EnvVar) []corev1.EnvVar {
 // podLabelsForDaemonSet takes the name of a cluster custom resource and returns
 // labels for the pods of StorageOS node DaemonSet.
 func podLabelsForDaemonSet(name string) map[string]string {
-	return map[string]string{
+	// Combine DaemonSet specific labels with the default app labels.
+	labels := map[string]string{
 		"app":          appName,
 		"storageos_cr": name,
 		"kind":         daemonsetKind,
 	}
+	return k8s.AddDefaultAppLabels(name, labels)
 }
