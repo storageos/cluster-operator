@@ -52,57 +52,76 @@ func (r *ResourceManager) SetLabels(labels map[string]string) *ResourceManager {
 // This can also be used to delete an existing object without any references to
 // the actual object. The name and namespace, without data, can be used to refer
 // the object and perform operations on it.
-func (r ResourceManager) ConfigMap(name, namespace string, data map[string]string) *resource.ConfigMap {
-	return resource.NewConfigMap(r.client, name, namespace, r.labels, data)
+func (r ResourceManager) ConfigMap(name, namespace string, labels map[string]string, data map[string]string) *resource.ConfigMap {
+	return resource.NewConfigMap(r.client, name, namespace, r.combineLabels(labels), data)
 }
 
 // DaemonSet returns a DaemonSet object.
-func (r ResourceManager) DaemonSet(name, namespace string, spec *appsv1.DaemonSetSpec) *resource.DaemonSet {
-	return resource.NewDaemonSet(r.client, name, namespace, r.labels, spec)
+func (r ResourceManager) DaemonSet(name, namespace string, labels map[string]string, spec *appsv1.DaemonSetSpec) *resource.DaemonSet {
+	return resource.NewDaemonSet(r.client, name, namespace, r.combineLabels(labels), spec)
 }
 
 // Deployment returns a Deployment object.
-func (r ResourceManager) Deployment(name, namespace string, spec *appsv1.DeploymentSpec) *resource.Deployment {
-	return resource.NewDeployment(r.client, name, namespace, r.labels, spec)
+func (r ResourceManager) Deployment(name, namespace string, labels map[string]string, spec *appsv1.DeploymentSpec) *resource.Deployment {
+	return resource.NewDeployment(r.client, name, namespace, r.combineLabels(labels), spec)
 }
 
 // Ingress returns an Ingress object.
-func (r ResourceManager) Ingress(name, namespace string, annotations map[string]string, spec *extensionsv1beta1.IngressSpec) *resource.Ingress {
-	return resource.NewIngress(r.client, name, namespace, r.labels, annotations, spec)
+func (r ResourceManager) Ingress(name, namespace string, labels map[string]string, annotations map[string]string, spec *extensionsv1beta1.IngressSpec) *resource.Ingress {
+	return resource.NewIngress(r.client, name, namespace, r.combineLabels(labels), annotations, spec)
 }
 
 // ServiceAccount returns a ServiceAccount object.
-func (r ResourceManager) ServiceAccount(name, namespace string) *resource.ServiceAccount {
-	return resource.NewServiceAccount(r.client, name, namespace, r.labels)
+func (r ResourceManager) ServiceAccount(name, namespace string, labels map[string]string) *resource.ServiceAccount {
+	return resource.NewServiceAccount(r.client, name, namespace, r.combineLabels(labels))
 }
 
 // Role returns a Role object.
-func (r ResourceManager) Role(name, namespace string, rules []rbacv1.PolicyRule) *resource.Role {
-	return resource.NewRole(r.client, name, namespace, r.labels, rules)
+func (r ResourceManager) Role(name, namespace string, labels map[string]string, rules []rbacv1.PolicyRule) *resource.Role {
+	return resource.NewRole(r.client, name, namespace, r.combineLabels(labels), rules)
 }
 
 // RoleBinding returns a RoleBinding object.
-func (r ResourceManager) RoleBinding(name, namespace string, subjects []rbacv1.Subject, roleRef *rbacv1.RoleRef) *resource.RoleBinding {
-	return resource.NewRoleBinding(r.client, name, namespace, r.labels, subjects, roleRef)
+func (r ResourceManager) RoleBinding(name, namespace string, labels map[string]string, subjects []rbacv1.Subject, roleRef *rbacv1.RoleRef) *resource.RoleBinding {
+	return resource.NewRoleBinding(r.client, name, namespace, r.combineLabels(labels), subjects, roleRef)
 }
 
 // ClusterRole returns a ClusterRole object.
-func (r ResourceManager) ClusterRole(name string, rules []rbacv1.PolicyRule) *resource.ClusterRole {
-	return resource.NewClusterRole(r.client, name, r.labels, rules)
+func (r ResourceManager) ClusterRole(name string, labels map[string]string, rules []rbacv1.PolicyRule) *resource.ClusterRole {
+	return resource.NewClusterRole(r.client, name, r.combineLabels(labels), rules)
 }
 
 // ClusterRoleBinding returns a ClusterRoleBinding object.
-func (r ResourceManager) ClusterRoleBinding(name string, subjects []rbacv1.Subject, roleRef *rbacv1.RoleRef) *resource.ClusterRoleBinding {
-	return resource.NewClusterRoleBinding(r.client, name, r.labels, subjects, roleRef)
+func (r ResourceManager) ClusterRoleBinding(name string, labels map[string]string, subjects []rbacv1.Subject, roleRef *rbacv1.RoleRef) *resource.ClusterRoleBinding {
+	return resource.NewClusterRoleBinding(r.client, name, r.combineLabels(labels), subjects, roleRef)
 }
 
 // Secret returns a Secret object.
-func (r ResourceManager) Secret(name, namespace string, secType corev1.SecretType, data map[string][]byte) *resource.Secret {
-	return resource.NewSecret(r.client, name, namespace, r.labels, secType, data)
+func (r ResourceManager) Secret(name, namespace string, labels map[string]string, secType corev1.SecretType, data map[string][]byte) *resource.Secret {
+	return resource.NewSecret(r.client, name, namespace, r.combineLabels(labels), secType, data)
 }
 
 // Service returns a Service object.
 func (r ResourceManager) Service(name, namespace string, labels map[string]string, annotations map[string]string, spec *corev1.ServiceSpec) *resource.Service {
+	return resource.NewService(r.client, name, namespace, r.combineLabels(labels), annotations, spec)
+}
+
+// StatefulSet returns a StatefulSet object.
+func (r ResourceManager) StatefulSet(name, namespace string, labels map[string]string, spec *appsv1.StatefulSetSpec) *resource.StatefulSet {
+	return resource.NewStatefulSet(r.client, name, namespace, r.combineLabels(labels), spec)
+}
+
+// StorageClass returns a StorageClass object.
+func (r ResourceManager) StorageClass(name string, labels map[string]string, provisioner string, params map[string]string) *resource.StorageClass {
+	return resource.NewStorageClass(r.client, name, r.combineLabels(labels), provisioner, params)
+}
+
+// PersistentVolumeClaim returns a PersistentVolumeClaim object.
+func (r ResourceManager) PersistentVolumeClaim(name, namespace string, labels map[string]string, spec *corev1.PersistentVolumeClaimSpec) *resource.PVC {
+	return resource.NewPVC(r.client, name, namespace, r.combineLabels(labels), spec)
+}
+
+func (r ResourceManager) combineLabels(labels map[string]string) map[string]string {
 	// Combine the common labels and resource specific labels.
 	if labels == nil {
 		labels = map[string]string{}
@@ -110,20 +129,5 @@ func (r ResourceManager) Service(name, namespace string, labels map[string]strin
 	for k, v := range r.labels {
 		labels[k] = v
 	}
-	return resource.NewService(r.client, name, namespace, labels, annotations, spec)
-}
-
-// StatefulSet returns a StatefulSet object.
-func (r ResourceManager) StatefulSet(name, namespace string, spec *appsv1.StatefulSetSpec) *resource.StatefulSet {
-	return resource.NewStatefulSet(r.client, name, namespace, r.labels, spec)
-}
-
-// StorageClass returns a StorageClass object.
-func (r ResourceManager) StorageClass(name string, provisioner string, params map[string]string) *resource.StorageClass {
-	return resource.NewStorageClass(r.client, name, r.labels, provisioner, params)
-}
-
-// PersistentVolumeClaim returns a PersistentVolumeClaim object.
-func (r ResourceManager) PersistentVolumeClaim(name, namespace string, spec *corev1.PersistentVolumeClaimSpec) *resource.PVC {
-	return resource.NewPVC(r.client, name, namespace, r.labels, spec)
+	return labels
 }

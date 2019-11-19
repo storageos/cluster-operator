@@ -38,7 +38,7 @@ func (d *Deployment) createStatefulSet(pvcVS *corev1.PersistentVolumeClaimVolume
 	// TODO: Add node affinity support for NFS server pods.
 	util.AddTolerations(&spec.Template.Spec, d.nfsServer.Spec.Tolerations)
 
-	return d.k8sResourceManager.StatefulSet(d.nfsServer.Name, d.nfsServer.Namespace, spec).Create()
+	return d.k8sResourceManager.StatefulSet(d.nfsServer.Name, d.nfsServer.Namespace, nil, spec).Create()
 }
 
 func (d *Deployment) createPodTemplateSpec(nfsPort int, httpPort int) corev1.PodTemplateSpec {

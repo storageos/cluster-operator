@@ -18,5 +18,5 @@ func (d *Deployment) createPVC(size *resource.Quantity) error {
 		},
 	}
 
-	return d.k8sResourceManager.PersistentVolumeClaim(d.nfsServer.Name, d.nfsServer.Namespace, spec).Create()
+	return d.k8sResourceManager.PersistentVolumeClaim(d.nfsServer.Name, d.nfsServer.Namespace, nil, spec).Create()
 }

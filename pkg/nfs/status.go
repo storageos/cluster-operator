@@ -48,7 +48,7 @@ func (s *Deployment) getStatus() (*storageosv1.NFSServerStatus, error) {
 	}
 
 	// Check if the StatefulSet exists.
-	_, err := s.k8sResourceManager.StatefulSet(s.nfsServer.Name, s.nfsServer.Namespace, nil).Get()
+	_, err := s.k8sResourceManager.StatefulSet(s.nfsServer.Name, s.nfsServer.Namespace, nil, nil).Get()
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Return empty status without any error. Resources haven't been

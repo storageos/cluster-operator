@@ -49,7 +49,7 @@ func (s Deployment) createCSIHelperStatefulSet(replicas int32) error {
 
 	s.addCommonPodProperties(&spec.Template.Spec)
 
-	return s.k8sResourceManager.StatefulSet(statefulsetName, s.stos.Spec.GetResourceNS(), spec).Create()
+	return s.k8sResourceManager.StatefulSet(statefulsetName, s.stos.Spec.GetResourceNS(), nil, spec).Create()
 }
 
 // csiHelperDeployment returns a CSI helper Deployment object.
@@ -74,7 +74,7 @@ func (s Deployment) createCSIHelperDeployment(replicas int32) error {
 
 	s.addCommonPodProperties(&spec.Template.Spec)
 
-	return s.k8sResourceManager.Deployment(csiHelperName, s.stos.Spec.GetResourceNS(), spec).Create()
+	return s.k8sResourceManager.Deployment(csiHelperName, s.stos.Spec.GetResourceNS(), nil, spec).Create()
 }
 
 // addCommonPodProperties adds common pod properties to a given pod spec. The
@@ -204,9 +204,9 @@ func (s Deployment) deleteCSIHelper() error {
 	// different kinds.
 	switch s.stos.Spec.GetCSIDeploymentStrategy() {
 	case deploymentKind:
-		return s.k8sResourceManager.Deployment(csiHelperName, s.stos.Spec.GetResourceNS(), nil).Delete()
+		return s.k8sResourceManager.Deployment(csiHelperName, s.stos.Spec.GetResourceNS(), nil, nil).Delete()
 	default:
-		return s.k8sResourceManager.StatefulSet(statefulsetName, s.stos.Spec.GetResourceNS(), nil).Delete()
+		return s.k8sResourceManager.StatefulSet(statefulsetName, s.stos.Spec.GetResourceNS(), nil, nil).Delete()
 	}
 }
 

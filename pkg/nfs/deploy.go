@@ -142,7 +142,7 @@ func (d *Deployment) createClusterRoleBindingForSCC() error {
 		Name:     storageos.OpenShiftSCCClusterRoleName,
 		APIGroup: "rbac.authorization.k8s.io",
 	}
-	return d.k8sResourceManager.ClusterRoleBinding(d.getClusterRoleBindingName(), subjects, roleRef).Create()
+	return d.k8sResourceManager.ClusterRoleBinding(d.getClusterRoleBindingName(), nil, subjects, roleRef).Create()
 }
 
 func (d *Deployment) getClusterRoleBindingName() string {
@@ -154,7 +154,7 @@ func (d *Deployment) getServiceAccountName() string {
 }
 
 func (d *Deployment) createServiceAccountForNFSServer() error {
-	return d.k8sResourceManager.ServiceAccount(d.getServiceAccountName(), d.nfsServer.Namespace).Create()
+	return d.k8sResourceManager.ServiceAccount(d.getServiceAccountName(), d.nfsServer.Namespace, nil).Create()
 }
 
 func (d *Deployment) createServiceMonitor() error {

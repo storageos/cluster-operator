@@ -7,10 +7,10 @@ package nfs
 // especially when a cluster reboots. Althrough the operator re-creates the
 // resources, we want to avoid this behavior by implementing an explcit delete.
 func (d *Deployment) Delete() error {
-	if err := d.k8sResourceManager.StatefulSet(d.nfsServer.Name, d.nfsServer.Namespace, nil).Delete(); err != nil {
+	if err := d.k8sResourceManager.StatefulSet(d.nfsServer.Name, d.nfsServer.Namespace, nil, nil).Delete(); err != nil {
 		return err
 	}
-	if err := d.k8sResourceManager.ConfigMap(d.nfsServer.Name, d.nfsServer.Namespace, nil).Delete(); err != nil {
+	if err := d.k8sResourceManager.ConfigMap(d.nfsServer.Name, d.nfsServer.Namespace, nil, nil).Delete(); err != nil {
 		return err
 	}
 	if err := d.k8sResourceManager.Service(d.nfsServer.Name, d.nfsServer.Namespace, nil, nil, nil).Delete(); err != nil {
@@ -19,10 +19,10 @@ func (d *Deployment) Delete() error {
 	if err := d.k8sResourceManager.Service(d.getMetricsServiceName(), d.nfsServer.Namespace, nil, nil, nil).Delete(); err != nil {
 		return err
 	}
-	if err := d.k8sResourceManager.ClusterRoleBinding(d.getClusterRoleBindingName(), nil, nil).Delete(); err != nil {
+	if err := d.k8sResourceManager.ClusterRoleBinding(d.getClusterRoleBindingName(), nil, nil, nil).Delete(); err != nil {
 		return err
 	}
-	if err := d.k8sResourceManager.ServiceAccount(d.getServiceAccountName(), d.nfsServer.Namespace).Delete(); err != nil {
+	if err := d.k8sResourceManager.ServiceAccount(d.getServiceAccountName(), d.nfsServer.Namespace, nil).Delete(); err != nil {
 		return err
 	}
 
@@ -33,7 +33,7 @@ func (d *Deployment) Delete() error {
 	// must be used to set volume reclaim policy. NFS Server spec reclaim policy
 	// will be removed in StorageOS cluster-operator v2 APIs.
 	if d.nfsServer.Spec.PersistentVolumeClaim.ClaimName == "" {
-		if err := d.k8sResourceManager.PersistentVolumeClaim(d.nfsServer.Name, d.nfsServer.Namespace, nil).Delete(); err != nil {
+		if err := d.k8sResourceManager.PersistentVolumeClaim(d.nfsServer.Name, d.nfsServer.Namespace, nil, nil).Delete(); err != nil {
 			return err
 		}
 	}

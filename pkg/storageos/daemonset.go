@@ -300,7 +300,7 @@ func (s *Deployment) createDaemonSet() error {
 
 	s.addCSI(podSpec)
 
-	return s.k8sResourceManager.DaemonSet(daemonsetName, s.stos.Spec.GetResourceNS(), spec).Create()
+	return s.k8sResourceManager.DaemonSet(daemonsetName, s.stos.Spec.GetResourceNS(), nil, spec).Create()
 }
 
 // addKVBackendEnvVars checks if KVBackend is set and sets the appropriate env vars.
