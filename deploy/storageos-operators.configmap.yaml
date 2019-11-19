@@ -746,6 +746,10 @@ data:
           2GB of RAM.  Runs in user-space on any 64-bit Linux with no custom kernel
           modules.
 
+          ## Prerequisites
+
+          * Ensure port 5705 is open on the worker nodes.
+
           ## Required Parameters
 
           * `secretRefName` - the name of a secret that contains two keys for the

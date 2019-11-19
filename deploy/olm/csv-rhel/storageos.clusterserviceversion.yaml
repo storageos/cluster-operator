@@ -25,6 +25,7 @@ metadata:
             "namespace": "kube-system",
             "secretRefName": "storageos-api",
             "secretRefNamespace": "default",
+            "k8sDistro": "openshift",
             "csi": {
               "enable": true,
               "deploymentStrategy": "deployment"
@@ -140,6 +141,10 @@ spec:
     * **Small footprint** - Lightweight container requires minimum 1 core with
     2GB of RAM.  Runs in user-space on any 64-bit Linux with no custom kernel
     modules.
+
+    ## Prerequisites
+
+    * Ensure port 5705 is open on the worker nodes.
 
     ## Required Parameters
 
