@@ -96,6 +96,7 @@ uninstall_storageos_operator() {
 
 uninstall_olm_quick() {
     echo "Uninstalling OLM"
-    kubectl delete -f https://raw.githubusercontent.com/operator-framework/operator-lifecycle-manager/master/deploy/upstream/quickstart/olm.yaml
+    kubectl delete -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/0.12.0/olm.yaml
+    kubectl delete -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/0.12.0/crds.yaml
     echo
 }
