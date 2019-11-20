@@ -35,7 +35,7 @@ func (s *Deployment) createService() error {
 
 	// Patch storageos-api secret with above service IP in apiAddress.
 	if !s.stos.Spec.CSI.Enable {
-		secret, err := s.k8sResourceManager.Secret(s.stos.Spec.SecretRefName, s.stos.Spec.SecretRefNamespace, corev1.SecretTypeOpaque, nil).Get()
+		secret, err := s.k8sResourceManager.Secret(s.stos.Spec.SecretRefName, s.stos.Spec.SecretRefNamespace, nil, corev1.SecretTypeOpaque, nil).Get()
 		if err != nil {
 			return err
 		}

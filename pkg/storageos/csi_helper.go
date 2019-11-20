@@ -4,6 +4,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/storageos/cluster-operator/pkg/util/k8s"
 )
 
 const (
@@ -49,7 +51,7 @@ func (s Deployment) createCSIHelperStatefulSet(replicas int32) error {
 
 	s.addCommonPodProperties(&spec.Template.Spec)
 
-	return s.k8sResourceManager.StatefulSet(statefulsetName, s.stos.Spec.GetResourceNS(), spec).Create()
+	return s.k8sResourceManager.StatefulSet(statefulsetName, s.stos.Spec.GetResourceNS(), nil, spec).Create()
 }
 
 // csiHelperDeployment returns a CSI helper Deployment object.
@@ -74,7 +76,7 @@ func (s Deployment) createCSIHelperDeployment(replicas int32) error {
 
 	s.addCommonPodProperties(&spec.Template.Spec)
 
-	return s.k8sResourceManager.Deployment(csiHelperName, s.stos.Spec.GetResourceNS(), spec).Create()
+	return s.k8sResourceManager.Deployment(csiHelperName, s.stos.Spec.GetResourceNS(), nil, spec).Create()
 }
 
 // addCommonPodProperties adds common pod properties to a given pod spec. The
@@ -204,18 +206,20 @@ func (s Deployment) deleteCSIHelper() error {
 	// different kinds.
 	switch s.stos.Spec.GetCSIDeploymentStrategy() {
 	case deploymentKind:
-		return s.k8sResourceManager.Deployment(csiHelperName, s.stos.Spec.GetResourceNS(), nil).Delete()
+		return s.k8sResourceManager.Deployment(csiHelperName, s.stos.Spec.GetResourceNS(), nil, nil).Delete()
 	default:
-		return s.k8sResourceManager.StatefulSet(statefulsetName, s.stos.Spec.GetResourceNS(), nil).Delete()
+		return s.k8sResourceManager.StatefulSet(statefulsetName, s.stos.Spec.GetResourceNS(), nil, nil).Delete()
 	}
 }
 
 // podLabelsForCSIHelpers takes the name of a cluster custom resource and the
 // kind of helper, and returns labels for the pods of the helpers.
 func podLabelsForCSIHelpers(name, kind string) map[string]string {
-	return map[string]string{
+	// Combine CSI Helper specific labels with the default app labels.
+	labels := map[string]string{
 		"app":          appName,
 		"storageos_cr": name,
 		"kind":         kind,
 	}
+	return k8s.AddDefaultAppLabels(name, labels)
 }

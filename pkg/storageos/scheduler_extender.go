@@ -8,6 +8,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/storageos/cluster-operator/pkg/util/k8s"
 )
 
 const (
@@ -71,7 +73,7 @@ func (s Deployment) createSchedulerDeployment(replicas int32) error {
 	// Add pod toleration for quick recovery on node failure.
 	addPodTolerationForRecovery(&spec.Template.Spec)
 
-	return s.k8sResourceManager.Deployment(SchedulerExtenderName, s.stos.Spec.GetResourceNS(), spec).Create()
+	return s.k8sResourceManager.Deployment(SchedulerExtenderName, s.stos.Spec.GetResourceNS(), nil, spec).Create()
 }
 
 // schedulerContainers returns a list of containers that should be part of the
@@ -115,22 +117,22 @@ func (s Deployment) schedulerVolumes() []corev1.Volume {
 // deleteSchedulerExtender deletes all the scheduler related resources.
 func (s Deployment) deleteSchedulerExtender() error {
 	namespace := s.stos.Spec.GetResourceNS()
-	if err := s.k8sResourceManager.Deployment(SchedulerExtenderName, namespace, nil).Delete(); err != nil {
+	if err := s.k8sResourceManager.Deployment(SchedulerExtenderName, namespace, nil, nil).Delete(); err != nil {
 		return err
 	}
-	if err := s.k8sResourceManager.ConfigMap(policyConfigMapName, namespace, nil).Delete(); err != nil {
+	if err := s.k8sResourceManager.ConfigMap(policyConfigMapName, namespace, nil, nil).Delete(); err != nil {
 		return err
 	}
-	if err := s.k8sResourceManager.ConfigMap(schedulerConfigConfigMapName, namespace, nil).Delete(); err != nil {
+	if err := s.k8sResourceManager.ConfigMap(schedulerConfigConfigMapName, namespace, nil, nil).Delete(); err != nil {
 		return err
 	}
-	if err := s.k8sResourceManager.ClusterRoleBinding(SchedulerClusterBindingName, nil, nil).Delete(); err != nil {
+	if err := s.k8sResourceManager.ClusterRoleBinding(SchedulerClusterBindingName, nil, nil, nil).Delete(); err != nil {
 		return err
 	}
-	if err := s.k8sResourceManager.ServiceAccount(SchedulerSA, namespace).Delete(); err != nil {
+	if err := s.k8sResourceManager.ServiceAccount(SchedulerSA, namespace, nil).Delete(); err != nil {
 		return err
 	}
-	if err := s.k8sResourceManager.ClusterRole(SchedulerClusterRoleName, nil).Delete(); err != nil {
+	if err := s.k8sResourceManager.ClusterRole(SchedulerClusterRoleName, nil, nil).Delete(); err != nil {
 		return err
 	}
 	return nil
@@ -190,7 +192,7 @@ func (s Deployment) createSchedulerPolicy() error {
 	data := map[string]string{
 		"policy.cfg": policyConfig.String(),
 	}
-	return s.k8sResourceManager.ConfigMap(policyConfigMapName, s.stos.Spec.GetResourceNS(), data).Create()
+	return s.k8sResourceManager.ConfigMap(policyConfigMapName, s.stos.Spec.GetResourceNS(), nil, data).Create()
 }
 
 // schedulerConfigTemplate contains fields for rendering the scheduler
@@ -240,14 +242,16 @@ func (s Deployment) createSchedulerConfiguration() error {
 	data := map[string]string{
 		"config.yaml": schedConfig.String(),
 	}
-	return s.k8sResourceManager.ConfigMap(schedulerConfigConfigMapName, s.stos.Spec.GetResourceNS(), data).Create()
+	return s.k8sResourceManager.ConfigMap(schedulerConfigConfigMapName, s.stos.Spec.GetResourceNS(), nil, data).Create()
 }
 
 // podLabelsForScheduler returns labels for the scheduler pod.
 func podLabelsForScheduler(name string) map[string]string {
-	return map[string]string{
+	// Combine CSI Helper specific labels with the default app labels.
+	labels := map[string]string{
 		"app":          appName,
 		"storageos_cr": name,
 		"kind":         deploymentKind,
 	}
+	return k8s.AddDefaultAppLabels(name, labels)
 }

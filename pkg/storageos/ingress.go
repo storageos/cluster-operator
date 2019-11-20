@@ -26,5 +26,5 @@ func (s *Deployment) createIngress() error {
 		}
 	}
 
-	return s.k8sResourceManager.Ingress(ingressName, s.stos.Spec.GetResourceNS(), s.stos.Spec.Ingress.Annotations, spec).Create()
+	return s.k8sResourceManager.Ingress(ingressName, s.stos.Spec.GetResourceNS(), nil, s.stos.Spec.Ingress.Annotations, spec).Create()
 }

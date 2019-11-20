@@ -6,13 +6,9 @@ import (
 	"strings"
 	"time"
 
-	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
-	stosClientset "github.com/storageos/cluster-operator/pkg/client/clientset/versioned"
-	"github.com/storageos/cluster-operator/pkg/nfs"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
@@ -23,6 +19,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	"github.com/storageos/cluster-operator/internal/pkg/storageoscluster"
+	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
+	stosClientset "github.com/storageos/cluster-operator/pkg/client/clientset/versioned"
+	"github.com/storageos/cluster-operator/pkg/nfs"
+	"github.com/storageos/cluster-operator/pkg/util/k8s"
 )
 
 // ErrNoCluster is the error when there's no associated running StorageOS
@@ -31,7 +33,10 @@ var ErrNoCluster = goerrors.New("no storageos cluster found")
 
 var log = logf.Log.WithName("controller_nfsserver")
 
-const finalizer = "finalizer.nfsserver.storageos.com"
+const (
+	finalizer    = "finalizer.nfsserver.storageos.com"
+	appComponent = "nfs-server"
+)
 
 // Add creates a new NFSServer Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -158,7 +163,7 @@ func (r *ReconcileNFSServer) reconcile(instance *storageosv1.NFSServer) error {
 	}
 
 	// Get a StorageOS cluster to associate the NFS server with.
-	stosCluster, err := r.getCurrentStorageOSCluster()
+	stosCluster, err := storageoscluster.GetCurrentStorageOSCluster(r.client)
 	if err != nil {
 		return err
 	}
@@ -184,7 +189,15 @@ func (r *ReconcileNFSServer) reconcile(instance *storageosv1.NFSServer) error {
 		labels = map[string]string{}
 	}
 	// Add default labels.
+	// TODO: This is legacy label. Remove this with care. Ensure it's not used
+	// by any label selectors.
 	labels["app"] = "storageos"
+
+	// Set the app component.
+	labels[k8s.AppComponent] = appComponent
+
+	// Add default resource app labels.
+	labels = k8s.AddDefaultAppLabels(stosCluster.Name, labels)
 
 	d := nfs.NewDeployment(r.client, r.kConfig, stosCluster, instance, labels, r.recorder, r.scheme)
 
@@ -262,38 +275,6 @@ func (r *ReconcileNFSServer) updateSpec(instance *storageosv1.NFSServer, cluster
 		return true, nil
 	}
 	return false, nil
-}
-
-// getCurrentStorageOSCluster returns a running StorageOS cluster.
-func (r *ReconcileNFSServer) getCurrentStorageOSCluster() (*storageosv1.StorageOSCluster, error) {
-	var currentCluster *storageosv1.StorageOSCluster
-
-	// Get a list of all the StorageOS clusters.
-	stosClusters, err := r.stosClientset.StorageosV1().StorageOSClusters("").List(metav1.ListOptions{})
-	if err != nil {
-		return currentCluster, err
-	}
-
-	// If there's only one cluster, select it as the current cluster.
-	if len(stosClusters.Items) == 1 {
-		currentCluster = &stosClusters.Items[0]
-	}
-
-	// If there are multiple clusters, consider the status of the cluster.
-	for _, cluster := range stosClusters.Items {
-		// Only one cluster can be in running phase at a time.
-		if cluster.Status.Phase == storageosv1.ClusterPhaseRunning {
-			currentCluster = &cluster
-			break
-		}
-	}
-
-	// If no current cluster found, fail.
-	if currentCluster != nil {
-		return currentCluster, nil
-	}
-
-	return currentCluster, ErrNoCluster
 }
 
 func contains(list []string, s string) bool {

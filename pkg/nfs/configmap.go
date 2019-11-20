@@ -195,5 +195,5 @@ func (d *Deployment) createNFSConfigMap() error {
 		d.nfsServer.Name: nfsConfig,
 	}
 
-	return d.k8sResourceManager.ConfigMap(d.nfsServer.Name, d.nfsServer.Namespace, data).Create()
+	return d.k8sResourceManager.ConfigMap(d.nfsServer.Name, d.nfsServer.Namespace, nil, data).Create()
 }
