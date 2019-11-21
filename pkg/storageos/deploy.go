@@ -351,11 +351,38 @@ func getPodNames(pods []corev1.Pod) []string {
 
 // GetNodeIPs returns a slice of IPs, given a slice of nodes.
 func GetNodeIPs(nodes []corev1.Node) []string {
-	var ips []string
+	ips := []string{}
 	for _, node := range nodes {
-		ips = append(ips, node.Status.Addresses[0].Address)
+		// Prefer InternalIP
+		if internalIP := GetNodeInternalIP(node.Status.Addresses); internalIP != "" {
+			ips = append(ips, internalIP)
+			continue
+		}
+		// Otherwise use first in list.
+		if address := GetFirstAddress(node.Status.Addresses); address != "" {
+			ips = append(ips, address)
+			continue
+		}
 	}
 	return ips
+}
+
+// GetNodeInternalIP the InternaIP from a slice of addresses, if it exists.
+func GetNodeInternalIP(addresses []corev1.NodeAddress) string {
+	for _, addr := range addresses {
+		if addr.Type == corev1.NodeInternalIP {
+			return addr.Address
+		}
+	}
+	return ""
+}
+
+// GetFirstAddress returns the first address from a slice of addresses.
+func GetFirstAddress(addresses []corev1.NodeAddress) string {
+	for _, addr := range addresses {
+		return addr.Address
+	}
+	return ""
 }
 
 // addPodTolerationForRecovery adds pod tolerations for cases when a node isn't
