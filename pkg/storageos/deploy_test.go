@@ -1557,3 +1557,116 @@ func TestDeploySchedulerExtender(t *testing.T) {
 		t.Fatalf("unexpected service account name:\n\t(WNT) %q\n\t(GOT) %q", schedDeployment.Spec.Template.Spec.ServiceAccountName, SchedulerSA)
 	}
 }
+
+func TestGetNodeIPs(t *testing.T) {
+	tests := []struct {
+		name  string
+		nodes []corev1.Node
+		want  []string
+	}{
+		{
+			name: "single node single internal ip",
+			nodes: []corev1.Node{
+				corev1.Node{
+					Status: corev1.NodeStatus{
+						Addresses: []corev1.NodeAddress{
+							corev1.NodeAddress{
+								Type:    corev1.NodeInternalIP,
+								Address: "1.1.1.1",
+							},
+						},
+					},
+				},
+			},
+			want: []string{"1.1.1.1"},
+		},
+		{
+			name: "multiple node single internal ip",
+			nodes: []corev1.Node{
+				corev1.Node{
+					Status: corev1.NodeStatus{
+						Addresses: []corev1.NodeAddress{
+							corev1.NodeAddress{
+								Type:    corev1.NodeInternalIP,
+								Address: "1.1.1.1",
+							},
+						},
+					},
+				},
+				corev1.Node{
+					Status: corev1.NodeStatus{
+						Addresses: []corev1.NodeAddress{
+							corev1.NodeAddress{
+								Type:    corev1.NodeInternalIP,
+								Address: "2.2.2.2",
+							},
+						},
+					},
+				},
+			},
+			want: []string{"1.1.1.1", "2.2.2.2"},
+		},
+		{
+			name: "single node no address",
+			nodes: []corev1.Node{
+				corev1.Node{
+					Status: corev1.NodeStatus{
+						Addresses: []corev1.NodeAddress{},
+					},
+				},
+			},
+			want: []string{},
+		},
+		{
+			name: "single node multiple addresses",
+			nodes: []corev1.Node{
+				corev1.Node{
+					Status: corev1.NodeStatus{
+						Addresses: []corev1.NodeAddress{
+							corev1.NodeAddress{
+								Type:    corev1.NodeHostName,
+								Address: "hostA",
+							},
+							corev1.NodeAddress{
+								Type:    corev1.NodeInternalIP,
+								Address: "1.1.1.1",
+							},
+							corev1.NodeAddress{
+								Type:    corev1.NodeExternalIP,
+								Address: "2.2.2.2",
+							},
+						},
+					},
+				},
+			},
+			want: []string{"1.1.1.1"},
+		},
+		{
+			name: "single node no internal ip",
+			nodes: []corev1.Node{
+				corev1.Node{
+					Status: corev1.NodeStatus{
+						Addresses: []corev1.NodeAddress{
+							corev1.NodeAddress{
+								Type:    corev1.NodeHostName,
+								Address: "hostA",
+							},
+							corev1.NodeAddress{
+								Type:    corev1.NodeExternalIP,
+								Address: "2.2.2.2",
+							},
+						},
+					},
+				},
+			},
+			want: []string{"hostA"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := GetNodeIPs(tt.nodes); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetNodeIPs() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
