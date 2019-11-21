@@ -248,13 +248,18 @@ func (s *Deployment) createClusterRoleForScheduler() error {
 		},
 		{
 			APIGroups: []string{"storage.k8s.io"},
-			Resources: []string{"storageclasses"},
+			Resources: []string{"storageclasses", "csinodes"},
 			Verbs:     []string{"list", "watch"},
 		},
 		{
 			APIGroups: []string{"policy"},
 			Resources: []string{"poddisruptionbudgets"},
 			Verbs:     []string{"list", "watch"},
+		},
+		{
+			APIGroups: []string{"events.k8s.io"},
+			Resources: []string{"events"},
+			Verbs:     []string{"create"},
 		},
 	}
 	return s.k8sResourceManager.ClusterRole(SchedulerClusterRoleName, nil, rules).Create()

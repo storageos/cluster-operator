@@ -286,6 +286,7 @@ spec:
           - storageclasses
           - volumeattachments
           - csinodeinfos
+          - csinodes
           verbs:
           - create
           - delete
@@ -346,6 +347,12 @@ spec:
           - storageos-cluster-operator
           verbs:
           - update
+        - apiGroups:
+          - events.k8s.io
+          resources:
+          - events
+          verbs:
+          - create
       deployments:
       - name: storageos-operator
         spec:
