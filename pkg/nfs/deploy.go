@@ -11,7 +11,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	"github.com/storageos/cluster-operator/pkg/storageos"
-	"github.com/storageos/cluster-operator/pkg/util/k8s"
 )
 
 const (
@@ -28,9 +27,6 @@ const (
 	NFSPortName = "nfs"
 	// MetricsPortName is the name of the port that exposes the NFS metrics.
 	MetricsPortName = "metrics"
-
-	// componentLabel is used to label component name of a resource.
-	componentLabel = "app.kubernetes.io/component"
 
 	// HealthEndpointPath is the path to query on the HTTP Port for health.
 	// This is hardcoded in the NFS container and not settable by the user.
@@ -116,20 +112,20 @@ func (d *Deployment) Deploy() error {
 // In 1.15 and later we can just set the "app" and "nfsserver" labels here.  For
 // now, pass all labels rather than check k8s versions.  The only downside is
 // that the nfs pod gets storageos.com labels that don't do anything directly.
-func (d *Deployment) labelsForStatefulSet(name string, labels map[string]string) map[string]string {
-	if labels == nil {
-		labels = make(map[string]string)
-	}
-
-	labels["app"] = appName
-	labels["nfsserver"] = name
+func (d *Deployment) labelsForStatefulSet() map[string]string {
+	// Get labels from the NFS k8s resource manager and add NFS Server specific
+	// labels.
+	ssLabels := d.k8sResourceManager.GetLabels()
+	// TODO: This is legacy label. Remove this with care. Ensure it's not used
+	// by any label selectors.
+	ssLabels["app"] = appName
+	ssLabels["nfsserver"] = d.nfsServer.Name
 
 	if !d.cluster.Spec.DisableFencing {
-		labels["storageos.com/fenced"] = "true"
+		ssLabels["storageos.com/fenced"] = "true"
 	}
 
-	// Add default resource labels.
-	return k8s.AddDefaultAppLabels(d.cluster.Name, labels)
+	return ssLabels
 }
 
 func (d *Deployment) createClusterRoleBindingForSCC() error {

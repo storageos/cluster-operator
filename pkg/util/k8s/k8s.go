@@ -3,12 +3,13 @@
 package k8s
 
 import (
-	"github.com/storageos/cluster-operator/pkg/util/k8s/resource"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/storageos/cluster-operator/pkg/util/k8s/resource"
 )
 
 // Resource is an interface for k8s resources. All the k8s resources supported
@@ -46,6 +47,11 @@ func (r *ResourceManager) SetLabels(labels map[string]string) *ResourceManager {
 	}
 	r.labels = labels
 	return r
+}
+
+// GetLabels returns labels of the resource manager.
+func (r *ResourceManager) GetLabels() map[string]string {
+	return r.labels
 }
 
 // ConfigMap returns a ConfigMap object.
