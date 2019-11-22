@@ -5,6 +5,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"github.com/storageos/cluster-operator/pkg/util/k8s"
 )
 
 func (d *Deployment) ensureService(nfsPort int) error {
@@ -15,7 +17,7 @@ func (d *Deployment) ensureService(nfsPort int) error {
 	}
 
 	labels := map[string]string{
-		componentLabel: "server",
+		k8s.ServiceFor: "nfs-server",
 	}
 
 	// Couldn't get any existing service. Create a new service.
@@ -28,7 +30,7 @@ func (d *Deployment) ensureService(nfsPort int) error {
 // createMetricsService creates a Service for metrics at the given port number.
 func (d *Deployment) createMetricsService(metricsPort int) error {
 	labels := map[string]string{
-		componentLabel: "metrics",
+		k8s.ServiceFor: "nfs-metrics",
 	}
 	if err := d.createService(d.getMetricsServiceName(), MetricsPortName, metricsPort, labels); err != nil {
 		return err
@@ -38,7 +40,7 @@ func (d *Deployment) createMetricsService(metricsPort int) error {
 
 func (d *Deployment) createService(name string, portName string, port int, labels map[string]string) error {
 	spec := &corev1.ServiceSpec{
-		Selector: d.labelsForStatefulSet(d.nfsServer.Name, map[string]string{}),
+		Selector: d.labelsForStatefulSet(),
 		Type:     corev1.ServiceTypeClusterIP,
 		Ports: []corev1.ServicePort{
 			{

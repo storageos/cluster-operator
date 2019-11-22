@@ -21,7 +21,7 @@ func (d *Deployment) createStatefulSet(pvcVS *corev1.PersistentVolumeClaimVolume
 		ServiceName: d.nfsServer.Name,
 		Replicas:    &replicas,
 		Selector: &metav1.LabelSelector{
-			MatchLabels: d.labelsForStatefulSet(d.nfsServer.Name, d.nfsServer.Labels),
+			MatchLabels: d.labelsForStatefulSet(),
 		},
 		Template: d.createPodTemplateSpec(nfsPort, httpPort),
 	}
@@ -44,7 +44,7 @@ func (d *Deployment) createStatefulSet(pvcVS *corev1.PersistentVolumeClaimVolume
 func (d *Deployment) createPodTemplateSpec(nfsPort int, httpPort int) corev1.PodTemplateSpec {
 	return corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels: d.labelsForStatefulSet(d.nfsServer.Name, d.nfsServer.Labels),
+			Labels: d.labelsForStatefulSet(),
 		},
 		Spec: corev1.PodSpec{
 			ServiceAccountName: d.getServiceAccountName(),

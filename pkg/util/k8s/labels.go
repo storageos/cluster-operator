@@ -1,6 +1,13 @@
 package k8s
 
 // k8s recommended labels from https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/ .
+//
+// Custom labels:
+//  - app.kubernetes.io/service-for: This label should be used to differentiate
+// between services by specifying what type of endpoint a service provides, like
+// nfs-server or metrics endpoint. This can be used along with component label
+// to uniquely select services by service label selectors, e.g. prometheus
+// service monitor selector.
 const (
 	AppName      = "app.kubernetes.io/name"
 	AppInstance  = "app.kubernetes.io/instance"
@@ -8,6 +15,7 @@ const (
 	AppComponent = "app.kubernetes.io/component"
 	AppPartOf    = "app.kubernetes.io/part-of"
 	AppManagedBy = "app.kubernetes.io/managed-by"
+	ServiceFor   = "app.kubernetes.io/service-for"
 )
 
 // GetDefaultAppLabels returns the default k8s app labels for resources created

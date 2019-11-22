@@ -98,8 +98,9 @@ The ServiceMonitor inherits labels from the respective NFS Server metrics
 service.
 
 To collect the NFS Server metrics in prometheus, create a Prometheus instance
-with `serviceMonitorSelector` matching labels `app=storageos` and 
-`app.kubernetes.io/component=metrics`. The prometheus server needs permissions
+with `serviceMonitorSelector` matching labels
+`app.kubernetes.io/service-for=nfs-metrics` and
+`app.kubernetes.io/component=nfs-server`. The prometheus server needs permissions
 to be able to collect the metrics from the metrics endpoints. Create a
 ServiceAccount with all the necessary RBAC permission by applying
 [prometheus-rbac.yaml](prometheus-rbac.yaml) and create a prometheus server
@@ -116,6 +117,10 @@ pvc-527a4462-50a4-490e-90a7-d2dd1224cf63-0   1/1     Running   0          118m
 In the above, `prometheus-prometheus-nfs-0` is the prometheus server pod.
 Once created, port-forward to the prometheus server pod and view the collected
 metrics in the prometheus dashboard at `localhost:8080`.
+
+__NOTE__: If there are multiple NFS Servers and metrics for a specific NFS
+Server is required, NFS PVC name can be included in the
+`serviceMonitorSelector`, `nfsserver=<rwx-pvc-name>`.
 
 ```
 $ kubectl port-forward prometheus-prometheus-nfs-0 8080:9090
