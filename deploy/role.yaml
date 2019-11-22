@@ -88,6 +88,7 @@ rules:
   - storageclasses
   - volumeattachments
   - csinodeinfos
+  - csinodes
   verbs:
   - create
   - delete
@@ -148,3 +149,9 @@ rules:
   - storageos-cluster-operator
   verbs:
   - update
+- apiGroups:
+  - events.k8s.io
+  resources:
+  - events
+  verbs:
+  - create
