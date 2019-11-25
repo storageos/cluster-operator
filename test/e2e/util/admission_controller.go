@@ -7,14 +7,13 @@ import (
 
 	"github.com/blang/semver"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
-	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
-	storageos "github.com/storageos/cluster-operator/pkg/storageos"
-	"github.com/storageos/cluster-operator/pkg/util/k8sutil"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+
+	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
+	storageos "github.com/storageos/cluster-operator/pkg/storageos"
 )
 
 // PodSchedulerAdmissionControllerTest checks if the pod scheduler mutating
@@ -29,26 +28,20 @@ func PodSchedulerAdmissionControllerTest(t *testing.T, ctx *framework.TestCtx) {
 		Patch: 0,
 	}
 
-	f := framework.Global
-
 	// Check the k8s version before running this test. Admission controller
 	// does not works on openshift 3.11 (k8s 1.11).
-	var log = logf.Log.WithName("test.admissioncontroller")
-	k := k8sutil.NewK8SOps(f.KubeClient, log)
-	version, err := k.GetK8SVersion()
+	featureSupported, err := featureSupportAvailable(minVersion)
 	if err != nil {
-		t.Errorf("failed to get k8s version: %v", err)
-	}
-
-	currentVersion, err := semver.Parse(version)
-	if err != nil {
-		t.Errorf("failed to parse k8s version: %v", err)
-	}
-
-	if currentVersion.Compare(minVersion) < 0 {
-		// This test is not supported in this version of k8s. Skip the test.
+		t.Errorf("failed to check platform support for admission controller test: %v", err)
 		return
 	}
+
+	// Skip if the feature is not supported.
+	if !featureSupported {
+		return
+	}
+
+	f := framework.Global
 
 	// Provide some time for StorageOS initialization to be complete.
 	time.Sleep(10 * time.Second)
