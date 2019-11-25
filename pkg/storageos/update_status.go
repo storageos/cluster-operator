@@ -75,7 +75,7 @@ func (s *Deployment) getStorageOSStatus() (*storageosv1.StorageOSClusterStatus, 
 		}
 	}
 
-	phase := storageosv1.ClusterPhaseInitial
+	phase := storageosv1.ClusterPhaseCreating
 	if readyNodes == totalNodes {
 		phase = storageosv1.ClusterPhaseRunning
 	}

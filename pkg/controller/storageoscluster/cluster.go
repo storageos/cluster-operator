@@ -67,6 +67,9 @@ func (c *StorageOSCluster) Deploy(r *ReconcileStorageOSCluster) error {
 }
 
 // DeleteDeployment deletes the StorageOS Cluster deployment.
-func (c *StorageOSCluster) DeleteDeployment() error {
+func (c *StorageOSCluster) DeleteDeployment(r *ReconcileStorageOSCluster) error {
+	if c.deployment == nil {
+		c.SetDeployment(r)
+	}
 	return c.deployment.Delete()
 }
