@@ -3,6 +3,11 @@ kind: ClusterRole
 metadata:
   creationTimestamp: null
   name: storageos-operator
+  labels:
+    app.kubernetes.io/name: storageos-operator
+    app.kubernetes.io/instance: storageos-cluster-operator
+    app.kubernetes.io/component: operator
+    app.kubernetes.io/part-of: storageos
 rules:
 - apiGroups:
   - storageos.com
