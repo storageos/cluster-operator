@@ -132,7 +132,7 @@ install_operatorsdk() {
 print_pod_details_and_logs() {
     local namespace="${1?Namespace is required}"
 
-    kubectl get pods --show-all --no-headers --namespace "$namespace" | awk '{ print $1 }' | while read -r pod; do
+    kubectl get pods --no-headers --namespace "$namespace" | awk '{ print $1 }' | while read -r pod; do
         if [[ -n "$pod" ]]; then
             printf '\n================================================================================\n'
             printf ' Details from pod %s\n' "$pod"
@@ -149,7 +149,7 @@ print_pod_details_and_logs() {
             printf '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n'
 
             local init_containers
-            init_containers=$(kubectl get pods --show-all --output jsonpath="{.spec.initContainers[*].name}" --namespace "$namespace" "$pod")
+            init_containers=$(kubectl get pods --output jsonpath="{.spec.initContainers[*].name}" --namespace "$namespace" "$pod")
             for container in $init_containers; do
                 printf -- '\n--------------------------------------------------------------------------------\n'
                 printf ' Logs of init container %s in pod %s\n' "$container" "$pod"
@@ -163,7 +163,7 @@ print_pod_details_and_logs() {
             done
 
             local containers
-            containers=$(kubectl get pods --show-all --output jsonpath="{.spec.containers[*].name}" --namespace "$namespace" "$pod")
+            containers=$(kubectl get pods --output jsonpath="{.spec.containers[*].name}" --namespace "$namespace" "$pod")
             for container in $containers; do
                 printf '\n--------------------------------------------------------------------------------\n'
                 printf -- ' Logs of container %s in pod %s\n' "$container" "$pod"
