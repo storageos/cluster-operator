@@ -3,6 +3,11 @@ kind: Deployment
 metadata:
   name: storageos-cluster-operator
   namespace: storageos-operator
+  labels:
+    app.kubernetes.io/name: storageos-operator
+    app.kubernetes.io/instance: storageos-cluster-operator
+    app.kubernetes.io/component: operator
+    app.kubernetes.io/part-of: storageos
 spec:
   replicas: 1
   selector:
