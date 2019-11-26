@@ -70,6 +70,9 @@ func (s Deployment) createSchedulerDeployment(replicas int32) error {
 		},
 	}
 
+	// Add cluster config tolerations.
+	s.addTolerations(&spec.Template.Spec)
+
 	// Add pod toleration for quick recovery on node failure.
 	addPodTolerationForRecovery(&spec.Template.Spec)
 

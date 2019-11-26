@@ -7,18 +7,21 @@ import (
 	"testing"
 	"time"
 
+	"github.com/blang/semver"
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
-	"github.com/storageos/cluster-operator/pkg/apis"
-	storageos "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
-
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+
+	"github.com/storageos/cluster-operator/pkg/apis"
+	storageos "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
+	"github.com/storageos/cluster-operator/pkg/util/k8sutil"
 )
 
 // Time constants.
@@ -302,4 +305,29 @@ func StorageOSClusterCRAttributesTest(t *testing.T, crName string, crNamespace s
 	if testStorageOS.Spec.Service.Name == "" {
 		t.Errorf("spec.service.name must not be empty")
 	}
+}
+
+// featureSupportAvailable can be used by tests to check if the platform
+// supports the test by passing a minimum version of k8s required to run the
+// test.
+func featureSupportAvailable(minVersion semver.Version) (bool, error) {
+	log := logf.Log.WithName("test.featureSupportAvailability")
+	k := k8sutil.NewK8SOps(framework.Global.KubeClient, log)
+	version, err := k.GetK8SVersion()
+	if err != nil {
+		return false, fmt.Errorf("failed to get k8s version: %v", err)
+	}
+
+	currentVersion, err := semver.Parse(version)
+	if err != nil {
+		return false, fmt.Errorf("failed to parse k8s version: %v", err)
+	}
+
+	if currentVersion.Compare(minVersion) >= 0 {
+		// This test is supported in this version of k8s.
+		return true, nil
+	}
+
+	// Test is not supported in this version of k8s. Skip the test.
+	return false, nil
 }
