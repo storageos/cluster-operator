@@ -87,6 +87,7 @@ metadata.annotations.alm-examples: |-
         "namespace": "kube-system",
         "secretRefName": "storageos-api",
         "secretRefNamespace": "default",
+        "k8sDistro": "openshift",
         "csi": {
           "enable": true,
           "deploymentStrategy": "deployment"
