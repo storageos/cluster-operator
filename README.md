@@ -111,7 +111,7 @@ Parameter | Description | Default
 `secretRefName` | Reference name of storageos secret |
 `secretRefNamespace` | Namespace of storageos secret |
 `namespace` | Namespace where storageos cluster resources are created | `storageos`
-`images.nodeContainer` | StorageOS node container image | `storageos/node:1.5.0`
+`images.nodeContainer` | StorageOS node container image | `storageos/node:1.5.1`
 `images.initContainer` | StorageOS init container image | `storageos/init:1.0.0`
 `images.csiNodeDriverRegistrarContainer` | CSI Node Driver Registrar Container image | `quay.io/k8scsi/csi-node-driver-registrar:v1.0.1`
 `images.csiClusterDriverRegistrarContainer` | CSI Cluster Driver Registrar Container image | `quay.io/k8scsi/csi-cluster-driver-registrar:v1.0.1`
