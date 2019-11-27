@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -27,6 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 )
 
 var log = logf.Log.WithName("storageos.job")
@@ -96,6 +97,10 @@ func (r *ReconcileJob) Reconcile(request reconcile.Request) (reconcile.Result, e
 	reconcilePeriod := 10 * time.Second
 	reconcileResult := reconcile.Result{RequeueAfter: reconcilePeriod}
 
+	// Return this for a immediate retry of the reconciliation loop with the
+	// same request object.
+	immediateRetryResult := reconcile.Result{Requeue: true}
+
 	// Fetch the Job instance
 	instance := &storageosv1.Job{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
@@ -107,7 +112,7 @@ func (r *ReconcileJob) Reconcile(request reconcile.Request) (reconcile.Result, e
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		return reconcileResult, err
+		return immediateRetryResult, err
 	}
 
 	// Set Spec attribute values.
@@ -115,18 +120,23 @@ func (r *ReconcileJob) Reconcile(request reconcile.Request) (reconcile.Result, e
 
 	// Update the object.
 	if err := r.client.Update(context.Background(), instance); err != nil {
-		return reconcileResult, err
+		return immediateRetryResult, err
 	}
 
 	// Define a new DaemonSet object
 	daemonset, err := newDaemonSetForCR(instance)
 	if err != nil {
-		return reconcileResult, err
+		log.Info("Failed to create DaemonSet for Job", "error", err)
+		instance.Status.Completed = false
+		if updateErr := r.client.Status().Update(context.Background(), instance); updateErr != nil {
+			err = fmt.Errorf("%v, %v", updateErr, err)
+		}
+		return immediateRetryResult, err
 	}
 
 	// Set Job instance as the owner and controller
 	if err := controllerutil.SetControllerReference(instance, daemonset, r.scheme); err != nil {
-		return reconcileResult, err
+		return immediateRetryResult, err
 	}
 
 	// Check if this DaemonSet already exists
@@ -136,13 +146,19 @@ func (r *ReconcileJob) Reconcile(request reconcile.Request) (reconcile.Result, e
 		log.Info("Creating a new DaemonSet")
 		err = r.client.Create(context.TODO(), daemonset)
 		if err != nil {
-			return reconcileResult, err
+			log.Info("Failed to create DaemonSet", "error", err)
+			// Update status.
+			instance.Status.Completed = false
+			if updateErr := r.client.Status().Update(context.Background(), instance); updateErr != nil {
+				err = fmt.Errorf("%v, %v", updateErr, err)
+			}
+			return immediateRetryResult, err
 		}
 
 		// DaemonSet created successfully - don't requeue
 		return reconcile.Result{}, nil
 	} else if err != nil {
-		return reconcileResult, err
+		return immediateRetryResult, err
 	}
 
 	if instance.Status.Completed {
@@ -150,16 +166,14 @@ func (r *ReconcileJob) Reconcile(request reconcile.Request) (reconcile.Result, e
 		return reconcile.Result{}, nil
 	}
 
-	// Check DaemonSet Pod status.
+	// Check DaemonSet Pod status and update it.
 	completed, err := checkPods(r.clientset, instance, r.recorder)
 	if err != nil {
-		return reconcileResult, err
+		log.Info("Failed to check pod status", "error", err)
 	}
-
-	// Update the Completed status of the Job (status subresource).
 	instance.Status.Completed = completed
 	if err := r.client.Status().Update(context.Background(), instance); err != nil {
-		return reconcileResult, err
+		return immediateRetryResult, err
 	}
 
 	return reconcileResult, nil
