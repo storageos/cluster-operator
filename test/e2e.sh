@@ -3,8 +3,8 @@
 set -Eeuxo pipefail
 
 readonly REPO_ROOT="${REPO_ROOT:-$(git rev-parse --show-toplevel)}"
-readonly K8S_LATEST="v1.15.3"
-readonly KIND_LINK="https://github.com/kubernetes-sigs/kind/releases/download/v0.5.1/kind-linux-amd64"
+readonly K8S_LATEST="v1.16.3"
+readonly KIND_LINK="https://github.com/kubernetes-sigs/kind/releases/download/v0.6.0/kind-linux-amd64"
 
 enable_lio() {
     echo "Enable LIO"
@@ -30,10 +30,8 @@ run_kind() {
     # kind create cluster --image=kindest/node:"$K8S_VERSION"
     kind create cluster --image storageos/kind-node:$1 --name kind-1
 
-    echo "Export kubeconfig..."
-    # shellcheck disable=SC2155
-    export KUBECONFIG="$(kind get kubeconfig-path --name="kind-1")"
-    cp $(kind get kubeconfig-path --name="kind-1") ~/.kube/config
+    echo "Set kubectl config context..."
+    kubectl config use-context kind-kind-1
     echo
 
     echo "Get cluster info..."
