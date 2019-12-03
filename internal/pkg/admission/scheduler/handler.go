@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
+	kscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/storageos/cluster-operator/internal/pkg/crv01/runtime/inject"
@@ -36,6 +37,20 @@ var _ admission.Handler = &PodSchedulerSetter{}
 
 // Handle handles an admission request and mutates a pod object in the request.
 func (p *PodSchedulerSetter) Handle(ctx context.Context, req types.Request) types.Response {
+	// NOTE: Since this webhook handler is built from an internal copy of
+	// controller-runtime webhook, the webhook admission decoder in the
+	// controller manager doesn't get translated to the internal webhook
+	// admission decoder correctly. As a workaround, since this handler is for
+	// pods only, use client-go's default scheme to create a new decoder.
+	// Client-go's default scheme contains pod scheme.
+	if p.decoder == nil {
+		decoder, err := admission.NewDecoder(kscheme.Scheme)
+		if err != nil {
+			log.Printf("failed to create a new decoder for the webhook handler: %v", err)
+			return admission.ErrorResponse(http.StatusInternalServerError, err)
+		}
+		p.decoder = decoder
+	}
 	// Decode the pod in request to a pod variable.
 	pod := &corev1.Pod{}
 	if err := p.decoder.Decode(req, pod); err != nil {
