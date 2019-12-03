@@ -13,11 +13,6 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
-	"github.com/storageos/cluster-operator/internal/pkg/admission"
-	"github.com/storageos/cluster-operator/internal/pkg/admission/scheduler"
-	"github.com/storageos/cluster-operator/pkg/apis"
-	"github.com/storageos/cluster-operator/pkg/controller"
-	"github.com/storageos/cluster-operator/pkg/storageos"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -27,7 +22,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
-	webhookAdmission "sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/storageos/cluster-operator/internal/pkg/admission"
+	"github.com/storageos/cluster-operator/internal/pkg/admission/scheduler"
+	webhookAdmission "github.com/storageos/cluster-operator/internal/pkg/crv01/webhook/admission"
+	"github.com/storageos/cluster-operator/pkg/apis"
+	"github.com/storageos/cluster-operator/pkg/controller"
+	"github.com/storageos/cluster-operator/pkg/storageos"
 )
 
 var log = logf.Log.WithName("storageos.setup")

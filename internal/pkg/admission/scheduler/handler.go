@@ -9,10 +9,10 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission/types"
 
+	"github.com/storageos/cluster-operator/internal/pkg/crv01/runtime/inject"
+	"github.com/storageos/cluster-operator/internal/pkg/crv01/webhook/admission"
+	"github.com/storageos/cluster-operator/internal/pkg/crv01/webhook/admission/types"
 	"github.com/storageos/cluster-operator/internal/pkg/storageoscluster"
 )
 

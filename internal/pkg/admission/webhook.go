@@ -4,9 +4,10 @@ import (
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission/builder"
+
+	"github.com/storageos/cluster-operator/internal/pkg/crv01/webhook"
+	"github.com/storageos/cluster-operator/internal/pkg/crv01/webhook/admission"
+	"github.com/storageos/cluster-operator/internal/pkg/crv01/webhook/admission/builder"
 )
 
 // MutatingWebhook is a mutating admission webhook.
