@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"time"
 
-	"k8s.io/client-go/util/cert"
+	"github.com/storageos/cluster-operator/internal/pkg/cert"
 )
 
 // ServiceToCommonName generates the CommonName for the certificate when using a k8s service.

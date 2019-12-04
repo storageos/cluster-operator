@@ -88,7 +88,7 @@ Start the server by starting the manager
 package webhook
 
 import (
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-var log = logf.KBLog.WithName("webhook")
+var log = logf.Log.WithName("webhook")

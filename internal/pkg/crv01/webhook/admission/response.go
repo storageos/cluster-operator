@@ -22,8 +22,8 @@ import (
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/patch"
 
+	"github.com/storageos/cluster-operator/internal/pkg/crv01/patch"
 	"github.com/storageos/cluster-operator/internal/pkg/crv01/webhook/admission/types"
 )
 

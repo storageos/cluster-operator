@@ -19,9 +19,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
@@ -45,7 +45,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileStorageOSUpgrade{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetRecorder("storageos-upgrader")}
+	return &ReconcileStorageOSUpgrade{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetEventRecorderFor("storageos-upgrader")}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -116,7 +116,8 @@ func (r *ReconcileStorageOSUpgrade) ResetCurrentUpgrade(request reconcile.Reques
 // findCurrentCluster finds the running cluster.
 func (r *ReconcileStorageOSUpgrade) findCurrentCluster() (*storageosv1.StorageOSCluster, error) {
 	clusterList := &storageosv1.StorageOSClusterList{}
-	if err := r.client.List(context.TODO(), &client.ListOptions{}, clusterList); err != nil {
+	listOpts := []client.ListOption{}
+	if err := r.client.List(context.TODO(), clusterList, listOpts...); err != nil {
 		return nil, fmt.Errorf("failed to list clusters: %v", err)
 	}
 

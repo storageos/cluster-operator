@@ -89,9 +89,9 @@ func (cp *Provisioner) inject(cc *admissionregistrationv1beta1.WebhookClientConf
 	for i := range objs {
 		switch typed := objs[i].(type) {
 		case *admissionregistrationv1beta1.MutatingWebhookConfiguration:
-			injectForEachWebhook(cc, typed.Webhooks)
+			injectForMutatingWebhook(cc, typed.Webhooks)
 		case *admissionregistrationv1beta1.ValidatingWebhookConfiguration:
-			injectForEachWebhook(cc, typed.Webhooks)
+			injectForValidatingWebhook(cc, typed.Webhooks)
 		default:
 			return fmt.Errorf("%#v is not supported for injecting a webhookClientConfig",
 				objs[i].GetObjectKind().GroupVersionKind())
@@ -100,9 +100,18 @@ func (cp *Provisioner) inject(cc *admissionregistrationv1beta1.WebhookClientConf
 	return cp.CertWriter.Inject(objs...)
 }
 
-func injectForEachWebhook(
+func injectForMutatingWebhook(
 	cc *admissionregistrationv1beta1.WebhookClientConfig,
-	webhooks []admissionregistrationv1beta1.Webhook) {
+	webhooks []admissionregistrationv1beta1.MutatingWebhook) {
+	for i := range webhooks {
+		// only replacing the CA bundle to preserve the path in the WebhookClientConfig
+		webhooks[i].ClientConfig.CABundle = cc.CABundle
+	}
+}
+
+func injectForValidatingWebhook(
+	cc *admissionregistrationv1beta1.WebhookClientConfig,
+	webhooks []admissionregistrationv1beta1.ValidatingWebhook) {
 	for i := range webhooks {
 		// only replacing the CA bundle to preserve the path in the WebhookClientConfig
 		webhooks[i].ClientConfig.CABundle = cc.CABundle

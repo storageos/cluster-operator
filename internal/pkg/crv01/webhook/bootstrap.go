@@ -229,14 +229,14 @@ func (s *Server) whConfigs() ([]runtime.Object, error) {
 }
 
 func (s *Server) mutatingWHConfigs() (runtime.Object, error) {
-	mutatingWebhooks := []v1beta1.Webhook{}
+	mutatingWebhooks := []v1beta1.MutatingWebhook{}
 	for path, webhook := range s.registry {
 		if webhook.GetType() != types.WebhookTypeMutating {
 			continue
 		}
 
 		admissionWebhook := webhook.(*admission.Webhook)
-		wh, err := s.admissionWebhook(path, admissionWebhook)
+		wh, err := s.admissionMutatingWebhook(path, admissionWebhook)
 		if err != nil {
 			return nil, err
 		}
@@ -263,7 +263,7 @@ func (s *Server) mutatingWHConfigs() (runtime.Object, error) {
 }
 
 func (s *Server) validatingWHConfigs() (runtime.Object, error) {
-	validatingWebhooks := []v1beta1.Webhook{}
+	validatingWebhooks := []v1beta1.ValidatingWebhook{}
 	for path, webhook := range s.registry {
 		var admissionWebhook *admission.Webhook
 		if webhook.GetType() != types.WebhookTypeValidating {
@@ -271,7 +271,7 @@ func (s *Server) validatingWHConfigs() (runtime.Object, error) {
 		}
 
 		admissionWebhook = webhook.(*admission.Webhook)
-		wh, err := s.admissionWebhook(path, admissionWebhook)
+		wh, err := s.admissionValidatingWebhook(path, admissionWebhook)
 		if err != nil {
 			return nil, err
 		}
@@ -297,7 +297,7 @@ func (s *Server) validatingWHConfigs() (runtime.Object, error) {
 	return nil, nil
 }
 
-func (s *Server) admissionWebhook(path string, wh *admission.Webhook) (*admissionregistration.Webhook, error) {
+func (s *Server) admissionMutatingWebhook(path string, wh *admission.Webhook) (*admissionregistration.MutatingWebhook, error) {
 	if wh.NamespaceSelector == nil && s.Service != nil && len(s.Service.Namespace) > 0 {
 		wh.NamespaceSelector = &metav1.LabelSelector{
 			MatchExpressions: []metav1.LabelSelectorRequirement{
@@ -309,7 +309,38 @@ func (s *Server) admissionWebhook(path string, wh *admission.Webhook) (*admissio
 		}
 	}
 
-	webhook := &admissionregistration.Webhook{
+	webhook := &admissionregistration.MutatingWebhook{
+		Name:              wh.GetName(),
+		Rules:             wh.Rules,
+		FailurePolicy:     wh.FailurePolicy,
+		NamespaceSelector: wh.NamespaceSelector,
+		ClientConfig: admissionregistration.WebhookClientConfig{
+			// The reason why we assign an empty byte array to CABundle is that
+			// CABundle field will be updated by the Provisioner.
+			CABundle: []byte{},
+		},
+	}
+	cc, err := s.getClientConfigWithPath(path)
+	if err != nil {
+		return nil, err
+	}
+	webhook.ClientConfig = *cc
+	return webhook, nil
+}
+
+func (s *Server) admissionValidatingWebhook(path string, wh *admission.Webhook) (*admissionregistration.ValidatingWebhook, error) {
+	if wh.NamespaceSelector == nil && s.Service != nil && len(s.Service.Namespace) > 0 {
+		wh.NamespaceSelector = &metav1.LabelSelector{
+			MatchExpressions: []metav1.LabelSelectorRequirement{
+				{
+					Key:      "control-plane",
+					Operator: metav1.LabelSelectorOpDoesNotExist,
+				},
+			},
+		}
+	}
+
+	webhook := &admissionregistration.ValidatingWebhook{
 		Name:              wh.GetName(),
 		Rules:             wh.Rules,
 		FailurePolicy:     wh.FailurePolicy,
