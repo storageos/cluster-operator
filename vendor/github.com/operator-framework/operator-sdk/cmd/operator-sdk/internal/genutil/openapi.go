@@ -21,8 +21,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/operator-framework/operator-sdk/internal/pkg/scaffold"
-	"github.com/operator-framework/operator-sdk/internal/pkg/scaffold/input"
+	"github.com/operator-framework/operator-sdk/internal/scaffold"
+	"github.com/operator-framework/operator-sdk/internal/scaffold/input"
 	"github.com/operator-framework/operator-sdk/internal/util/k8sutil"
 	"github.com/operator-framework/operator-sdk/internal/util/projutil"
 
@@ -39,7 +39,7 @@ func OpenAPIGen() error {
 	absProjectPath := projutil.MustGetwd()
 	repoPkg := projutil.GetGoPkg()
 
-	gvMap, err := parseGroupVersions()
+	gvMap, err := k8sutil.ParseGroupSubpackages(scaffold.ApisDir)
 	if err != nil {
 		return fmt.Errorf("failed to parse group versions: (%v)", err)
 	}
@@ -51,7 +51,7 @@ func OpenAPIGen() error {
 	log.Infof("Running OpenAPI code-generation for Custom Resource group versions: [%v]\n", gvb.String())
 
 	apisPkg := filepath.Join(repoPkg, scaffold.ApisDir)
-	fqApis := createFQAPIs(apisPkg, gvMap)
+	fqApis := k8sutil.CreateFQAPIs(apisPkg, gvMap)
 	f := func(a string) error { return openAPIGen(a, fqApis) }
 	if err = generateWithHeaderFile(f); err != nil {
 		return err
