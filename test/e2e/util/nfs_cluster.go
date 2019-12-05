@@ -14,8 +14,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/discovery"
 
+	"github.com/storageos/cluster-operator/internal/pkg/discovery"
 	storageos "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 )
 
@@ -157,25 +157,10 @@ func NFSServerTest(t *testing.T, ctx *framework.TestCtx) {
 	time.Sleep(5 * time.Second)
 }
 
-// hasServiceMonitor checks is Prometheus Service Monitor CRD is registered in
+// hasServiceMonitor checks if Prometheus Service Monitor CRD is registered in
 // the cluster.
 func hasServiceMonitor() (bool, error) {
-	dc := discovery.NewDiscoveryClientForConfigOrDie(framework.Global.KubeConfig)
 	apiVersion := "monitoring.coreos.com/v1"
 	kind := "ServiceMonitor"
-
-	apiLists, err := dc.ServerResources()
-	if err != nil {
-		return false, err
-	}
-	for _, apiList := range apiLists {
-		if apiList.GroupVersion == apiVersion {
-			for _, r := range apiList.APIResources {
-				if r.Kind == kind {
-					return true, nil
-				}
-			}
-		}
-	}
-	return false, nil
+	return discovery.HasResource(framework.Global.KubeConfig, apiVersion, kind)
 }
