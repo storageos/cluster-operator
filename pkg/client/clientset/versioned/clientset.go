@@ -28,8 +28,6 @@ import (
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	StorageosV1() storageosv1.StorageosV1Interface
-	// Deprecated: please explicitly pick a version if possible.
-	Storageos() storageosv1.StorageosV1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
@@ -41,12 +39,6 @@ type Clientset struct {
 
 // StorageosV1 retrieves the StorageosV1Client
 func (c *Clientset) StorageosV1() storageosv1.StorageosV1Interface {
-	return c.storageosV1
-}
-
-// Deprecated: Storageos retrieves the default version of StorageosClient.
-// Please explicitly pick a version.
-func (c *Clientset) Storageos() storageosv1.StorageosV1Interface {
 	return c.storageosV1
 }
 

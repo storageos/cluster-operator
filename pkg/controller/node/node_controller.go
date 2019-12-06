@@ -7,6 +7,9 @@ import (
 	"strings"
 	"time"
 
+	storageosapi "github.com/storageos/go-api"
+	storageoserror "github.com/storageos/go-api/serror"
+	storageostypes "github.com/storageos/go-api/types"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -14,15 +17,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
-	storageosapi "github.com/storageos/go-api"
-	storageoserror "github.com/storageos/go-api/serror"
-	storageostypes "github.com/storageos/go-api/types"
 )
 
 var log = logf.Log.WithName("storageos.node")
@@ -199,7 +199,8 @@ func (r *ReconcileNode) syncLabels(name string, labels map[string]string) error 
 // findCurrentCluster finds the running cluster.
 func (r *ReconcileNode) findCurrentCluster() (*storageosv1.StorageOSCluster, error) {
 	clusterList := &storageosv1.StorageOSClusterList{}
-	if err := r.client.List(context.TODO(), &client.ListOptions{}, clusterList); err != nil {
+	listOpts := []client.ListOption{}
+	if err := r.client.List(context.TODO(), clusterList, listOpts...); err != nil {
 		return nil, fmt.Errorf("failed to list clusters: %v", err)
 	}
 

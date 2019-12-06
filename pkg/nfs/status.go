@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"reflect"
 
-	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 )
 
 const (
@@ -84,10 +85,11 @@ func (s *Deployment) getStatus() (*storageosv1.NFSServerStatus, error) {
 		status.RemoteTarget = svc.Spec.ClusterIP
 
 		// Get the NFS Server pods and check their status.
-		listOpts := &client.ListOptions{}
-		listOpts.SetLabelSelector(fmt.Sprintf("%s=%s", nfsServerPodLabelSelector, s.nfsServer.Name))
+		listOpts := []client.ListOption{
+			client.MatchingLabels{nfsServerPodLabelSelector: s.nfsServer.Name},
+		}
 		podList := &corev1.PodList{}
-		if err := s.client.List(context.Background(), listOpts, podList); err != nil {
+		if err := s.client.List(context.Background(), podList, listOpts...); err != nil {
 			return status, err
 		}
 

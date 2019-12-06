@@ -16,9 +16,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/storageos/cluster-operator/internal/pkg/storageoscluster"
@@ -53,7 +53,7 @@ func newReconciler(mgr manager.Manager, k8sVersion string) reconcile.Reconciler 
 		client:     mgr.GetClient(),
 		scheme:     mgr.GetScheme(),
 		k8sVersion: k8sVersion,
-		recorder:   mgr.GetRecorder("storageoscluster-operator"),
+		recorder:   mgr.GetEventRecorderFor("storageoscluster-operator"),
 	}
 }
 
@@ -395,7 +395,8 @@ func updateInt(valA *int, valB int) bool {
 func (r *ReconcileStorageOSCluster) generateJoinToken(m *storageosv1.StorageOSCluster) (string, error) {
 	// Get a new list of all the nodes.
 	nodeList := storageos.NodeList()
-	if err := r.client.List(context.Background(), &client.ListOptions{}, nodeList); err != nil {
+	listOpts := []client.ListOption{}
+	if err := r.client.List(context.Background(), nodeList, listOpts...); err != nil {
 		return "", fmt.Errorf("failed to list nodes: %v", err)
 	}
 

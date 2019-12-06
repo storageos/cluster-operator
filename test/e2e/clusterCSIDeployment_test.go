@@ -63,7 +63,7 @@ func TestClusterCSIDeployment(t *testing.T) {
 
 	testutil.ClusterStatusCheck(t, testStorageOS.Status, 1)
 
-	daemonset, err := f.KubeClient.AppsV1().DaemonSets(resourceNS).Get("storageos-daemonset", metav1.GetOptions{IncludeUninitialized: true})
+	daemonset, err := f.KubeClient.AppsV1().DaemonSets(resourceNS).Get("storageos-daemonset", metav1.GetOptions{})
 	if err != nil {
 		t.Fatalf("failed to get storageos-daemonset: %v", err)
 	}

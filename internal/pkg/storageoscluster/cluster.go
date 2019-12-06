@@ -5,8 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 )
 
 // ErrNoCluster is the error when there's no running StorageOS cluster found.
@@ -18,7 +19,8 @@ func GetCurrentStorageOSCluster(kclient client.Client) (*storageosv1.StorageOSCl
 
 	// Get a list of all the StorageOS clusters.
 	clusterList := &storageosv1.StorageOSClusterList{}
-	if err := kclient.List(context.Background(), &client.ListOptions{}, clusterList); err != nil {
+	listOpts := []client.ListOption{}
+	if err := kclient.List(context.Background(), clusterList, listOpts...); err != nil {
 		return nil, fmt.Errorf("failed to list storageos clusters: %v", err)
 	}
 
