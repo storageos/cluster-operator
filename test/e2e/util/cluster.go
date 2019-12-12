@@ -336,9 +336,27 @@ func featureSupportAvailable(minVersion semver.Version) (bool, error) {
 // CSIDriverResourceTest checks if the CSIDriver resource is created. In k8s
 // 1.14+, CSIDriver is created as part of the cluster deployment.
 func CSIDriverResourceTest(t *testing.T, driverName string) {
+	// Minimum version of k8s required to run this test.
+	minVersion := semver.Version{
+		Major: 1, Minor: 14, Patch: 0,
+	}
+
+	// Check the k8s version before running this test. CSIDriver built-in
+	// resource does not exists in openshift 3.11 (k8s 1.11).
+	featureSupported, err := featureSupportAvailable(minVersion)
+	if err != nil {
+		t.Errorf("failed to check platform support for CSIDriver test: %v", err)
+		return
+	}
+
+	// Skip if the feature is not supported.
+	if !featureSupported {
+		return
+	}
+
 	f := framework.Global
 	csiDriver := &storagev1beta1.CSIDriver{}
-	err := f.Client.Get(goctx.TODO(), types.NamespacedName{Name: driverName}, csiDriver)
+	err = f.Client.Get(goctx.TODO(), types.NamespacedName{Name: driverName}, csiDriver)
 	if err != nil {
 		t.Errorf("CSIDriver not found: %v", err)
 	}
