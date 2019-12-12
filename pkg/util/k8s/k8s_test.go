@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/storageos/cluster-operator/pkg/util/k8s/resource"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
@@ -14,6 +13,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/storageos/cluster-operator/pkg/util/k8s/resource"
 )
 
 // TestResourceManager tests ResourceManager and the resources in the
@@ -173,6 +174,18 @@ func TestResourceManager(t *testing.T) {
 			},
 			wantResource: &corev1.PersistentVolumeClaim{},
 		},
+		// Testing this results in invalid kind even when a custom scheme is
+		// passed to the fake client. The default client-go scheme doesn't
+		// include CSIDriver.
+		// {
+		// 	name: resource.CSIDriverKind,
+		// 	create: func(rm *ResourceManager, nsName types.NamespacedName) error {
+		// 		return rm.CSIDriver(nsName.Name, nil, &storagev1beta1.CSIDriverSpec{}).Create()
+		// 	},
+		// 	delete: func(rm *ResourceManager, nsName types.NamespacedName) error {
+		// 		return rm.CSIDriver(nsName.Name, nil, nil).Delete()
+		// 	},
+		// },
 	}
 
 	for _, tc := range testcases {
