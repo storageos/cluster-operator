@@ -45,12 +45,13 @@ const (
 	DefaultNodeContainerImage                 = "storageos/node:1.5.1"
 	DefaultInitContainerImage                 = "storageos/init:1.0.0"
 	CSIv1ClusterDriverRegistrarContainerImage = "quay.io/k8scsi/csi-cluster-driver-registrar:v1.0.1"
-	CSIv1NodeDriverRegistrarContainerImage    = "quay.io/k8scsi/csi-node-driver-registrar:v1.0.1"
-	CSIv1ExternalProvisionerContainerImage    = "storageos/csi-provisioner:v1.0.1"
-	CSIv1ExternalAttacherContainerImage       = "quay.io/k8scsi/csi-attacher:v1.0.1"
-	CSIv1LivenessProbeContainerImage          = "quay.io/k8scsi/livenessprobe:v1.0.1"
+	CSIv1NodeDriverRegistrarContainerImage    = "quay.io/k8scsi/csi-node-driver-registrar:v1.2.0"
+	CSIv1ExternalProvisionerContainerImage    = "storageos/csi-provisioner:v1.4.0"
+	CSIv1ExternalAttacherContainerImage       = "quay.io/k8scsi/csi-attacher:v1.2.1"
+	CSIv1ExternalAttacherv2ContainerImage     = "quay.io/k8scsi/csi-attacher:v2.0.0"
+	CSIv1LivenessProbeContainerImage          = "quay.io/k8scsi/livenessprobe:v1.1.0"
 	CSIv0DriverRegistrarContainerImage        = "quay.io/k8scsi/driver-registrar:v0.4.2"
-	CSIv0ExternalProvisionerContainerImage    = "storageos/csi-provisioner:v0.4.2"
+	CSIv0ExternalProvisionerContainerImage    = "storageos/csi-provisioner:v0.4.3"
 	CSIv0ExternalAttacherContainerImage       = "quay.io/k8scsi/csi-attacher:v0.4.2"
 	DefaultNFSContainerImage                  = "storageos/nfs:1.0.0"
 
@@ -331,11 +332,16 @@ func (s StorageOSClusterSpec) GetCSIExternalProvisionerImage(csiv1 bool) string 
 }
 
 // GetCSIExternalAttacherImage returns CSI external attacher container image.
-func (s StorageOSClusterSpec) GetCSIExternalAttacherImage(csiv1 bool) string {
+// CSI v0, CSI v1 on k8s 1.13 and CSI v1 on k8s 1.14+ require different versions
+// of external attacher.
+func (s StorageOSClusterSpec) GetCSIExternalAttacherImage(csiv1 bool, attacherv2Supported bool) string {
 	if s.Images.CSIExternalAttacherContainer != "" {
 		return s.Images.CSIExternalAttacherContainer
 	}
 	if csiv1 {
+		if attacherv2Supported {
+			return CSIv1ExternalAttacherv2ContainerImage
+		}
 		return CSIv1ExternalAttacherContainerImage
 	}
 	return CSIv0ExternalAttacherContainerImage

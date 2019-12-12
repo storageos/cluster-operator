@@ -12,6 +12,7 @@ import (
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
 	corev1 "k8s.io/api/core/v1"
+	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -330,4 +331,15 @@ func featureSupportAvailable(minVersion semver.Version) (bool, error) {
 
 	// Test is not supported in this version of k8s. Skip the test.
 	return false, nil
+}
+
+// CSIDriverResourceTest checks if the CSIDriver resource is created. In k8s
+// 1.14+, CSIDriver is created as part of the cluster deployment.
+func CSIDriverResourceTest(t *testing.T, driverName string) {
+	f := framework.Global
+	csiDriver := &storagev1beta1.CSIDriver{}
+	err := f.Client.Get(goctx.TODO(), types.NamespacedName{Name: driverName}, csiDriver)
+	if err != nil {
+		t.Errorf("CSIDriver not found: %v", err)
+	}
 }

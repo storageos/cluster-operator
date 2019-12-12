@@ -159,7 +159,7 @@ func (s *Deployment) createClusterRoleForProvisioner() error {
 		{
 			APIGroups: []string{""},
 			Resources: []string{"persistentvolumes"},
-			Verbs:     []string{"list", "watch", "create", "delete"},
+			Verbs:     []string{"get", "list", "watch", "create", "delete"},
 		},
 		{
 			APIGroups: []string{""},
@@ -168,7 +168,7 @@ func (s *Deployment) createClusterRoleForProvisioner() error {
 		},
 		{
 			APIGroups: []string{"storage.k8s.io"},
-			Resources: []string{"storageclasses"},
+			Resources: []string{"storageclasses", "csinodes"},
 			Verbs:     []string{"list", "watch", "get"},
 		},
 		{
@@ -181,6 +181,11 @@ func (s *Deployment) createClusterRoleForProvisioner() error {
 			Resources: []string{"events"},
 			Verbs:     []string{"list", "watch", "create", "update", "patch"},
 		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"nodes"},
+			Verbs:     []string{"list", "watch", "get"},
+		},
 	}
 	return s.k8sResourceManager.ClusterRole(CSIProvisionerClusterRoleName, nil, rules).Create()
 }
@@ -190,7 +195,7 @@ func (s *Deployment) createClusterRoleForAttacher() error {
 		{
 			APIGroups: []string{""},
 			Resources: []string{"persistentvolumes"},
-			Verbs:     []string{"get", "list", "watch", "update"},
+			Verbs:     []string{"get", "list", "watch", "update", "patch"},
 		},
 		{
 			APIGroups: []string{""},
@@ -205,11 +210,11 @@ func (s *Deployment) createClusterRoleForAttacher() error {
 		{
 			APIGroups: []string{"storage.k8s.io"},
 			Resources: []string{"volumeattachments"},
-			Verbs:     []string{"get", "list", "watch", "update"},
+			Verbs:     []string{"get", "list", "watch", "update", "patch"},
 		},
 		{
 			APIGroups: []string{"storage.k8s.io"},
-			Resources: []string{"csinodeinfos"},
+			Resources: []string{"csinodeinfos", "csinodes"},
 			Verbs:     []string{"get", "list", "watch"},
 		},
 		{

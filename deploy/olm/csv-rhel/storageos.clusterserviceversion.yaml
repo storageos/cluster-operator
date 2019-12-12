@@ -287,6 +287,7 @@ spec:
           - volumeattachments
           - csinodeinfos
           - csinodes
+          - csidrivers
           verbs:
           - create
           - delete
@@ -294,6 +295,7 @@ spec:
           - list
           - get
           - update
+          - patch
         - apiGroups:
           - apiextensions.k8s.io
           resources:

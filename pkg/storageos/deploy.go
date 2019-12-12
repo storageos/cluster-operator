@@ -151,6 +151,17 @@ func (s *Deployment) Deploy() error {
 	}
 
 	if s.stos.Spec.CSI.Enable {
+		// Create CSIDriver if supported.
+		supportsCSIDriver, err := HasCSIDriverKind(s.discoveryClient)
+		if err != nil {
+			return err
+		}
+		if supportsCSIDriver {
+			if err := s.createCSIDriver(); err != nil {
+				return err
+			}
+		}
+
 		// Create CSI exclusive resources.
 		if err := s.createCSISecrets(); err != nil {
 			return err
@@ -273,6 +284,14 @@ func CSIV1Supported(version string) bool {
 	return versionSupported(version, "1.13.0")
 }
 
+// CSIExternalAttacherV2Supported returns true for k8s 1.14+
+func CSIExternalAttacherV2Supported(version string) bool {
+	return versionSupported(version, "1.14.0")
+}
+
+// versionSupported takes two versions, current version (haveVersion) and a
+// minimum requirement version (wantVersion) and checks if the current version
+// is supported by comparing it with the minimum requirement.
 func versionSupported(haveVersion, wantVersion string) bool {
 	supportedVersion, err := semver.Parse(wantVersion)
 	if err != nil {

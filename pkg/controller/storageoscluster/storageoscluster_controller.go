@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -50,10 +51,11 @@ func Add(mgr manager.Manager) error {
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager, k8sVersion string) reconcile.Reconciler {
 	return &ReconcileStorageOSCluster{
-		client:     mgr.GetClient(),
-		scheme:     mgr.GetScheme(),
-		k8sVersion: k8sVersion,
-		recorder:   mgr.GetEventRecorderFor("storageoscluster-operator"),
+		client:          mgr.GetClient(),
+		scheme:          mgr.GetScheme(),
+		k8sVersion:      k8sVersion,
+		recorder:        mgr.GetEventRecorderFor("storageoscluster-operator"),
+		discoveryClient: discovery.NewDiscoveryClientForConfigOrDie(mgr.GetConfig()),
 	}
 }
 
@@ -80,11 +82,12 @@ var _ reconcile.Reconciler = &ReconcileStorageOSCluster{}
 type ReconcileStorageOSCluster struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client         client.Client
-	scheme         *runtime.Scheme
-	k8sVersion     string
-	recorder       record.EventRecorder
-	currentCluster *StorageOSCluster
+	client          client.Client
+	scheme          *runtime.Scheme
+	k8sVersion      string
+	recorder        record.EventRecorder
+	currentCluster  *StorageOSCluster
+	discoveryClient discovery.DiscoveryInterface
 }
 
 // UpdateCurrentCluster checks if there are any existing cluster and updates the
@@ -330,7 +333,7 @@ func (r *ReconcileStorageOSCluster) updateSpec(m *storageosv1.StorageOSCluster) 
 			properties[&m.Spec.Images.CSILivenessProbeContainer] = m.Spec.GetCSILivenessProbeImage()
 		}
 		properties[&m.Spec.Images.CSIExternalProvisionerContainer] = m.Spec.GetCSIExternalProvisionerImage(storageos.CSIV1Supported(r.k8sVersion))
-		properties[&m.Spec.Images.CSIExternalAttacherContainer] = m.Spec.GetCSIExternalAttacherImage(storageos.CSIV1Supported(r.k8sVersion))
+		properties[&m.Spec.Images.CSIExternalAttacherContainer] = m.Spec.GetCSIExternalAttacherImage(storageos.CSIV1Supported(r.k8sVersion), storageos.CSIExternalAttacherV2Supported(r.k8sVersion))
 		properties[&m.Spec.CSI.DeploymentStrategy] = m.Spec.GetCSIDeploymentStrategy()
 	}
 

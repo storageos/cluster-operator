@@ -896,6 +896,7 @@ data:
                 - volumeattachments
                 - csinodeinfos
                 - csinodes
+                - csidrivers
                 verbs:
                 - create
                 - delete
@@ -903,6 +904,7 @@ data:
                 - list
                 - get
                 - update
+                - patch
               - apiGroups:
                 - apiextensions.k8s.io
                 resources:

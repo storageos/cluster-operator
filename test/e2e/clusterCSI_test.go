@@ -84,5 +84,8 @@ func TestClusterCSI(t *testing.T) {
 		}
 	}
 
+	// Test CSIDriver resource existence.
+	testutil.CSIDriverResourceTest(t, deploy.CSIProvisionerName)
+
 	testutil.NodeLabelSyncTest(t, f.KubeClient)
 }

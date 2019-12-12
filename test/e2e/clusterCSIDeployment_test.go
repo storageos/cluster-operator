@@ -8,12 +8,13 @@ import (
 	"testing"
 
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
-	storageos "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
-	deploy "github.com/storageos/cluster-operator/pkg/storageos"
-	testutil "github.com/storageos/cluster-operator/test/e2e/util"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+
+	storageos "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
+	deploy "github.com/storageos/cluster-operator/pkg/storageos"
+	testutil "github.com/storageos/cluster-operator/test/e2e/util"
 )
 
 // TestClusterCSIDeployment test the CSI helper deployment as Deployment.
@@ -88,6 +89,9 @@ func TestClusterCSIDeployment(t *testing.T) {
 
 	// Test StorageOSCluster CR attributes.
 	testutil.StorageOSClusterCRAttributesTest(t, testutil.TestClusterCRName, namespace)
+
+	// Test CSIDriver resource existence.
+	testutil.CSIDriverResourceTest(t, deploy.CSIProvisionerName)
 
 	// Test NFSServer deployment.
 	testutil.NFSServerTest(t, ctx)
