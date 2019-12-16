@@ -189,7 +189,7 @@ func checkPods(client kubernetes.Interface, cr *storageosv1.Job, recorder record
 
 	pods, err := client.CoreV1().Pods(cr.GetNamespace()).List(podListOpts)
 	if err != nil {
-		log.Error(err, "Failed to get pods")
+		log.Info("Failed to get pods", "error", err)
 		return false, err
 	}
 
