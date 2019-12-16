@@ -2,17 +2,12 @@ package discovery
 
 import (
 	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/rest"
 )
 
 // HasResource takes an api version and a kind of a resource and checks if the resource
 // is supported by the k8s api server.
-func HasResource(kubeconfig *rest.Config, apiVersion, kind string) (bool, error) {
-	dc, err := discovery.NewDiscoveryClientForConfig(kubeconfig)
-	if err != nil {
-		return false, err
-	}
-	apiLists, err := dc.ServerResources()
+func HasResource(dc discovery.DiscoveryInterface, apiVersion, kind string) (bool, error) {
+	_, apiLists, err := dc.ServerGroupsAndResources()
 	if err != nil {
 		return false, err
 	}

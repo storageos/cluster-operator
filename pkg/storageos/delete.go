@@ -60,6 +60,17 @@ func (s *Deployment) Delete() error {
 	}
 
 	if s.stos.Spec.CSI.Enable {
+		// Delete CSIDriver if supported.
+		supportsCSIDriver, err := HasCSIDriverKind(s.discoveryClient)
+		if err != nil {
+			return err
+		}
+		if supportsCSIDriver {
+			if err := s.deleteCSIDriver(); err != nil {
+				return err
+			}
+		}
+
 		if err := s.deleteCSIHelper(); err != nil {
 			return err
 		}

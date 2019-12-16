@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	kdiscovery "k8s.io/client-go/discovery"
 
 	"github.com/storageos/cluster-operator/internal/pkg/discovery"
 	storageos "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
@@ -162,5 +163,10 @@ func NFSServerTest(t *testing.T, ctx *framework.TestCtx) {
 func hasServiceMonitor() (bool, error) {
 	apiVersion := "monitoring.coreos.com/v1"
 	kind := "ServiceMonitor"
-	return discovery.HasResource(framework.Global.KubeConfig, apiVersion, kind)
+
+	dc, err := kdiscovery.NewDiscoveryClientForConfig(framework.Global.KubeConfig)
+	if err != nil {
+		return false, err
+	}
+	return discovery.HasResource(dc, apiVersion, kind)
 }

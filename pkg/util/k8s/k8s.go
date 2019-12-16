@@ -7,6 +7,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/storageos/cluster-operator/pkg/util/k8s/resource"
@@ -125,6 +126,11 @@ func (r ResourceManager) StorageClass(name string, labels map[string]string, pro
 // PersistentVolumeClaim returns a PersistentVolumeClaim object.
 func (r ResourceManager) PersistentVolumeClaim(name, namespace string, labels map[string]string, spec *corev1.PersistentVolumeClaimSpec) *resource.PVC {
 	return resource.NewPVC(r.client, name, namespace, r.combineLabels(labels), spec)
+}
+
+// CSIDriver returns a CSIDriver object.
+func (r ResourceManager) CSIDriver(name string, labels map[string]string, spec *storagev1beta1.CSIDriverSpec) *resource.CSIDriver {
+	return resource.NewCSIDriver(r.client, name, r.combineLabels(labels), spec)
 }
 
 func (r ResourceManager) combineLabels(labels map[string]string) map[string]string {
