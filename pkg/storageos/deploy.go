@@ -295,13 +295,13 @@ func CSIExternalAttacherV2Supported(version string) bool {
 func versionSupported(haveVersion, wantVersion string) bool {
 	supportedVersion, err := semver.Parse(wantVersion)
 	if err != nil {
-		log.Error(err, "Failed to parse version", "want", wantVersion)
+		log.Info("Failed to parse version", "error", err, "want", wantVersion)
 		return false
 	}
 
 	currentVersion, err := semver.Parse(haveVersion)
 	if err != nil {
-		log.Error(err, "Failed to parse version", "have", haveVersion)
+		log.Info("Failed to parse version", "error", err, "have", haveVersion)
 		return false
 	}
 

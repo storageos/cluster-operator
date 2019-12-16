@@ -94,13 +94,13 @@ func (d *Deployment) Deploy() error {
 	}
 
 	if err := d.updateStatus(status); err != nil {
-		log.Error(err, "Failed to update status")
+		log.Info("Failed to update status", "error", err)
 	}
 
 	if err := d.createServiceMonitor(); err != nil {
 		// Ignore if the ServiceMonitor already exists.
 		if !errors.IsAlreadyExists(err) {
-			log.Error(err, "Failed to create service monitor for metrics")
+			log.Info("Failed to create service monitor for metrics", "error", err)
 		}
 	}
 

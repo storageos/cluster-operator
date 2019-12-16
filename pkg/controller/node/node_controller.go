@@ -101,7 +101,7 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 			return reconcile.Result{}, nil
 		}
 		// Requeue the request in order to retry getting the cluster.
-		log.Error(err, "Failed to find current cluster")
+		log.Info("Failed to find current cluster", "error", err)
 		return reconcileResult, err
 	}
 
@@ -114,7 +114,7 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 		r.stosClient.clusterUID != cluster.GetUID() {
 
 		if err := r.setClientForCluster(cluster); err != nil {
-			log.Error(err, "Failed to configure api client")
+			log.Info("Failed to configure api client", "error", err)
 			return reconcileResult, err
 		}
 	}
