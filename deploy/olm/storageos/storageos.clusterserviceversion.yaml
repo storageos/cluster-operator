@@ -354,6 +354,14 @@ spec:
           - events
           verbs:
           - create
+        - apiGroups:
+          - coordination.k8s.io
+          resources:
+          - leases
+          verbs:
+          - get
+          - create
+          - update
       deployments:
       - name: storageos-operator
         spec:

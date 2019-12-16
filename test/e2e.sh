@@ -3,8 +3,8 @@
 set -Eeuxo pipefail
 
 readonly REPO_ROOT="${REPO_ROOT:-$(git rev-parse --show-toplevel)}"
-readonly K8S_LATEST="v1.16.3"
-readonly KIND_LINK="https://github.com/kubernetes-sigs/kind/releases/download/v0.6.0/kind-linux-amd64"
+readonly K8S_LATEST="v1.17.0"
+readonly KIND_LINK="https://github.com/kubernetes-sigs/kind/releases/download/v0.6.1/kind-linux-amd64"
 
 enable_lio() {
     echo "Enable LIO"
