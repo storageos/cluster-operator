@@ -79,6 +79,10 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 	reconcilePeriod := 5 * time.Second
 	reconcileResult := reconcile.Result{RequeueAfter: reconcilePeriod}
 
+	// Return this for a immediate retry of the reconciliation loop with the
+	// same request object.
+	immediateRetryResult := reconcile.Result{Requeue: true}
+
 	// Fetch the Node instance
 	instance := &corev1.Node{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
@@ -119,8 +123,20 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 		}
 	}
 
+	// Check if the node is part of StorageOS cluster.
+	node, err := r.stosClient.Node(instance.Name)
+	if err != nil {
+		if err == storageosapi.ErrNoSuchNode {
+			// Not a StorageOS node, skip.
+			return reconcile.Result{}, nil
+		}
+		// Retry immediately if failed to determine if the node is part of the
+		// cluster.
+		return immediateRetryResult, err
+	}
+
 	// Sync labels to StorageOS node object.
-	if err = r.syncLabels(instance.Name, instance.Labels); err != nil {
+	if err = r.syncLabels(node, instance.Labels); err != nil {
 		if storageoserror.ErrorKind(err) == storageoserror.APIUncontactable {
 			log.Info("Waiting for StorageOS API to become ready")
 			return reconcileResult, nil
@@ -131,23 +147,17 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 		return reconcileResult, nil
 	}
 
-	return reconcileResult, nil
+	return reconcile.Result{}, nil
 }
 
 // SyncNodeLabels applies the Kubernetes node labels to StorageOS node objects.
-func (r *ReconcileNode) syncLabels(name string, labels map[string]string) error {
-	if len(name) == 0 || len(labels) == 0 {
+func (r *ReconcileNode) syncLabels(node *storageostypes.Node, labels map[string]string) error {
+	if len(labels) == 0 {
 		return nil
 	}
 
 	if r.stosClient == nil {
 		return ErrNoAPIClient
-	}
-
-	// Get StorageOS node
-	node, err := r.stosClient.Node(name)
-	if err != nil {
-		return err
 	}
 
 	// Initialize the map if empty.
@@ -192,7 +202,7 @@ func (r *ReconcileNode) syncLabels(name string, labels map[string]string) error 
 		Context:     ctx,
 	}
 
-	_, err = r.stosClient.NodeUpdate(opts)
+	_, err := r.stosClient.NodeUpdate(opts)
 	return err
 }
 
