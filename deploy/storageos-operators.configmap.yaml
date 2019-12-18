@@ -65,6 +65,8 @@ data:
                         type: string
                       enable:
                         type: boolean
+                      enableControllerExpandCreds:
+                        type: boolean
                       enableControllerPublishCreds:
                         type: boolean
                       enableNodePublishCreds:
@@ -137,6 +139,8 @@ data:
                       csiExternalAttacherContainer:
                         type: string
                       csiExternalProvisionerContainer:
+                        type: string
+                      csiExternalResizerContainer:
                         type: string
                       csiLivenessProbeContainer:
                         type: string
@@ -868,6 +872,7 @@ data:
                 - services
                 - services/finalizers
                 - persistentvolumeclaims
+                - persistentvolumeclaims/status
                 - persistentvolumes
                 - configmaps
                 - replicationcontrollers
@@ -1009,6 +1014,8 @@ data:
                       - name: RELATED_IMAGE_CSIV1_EXTERNAL_ATTACHER
                         value: ""
                       - name: RELATED_IMAGE_CSIV1_EXTERNAL_ATTACHER_V2
+                        value: ""
+                      - name: RELATED_IMAGE_CSIV1_EXTERNAL_RESIZER
                         value: ""
                       - name: RELATED_IMAGE_CSIV1_LIVENESS_PROBE
                         value: ""

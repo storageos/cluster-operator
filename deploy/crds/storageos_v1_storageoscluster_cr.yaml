@@ -19,6 +19,7 @@ spec:
   #   csiClusterDriverRegistrarContainer:
   #   csiExternalProvisionerContainer:
   #   csiExternalAttacherContainer:
+  #   csiExternalResizerContainer:
   #   csiLivenessProbeContainer:
   #   hyperkubeContainer:
   #   nfsContainer:
@@ -33,6 +34,7 @@ spec:
   #   enableProvisionCreds: false
   #   enableControllerPublishCreds: false
   #   enableNodePublishCreds: false
+  #   enableControllerExpandCreds: false
   #   kubeletRegistrationPath: /var/lib/kubelet/plugins/storageos/csi.sock
   #   driverRegisterationMode: node-register
   #   DriverRequiresAttachment: "true"

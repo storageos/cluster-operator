@@ -47,6 +47,8 @@ spec:
               value: ""
             - name: RELATED_IMAGE_CSIV1_EXTERNAL_ATTACHER_V2
               value: ""
+            - name: RELATED_IMAGE_CSIV1_EXTERNAL_RESIZER
+              value: ""
             - name: RELATED_IMAGE_CSIV1_LIVENESS_PROBE
               value: ""
             - name: RELATED_IMAGE_CSIV0_DRIVER_REGISTRAR

@@ -328,12 +328,17 @@ func (r *ReconcileStorageOSCluster) updateSpec(m *storageosv1.StorageOSCluster) 
 
 	if m.Spec.CSI.Enable {
 		properties[&m.Spec.Images.CSINodeDriverRegistrarContainer] = m.Spec.GetCSINodeDriverRegistrarImage(storageos.CSIV1Supported(r.k8sVersion))
-		if storageos.CSIV1Supported((r.k8sVersion)) {
+		if storageos.CSIV1Supported(r.k8sVersion) {
 			properties[&m.Spec.Images.CSIClusterDriverRegistrarContainer] = m.Spec.GetCSIClusterDriverRegistrarImage()
 			properties[&m.Spec.Images.CSILivenessProbeContainer] = m.Spec.GetCSILivenessProbeImage()
 		}
 		properties[&m.Spec.Images.CSIExternalProvisionerContainer] = m.Spec.GetCSIExternalProvisionerImage(storageos.CSIV1Supported(r.k8sVersion), storageos.NodeV2Image(m.Spec.GetNodeContainerImage()))
 		properties[&m.Spec.Images.CSIExternalAttacherContainer] = m.Spec.GetCSIExternalAttacherImage(storageos.CSIV1Supported(r.k8sVersion), storageos.CSIExternalAttacherV2Supported(r.k8sVersion))
+		// Add external resizer image if storageos v2 and supported k8s
+		// version.
+		if storageos.CSIExternalResizerSupported(r.k8sVersion) && storageos.NodeV2Image(m.Spec.GetNodeContainerImage()) {
+			properties[&m.Spec.Images.CSIExternalResizerContainer] = m.Spec.GetCSIExternalResizerImage()
+		}
 		properties[&m.Spec.CSI.DeploymentStrategy] = m.Spec.GetCSIDeploymentStrategy()
 	}
 

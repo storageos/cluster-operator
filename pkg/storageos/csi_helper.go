@@ -156,9 +156,39 @@ func (s Deployment) csiHelperContainers() ([]corev1.Container, error) {
 		},
 	}
 
-	// v2 provisioner requires additional startup flag.
 	if s.nodev2 {
+		// v2 provisioner requires additional startup flag.
 		containers[0].Args = append(containers[0].Args, "--extra-create-metadata")
+
+		// v2 supports volume resize.
+		// Add CSI external resizer if it's supported by the version of k8s.
+		if CSIExternalResizerSupported(s.k8sVersion) {
+			resizer := corev1.Container{
+				Image:           s.stos.Spec.GetCSIExternalResizerImage(),
+				Name:            "csi-external-resizer",
+				ImagePullPolicy: corev1.PullIfNotPresent,
+				Args: []string{
+					"--v=5",
+					"--csi-address=$(ADDRESS)",
+				},
+				Env: []corev1.EnvVar{
+					{
+						Name:  addressEnvVar,
+						Value: "/csi/csi.sock",
+					},
+				},
+				SecurityContext: &corev1.SecurityContext{
+					Privileged: &privileged,
+				},
+				VolumeMounts: []corev1.VolumeMount{
+					{
+						Name:      "plugin-dir",
+						MountPath: "/csi",
+					},
+				},
+			}
+			containers = append(containers, resizer)
+		}
 	}
 
 	// CSI v1 requires running CSI driver registrar to register the driver along

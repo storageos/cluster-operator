@@ -31,6 +31,7 @@ const (
 	csiProvisionerSecretName       = "csi-provisioner-secret"
 	csiControllerPublishSecretName = "csi-controller-publish-secret"
 	csiNodePublishSecretName       = "csi-node-publish-secret"
+	csiControllerExpandSecretName  = "csi-controller-expand-secret"
 
 	appName         = "storageos"
 	daemonsetKind   = "daemonset"
@@ -58,6 +59,8 @@ const (
 	csiControllerPublishPasswordKey          = "csiControllerPublishPassword"
 	csiNodePublishUsernameKey                = "csiNodePublishUsername"
 	csiNodePublishPasswordKey                = "csiNodePublishPassword"
+	csiControllerExpandUsernameKey           = "csiControllerExpandUsername"
+	csiControllerExpandPasswordKey           = "csiControllerExpandPassword"
 	fsType                                   = "fsType"
 	csiV0ProvisionerSecretNameKey            = "csiProvisionerSecretName"
 	csiV0ProvisionerSecretNamespaceKey       = "csiProvisionerSecretNamespace"
@@ -72,6 +75,8 @@ const (
 	csiV1ControllerPublishSecretNamespaceKey = csiParameterPrefix + "controller-publish-secret-namespace"
 	csiV1NodePublishSecretNameKey            = csiParameterPrefix + "node-publish-secret-name"
 	csiV1NodePublishSecretNamespaceKey       = csiParameterPrefix + "node-publish-secret-namespace"
+	csiV1ControllerExpandSecretNameKey       = csiParameterPrefix + "controller-expand-secret-name"
+	csiV1ControllerExpandSecretnamespaceKey  = csiParameterPrefix + "controller-expand-secret-namespace"
 	tlsCertKey                               = "tls.crt"
 	tlsKeyKey                                = "tls.key"
 	credUsernameKey                          = "username"
@@ -199,11 +204,19 @@ func (s *Deployment) Deploy() error {
 			return err
 		}
 
+		if err := s.createClusterRoleForResizer(); err != nil {
+			return err
+		}
+
 		if err := s.createClusterRoleBindingForProvisioner(); err != nil {
 			return err
 		}
 
 		if err := s.createClusterRoleBindingForAttacher(); err != nil {
+			return err
+		}
+
+		if err := s.createClusterRoleBindingForResizer(); err != nil {
 			return err
 		}
 
@@ -320,9 +333,14 @@ func CSIV1Supported(version string) bool {
 	return versionSupported(version, "1.13.0")
 }
 
-// CSIExternalAttacherV2Supported returns true for k8s 1.14+
+// CSIExternalAttacherV2Supported returns true for k8s 1.14+.
 func CSIExternalAttacherV2Supported(version string) bool {
 	return versionSupported(version, "1.14.0")
+}
+
+// CSIExternalResizerSupported returns true for k8s 1.16+.
+func CSIExternalResizerSupported(version string) bool {
+	return versionSupported(version, "1.16.0")
 }
 
 // NodeV2Image returns true if the image tag starts with "2." "v2", or "c2".

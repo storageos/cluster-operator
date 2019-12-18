@@ -54,9 +54,12 @@ func (s StorageClass) Delete() error {
 
 // Create creates a StorageClass resource.
 func (s StorageClass) Create() error {
+	// TODO: Export volume expansion option.
+	allowVolumeExpansion := true
 	sc := getStorageClass(s.Name, s.labels)
 	sc.Provisioner = s.provisioner
 	sc.Parameters = s.params
+	sc.AllowVolumeExpansion = &allowVolumeExpansion
 	return CreateOrUpdate(s.client, sc)
 }
 
