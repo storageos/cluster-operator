@@ -81,12 +81,12 @@ metadata.annotations.alm-examples: |-
       "kind": "StorageOSCluster",
       "metadata": {
         "name": "example-storageos",
-        "namespace": "default"
+        "namespace": "openshift-operators"
       },
       "spec": {
         "namespace": "kube-system",
         "secretRefName": "storageos-api",
-        "secretRefNamespace": "default",
+        "secretRefNamespace": "openshift-operators",
         "k8sDistro": "openshift",
         "csi": {
           "enable": true,
