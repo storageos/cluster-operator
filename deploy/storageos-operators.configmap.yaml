@@ -146,6 +146,8 @@ data:
                         type: string
                       initContainer:
                         type: string
+                      kubeSchedulerContainer:
+                        type: string
                       nfsContainer:
                         type: string
                       nodeContainer:

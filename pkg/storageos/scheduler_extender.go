@@ -84,7 +84,7 @@ func (s Deployment) createSchedulerDeployment(replicas int32) error {
 func (s Deployment) schedulerContainers() []corev1.Container {
 	return []corev1.Container{
 		{
-			Image:           s.stos.Spec.GetHyperkubeImage(s.k8sVersion),
+			Image:           s.stos.Spec.GetKubeSchedulerImage(s.k8sVersion),
 			Name:            "storageos-scheduler",
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Args: []string{

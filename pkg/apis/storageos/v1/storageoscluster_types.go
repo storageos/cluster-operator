@@ -57,6 +57,8 @@ const (
 
 	DefaultHyperkubeContainerRegistry = "gcr.io/google_containers/hyperkube"
 
+	DefaultKubeSchedulerContainerRegistry = "gcr.io/google-containers/kube-scheduler"
+
 	DefaultPluginRegistrationPath = "/var/lib/kubelet/plugins_registry"
 	OldPluginRegistrationPath     = "/var/lib/kubelet/plugins"
 
@@ -366,6 +368,17 @@ func (s StorageOSClusterSpec) GetHyperkubeImage(k8sVersion string) string {
 	return fmt.Sprintf("%s:v%s", DefaultHyperkubeContainerRegistry, k8sVersion)
 }
 
+// GetKubeSchedulerImage returns kube-scheduler container image for a given k8s
+// version. If an image is set explicitly in the cluster configuration, that
+// image is returned.
+func (s StorageOSClusterSpec) GetKubeSchedulerImage(k8sVersion string) string {
+	if s.Images.KubeSchedulerContainer != "" {
+		return s.Images.KubeSchedulerContainer
+	}
+	// Add version prefix "v" in the tag.
+	return fmt.Sprintf("%s:v%s", DefaultKubeSchedulerContainerRegistry, k8sVersion)
+}
+
 // GetNFSServerImage returns NFS server container image used as the default
 // image in the cluster.
 func (s StorageOSClusterSpec) GetNFSServerImage() string {
@@ -529,6 +542,7 @@ type ContainerImages struct {
 	CSIExternalAttacherContainer       string `json:"csiExternalAttacherContainer,omitempty"`
 	CSILivenessProbeContainer          string `json:"csiLivenessProbeContainer,omitempty"`
 	HyperkubeContainer                 string `json:"hyperkubeContainer,omitempty"`
+	KubeSchedulerContainer             string `json:"kubeSchedulerContainer,omitempty"`
 	NFSContainer                       string `json:"nfsContainer,omitempty"`
 }
 
