@@ -6,26 +6,31 @@ import (
 	"strings"
 	"time"
 
-	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
-	"github.com/storageos/cluster-operator/pkg/storageos"
-	"github.com/storageos/cluster-operator/pkg/util/k8sutil"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	"github.com/storageos/cluster-operator/internal/pkg/storageoscluster"
+	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
+	"github.com/storageos/cluster-operator/pkg/storageos"
+	"github.com/storageos/cluster-operator/pkg/util/k8sutil"
 )
 
 var log = logf.Log.WithName("storageos.cluster")
+
+const clusterFinalizer = "finalizer.storageoscluster.storageos.com"
 
 // Add creates a new StorageOSCluster Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -46,10 +51,11 @@ func Add(mgr manager.Manager) error {
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager, k8sVersion string) reconcile.Reconciler {
 	return &ReconcileStorageOSCluster{
-		client:     mgr.GetClient(),
-		scheme:     mgr.GetScheme(),
-		k8sVersion: k8sVersion,
-		recorder:   mgr.GetRecorder("storageoscluster-operator"),
+		client:          mgr.GetClient(),
+		scheme:          mgr.GetScheme(),
+		k8sVersion:      k8sVersion,
+		recorder:        mgr.GetEventRecorderFor("storageoscluster-operator"),
+		discoveryClient: discovery.NewDiscoveryClientForConfigOrDie(mgr.GetConfig()),
 	}
 }
 
@@ -76,19 +82,30 @@ var _ reconcile.Reconciler = &ReconcileStorageOSCluster{}
 type ReconcileStorageOSCluster struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client         client.Client
-	scheme         *runtime.Scheme
-	k8sVersion     string
-	recorder       record.EventRecorder
-	currentCluster *StorageOSCluster
+	client          client.Client
+	scheme          *runtime.Scheme
+	k8sVersion      string
+	recorder        record.EventRecorder
+	currentCluster  *StorageOSCluster
+	discoveryClient discovery.DiscoveryInterface
 }
 
-// SetCurrentClusterIfNone checks if there's any existing current cluster and
-// sets a new current cluster if it wasn't set before.
-func (r *ReconcileStorageOSCluster) SetCurrentClusterIfNone(cluster *storageosv1.StorageOSCluster) {
-	if r.currentCluster == nil {
-		r.SetCurrentCluster(cluster)
+// UpdateCurrentCluster checks if there are any existing cluster and updates the
+// current cluster with the new cluster is no existing cluster is found.
+func (r *ReconcileStorageOSCluster) UpdateCurrentCluster(cluster *storageosv1.StorageOSCluster) error {
+	cc, err := storageoscluster.GetCurrentStorageOSCluster(r.client)
+	if err != nil {
+		if err == storageoscluster.ErrNoCluster {
+			// If there's no existing cluster, set the passed cluster as the
+			// current cluster.
+			r.SetCurrentCluster(cluster)
+		} else {
+			return fmt.Errorf("failed to get current cluster: %v", err)
+		}
+	} else {
+		r.SetCurrentCluster(cc)
 	}
+	return nil
 }
 
 // SetCurrentCluster sets the currently active cluster in the controller.
@@ -110,42 +127,90 @@ func (r *ReconcileStorageOSCluster) Reconcile(request reconcile.Request) (reconc
 	log := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	// log.Info("Reconciling Cluster")
 
+	// Return this for a retry of the reconciliation loop after a period of
+	// time.
 	reconcilePeriod := 15 * time.Second
 	reconcileResult := reconcile.Result{RequeueAfter: reconcilePeriod}
+
+	// Return this for a immediate retry of the reconciliation loop with the
+	// same request object.
+	immediateRetryResult := reconcile.Result{Requeue: true}
 
 	// Fetch the StorageOSCluster instance
 	instance := &storageosv1.StorageOSCluster{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// Cluster instance not found. Delete the resources and reset the
-			// current cluster.
-			if r.currentCluster != nil {
-				if err := r.currentCluster.DeleteDeployment(); err != nil {
-					// Error deleting - requeue the request.
-					return reconcileResult, err
-				}
-			}
-			r.ResetCurrentCluster()
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		return reconcileResult, err
+		return immediateRetryResult, err
 	}
 
 	// Set as the current cluster if there's no current cluster.
-	r.SetCurrentClusterIfNone(instance)
+	if err := r.UpdateCurrentCluster(instance); err != nil {
+		log.Info("Failed to update current cluster", "error", err)
+		// Failed to determine or set current cluster, requeue the request.
+		return immediateRetryResult, nil
+	}
+
+	// Check if the cluster instance is marked to be deleted, which is indicated
+	// by the deletion timestamp being set.
+	if instance.GetDeletionTimestamp() != nil {
+		if contains(instance.GetFinalizers(), clusterFinalizer) {
+			// Update status subresource.
+			instance.Status.Phase = storageosv1.ClusterPhaseTerminating
+			if err := r.client.Status().Update(context.TODO(), instance); err != nil {
+				log.Info("Failed to update cluster status", "error", err)
+				return immediateRetryResult, nil
+			}
+
+			// Finalize the cluster.
+			if err := r.finalizeCluster(instance); err != nil {
+				log.Info("Failed to finalize cluster", "error", err)
+				return immediateRetryResult, nil
+			}
+
+			// Remove finalizer and update cluster status.
+			instance.SetFinalizers(remove(instance.GetFinalizers(), clusterFinalizer))
+			if err := r.client.Update(context.TODO(), instance); err != nil {
+				log.Info("Failed to update cluster finalizers", "error", err)
+				return immediateRetryResult, nil
+			}
+		}
+		// Return and do not requeue. Successful deletion.
+		return reconcile.Result{}, nil
+	}
+
+	// Add finalizer if not exists already.
+	if !contains(instance.GetFinalizers(), clusterFinalizer) {
+		if err := r.addFinalizer(instance); err != nil {
+			log.Info("Failed to update cluster with finalizer", "error", err)
+			// Requeue if adding finalizer fails for a retry.
+			return immediateRetryResult, nil
+		}
+	}
 
 	// If the event doesn't belongs to the current cluster, do not reconcile.
 	// There must be only a single instance of storageos in a cluster.
 	if !r.currentCluster.IsCurrentCluster(instance) {
 		err := fmt.Errorf("can't create more than one storageos cluster")
 		r.recorder.Event(instance, corev1.EventTypeWarning, "FailedCreation", err.Error())
-		// Do not requeue the request.
-		return reconcile.Result{}, nil
+
+		// Set the cluster status to pending.
+		instance.Status.Phase = storageosv1.ClusterPhasePending
+		if err := r.client.Status().Update(context.Background(), instance); err != nil {
+			log.Info("Failed to update cluster status", "error", err)
+			// Requeue so that a status update is attempted again.
+			return immediateRetryResult, nil
+		}
+
+		// Requeue the request so that this cluster is deployed as soon as it
+		// becomes the current cluster.
+		return immediateRetryResult, nil
 	} else if r.currentCluster.cluster.GetUID() != instance.GetUID() {
 		// If the cluster name and namespace match with the current cluster, but
 		// the resource UIDs are different, maybe the current cluster reset
@@ -157,11 +222,41 @@ func (r *ReconcileStorageOSCluster) Reconcile(request reconcile.Request) (reconc
 	}
 
 	if err := r.reconcile(instance); err != nil {
-		log.V(4).Info("Reconcile failed", "error", err)
-		return reconcileResult, nil
+		log.Info("Reconcile failed", "error", err)
+		return immediateRetryResult, nil
 	}
 
+	// Requeue to reconcile after a period of time.
 	return reconcileResult, nil
+}
+
+// finalizeCluster performs cleanup of the resources before deleting the cluster
+// custom resource. Cluster deployment is deleted only when passed cluster is
+// the currently running StorageOS cluster. No cleanup is needed for a pending
+// cluster.
+func (r *ReconcileStorageOSCluster) finalizeCluster(m *storageosv1.StorageOSCluster) error {
+	// Check if the cluster being finalized is the currently running cluster.
+	if r.currentCluster.cluster.Name == m.Name {
+		r.recorder.Event(m, corev1.EventTypeNormal, "Terminating", "Deleting all the resources...")
+		if err := r.currentCluster.DeleteDeployment(r); err != nil {
+			return fmt.Errorf("failed to delete the cluster: %v", err)
+		}
+	}
+
+	return nil
+}
+
+// addFinalizer adds a finalizer on the cluster object to avoid instant deletion
+// of the object without finalizing it.
+func (r *ReconcileStorageOSCluster) addFinalizer(m *storageosv1.StorageOSCluster) error {
+	log.Info("Adding Finalizer for the StorageOSCluster")
+	m.SetFinalizers(append(m.GetFinalizers(), clusterFinalizer))
+
+	// Update CR.
+	if err := r.client.Update(context.TODO(), m); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *ReconcileStorageOSCluster) reconcile(m *storageosv1.StorageOSCluster) error {
@@ -170,99 +265,132 @@ func (r *ReconcileStorageOSCluster) reconcile(m *storageosv1.StorageOSCluster) e
 		return nil
 	}
 
-	join, err := r.generateJoinToken(m)
+	// Update the spec values. This ensures that the default values are applied
+	// when fields are not set in the spec.
+	updated, err := r.updateSpec(m)
 	if err != nil {
 		return err
 	}
 
-	if m.Spec.Join != join {
-		m.Spec.Join = join
-		// Update Nodes as well, because updating StorageOS with null Nodes
-		// results in invalid config.
-		m.Status.Nodes = strings.Split(join, ",")
-		if err := r.client.Update(context.Background(), m); err != nil {
-			return err
-		}
-		// Update current cluster.
+	// If updated, update the current cluster and return, as the current
+	// instance is outdated.
+	if updated {
 		r.SetCurrentCluster(m)
+		return nil
 	}
 
-	// Update the spec values. This ensures that the default values are applied
-	// when fields are not set in the spec.
-	m.Spec.Namespace = m.Spec.GetResourceNS()
-	m.Spec.Images.NodeContainer = m.Spec.GetNodeContainerImage()
-	m.Spec.Images.InitContainer = m.Spec.GetInitContainerImage()
-
-	if !m.Spec.DisableScheduler {
-		m.Spec.Images.HyperkubeContainer = m.Spec.GetHyperkubeImage(r.k8sVersion)
-	}
-
-	if m.Spec.CSI.Enable {
-		m.Spec.Images.CSINodeDriverRegistrarContainer = m.Spec.GetCSINodeDriverRegistrarImage(storageos.CSIV1Supported(r.k8sVersion))
-		if storageos.CSIV1Supported((r.k8sVersion)) {
-			m.Spec.Images.CSIClusterDriverRegistrarContainer = m.Spec.GetCSIClusterDriverRegistrarImage()
-			m.Spec.Images.CSILivenessProbeContainer = m.Spec.GetCSILivenessProbeImage()
+	if err := r.currentCluster.Deploy(r); err != nil {
+		// Ignore "Operation cannot be fulfilled" error. It happens when the
+		// actual state of object is different from what is known to the operator.
+		// Operator would resync and retry the failed operation on its own.
+		if !strings.HasPrefix(err.Error(), "Operation cannot be fulfilled") {
+			r.recorder.Event(m, corev1.EventTypeWarning, "FailedCreation", err.Error())
 		}
-		m.Spec.Images.CSIExternalProvisionerContainer = m.Spec.GetCSIExternalProvisionerImage(storageos.CSIV1Supported(r.k8sVersion))
-		m.Spec.Images.CSIExternalAttacherContainer = m.Spec.GetCSIExternalAttacherImage(storageos.CSIV1Supported(r.k8sVersion))
-		m.Spec.CSI.DeploymentStrategy = m.Spec.GetCSIDeploymentStrategy()
-	}
 
-	if m.Spec.Ingress.Enable {
-		m.Spec.Ingress.Hostname = m.Spec.GetIngressHostname()
-	}
-
-	m.Spec.Service.Name = m.Spec.GetServiceName()
-	m.Spec.Service.Type = m.Spec.GetServiceType()
-	m.Spec.Service.ExternalPort = m.Spec.GetServiceExternalPort()
-	m.Spec.Service.InternalPort = m.Spec.GetServiceInternalPort()
-
-	// Finalizers are set when an object should be deleted. Apply deploy only
-	// when finalizers is empty.
-	if len(m.GetFinalizers()) == 0 {
-		// // Check if there's a new version of the cluster config and create a new
-		// // deployment accordingly to update the resources that already exist.
-		// // TODO: Add more granular checks. Resource version check is not enough
-		// // to detect and apply changes. Maybe add an admission webhook to
-		// // perform validation when the cluster config is updated and handle the
-		// // resource update at an individual level. Updating all the resources
-		// // is dangerous.
-		// updateIfExists := false
-		// if r.currentCluster.GetResourceVersion() != m.GetResourceVersion() {
-		// 	log.Println("new cluster config detected")
-		// 	updateIfExists = true
-		// 	r.SetCurrentCluster(m)
-		// }
-
-		if err := r.currentCluster.Deploy(r); err != nil {
-			// Ignore "Operation cannot be fulfilled" error. It happens when the
-			// actual state of object is different from what is known to the operator.
-			// Operator would resync and retry the failed operation on its own.
-			if !strings.HasPrefix(err.Error(), "Operation cannot be fulfilled") {
-				r.recorder.Event(m, corev1.EventTypeWarning, "FailedCreation", err.Error())
-			}
-			return err
-		}
-	} else {
-		// Delete the deployment once the finalizers are set on the cluster
-		// resource.
-		r.recorder.Event(m, corev1.EventTypeNormal, "Terminating", "Deleting all the resources...")
-
-		if err := r.currentCluster.DeleteDeployment(); err != nil {
+		// Set the status to pending.
+		r.currentCluster.cluster.Status.Phase = storageosv1.ClusterPhasePending
+		if err := r.client.Status().Update(context.Background(), r.currentCluster.cluster); err != nil {
 			return err
 		}
 
-		r.ResetCurrentCluster()
-		// Reset finalizers and let k8s delete the object.
-		// When finalizers are set on an object, metadata.deletionTimestamp is
-		// also set. deletionTimestamp helps the garbage collector identify
-		// when to delete an object. k8s deletes the object only once the
-		// list of finalizers is empty.
-		m.SetFinalizers([]string{})
-		return r.client.Update(context.Background(), m)
+		return err
 	}
 
 	return nil
+}
+
+// updateSpec takes a StorageOSCluster CR and updates the CR properties with
+// defaults and inferred values. It returns true if there was an update. This
+// result can be used to decide if the caller should continue with reconcile or
+// return from reconcile due to an outdated CR instance.
+func (r *ReconcileStorageOSCluster) updateSpec(m *storageosv1.StorageOSCluster) (bool, error) {
+	needUpdate := false
+
+	// Check updates for string properties.
+
+	join, err := r.generateJoinToken(m)
+	if err != nil {
+		return false, err
+	}
+
+	properties := map[*string]string{
+		&m.Spec.Namespace:            m.Spec.GetResourceNS(),
+		&m.Spec.Images.NodeContainer: m.Spec.GetNodeContainerImage(),
+		&m.Spec.Images.InitContainer: m.Spec.GetInitContainerImage(),
+		&m.Spec.Service.Name:         m.Spec.GetServiceName(),
+		&m.Spec.Service.Type:         m.Spec.GetServiceType(),
+		&m.Spec.Join:                 join,
+	}
+
+	if !m.Spec.DisableScheduler {
+		properties[&m.Spec.Images.HyperkubeContainer] = m.Spec.GetHyperkubeImage(r.k8sVersion)
+	}
+
+	if m.Spec.CSI.Enable {
+		properties[&m.Spec.Images.CSINodeDriverRegistrarContainer] = m.Spec.GetCSINodeDriverRegistrarImage(storageos.CSIV1Supported(r.k8sVersion))
+		if storageos.CSIV1Supported((r.k8sVersion)) {
+			properties[&m.Spec.Images.CSIClusterDriverRegistrarContainer] = m.Spec.GetCSIClusterDriverRegistrarImage()
+			properties[&m.Spec.Images.CSILivenessProbeContainer] = m.Spec.GetCSILivenessProbeImage()
+		}
+		properties[&m.Spec.Images.CSIExternalProvisionerContainer] = m.Spec.GetCSIExternalProvisionerImage(storageos.CSIV1Supported(r.k8sVersion))
+		properties[&m.Spec.Images.CSIExternalAttacherContainer] = m.Spec.GetCSIExternalAttacherImage(storageos.CSIV1Supported(r.k8sVersion), storageos.CSIExternalAttacherV2Supported(r.k8sVersion))
+		properties[&m.Spec.CSI.DeploymentStrategy] = m.Spec.GetCSIDeploymentStrategy()
+	}
+
+	if m.Spec.Ingress.Enable {
+		properties[&m.Spec.Ingress.Hostname] = m.Spec.GetIngressHostname()
+	}
+
+	for k, v := range properties {
+		if updateString(k, v) {
+			needUpdate = true
+		}
+	}
+
+	// Check updates for int properties.
+
+	intProperties := map[*int]int{
+		&m.Spec.Service.ExternalPort: m.Spec.GetServiceExternalPort(),
+		&m.Spec.Service.InternalPort: m.Spec.GetServiceInternalPort(),
+	}
+
+	for k, v := range intProperties {
+		if updateInt(k, v) {
+			needUpdate = true
+		}
+	}
+
+	if needUpdate {
+		// Update CR.
+		err := r.client.Update(context.TODO(), m)
+		if err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	return false, nil
+}
+
+// updateString compares the string value of valA with valB and if there's a
+// mismatch, assigns valB as the value of valA and returns true. If the values
+// are equal, false is returned.
+func updateString(valA *string, valB string) bool {
+	if *valA != valB {
+		*valA = valB
+		return true
+	}
+	return false
+}
+
+// updateInt compares the int value of valA with valB and if there's a mismatch,
+// assigns valB as the value of valA and returns true. If the values are equal,
+// false is returned.
+func updateInt(valA *int, valB int) bool {
+	if *valA != valB {
+		*valA = valB
+		return true
+	}
+	return false
 }
 
 // generateJoinToken performs node selection based on NodeSelectorTerms if
@@ -270,7 +398,8 @@ func (r *ReconcileStorageOSCluster) reconcile(m *storageosv1.StorageOSCluster) e
 func (r *ReconcileStorageOSCluster) generateJoinToken(m *storageosv1.StorageOSCluster) (string, error) {
 	// Get a new list of all the nodes.
 	nodeList := storageos.NodeList()
-	if err := r.client.List(context.Background(), &client.ListOptions{}, nodeList); err != nil {
+	listOpts := []client.ListOption{}
+	if err := r.client.List(context.Background(), nodeList, listOpts...); err != nil {
 		return "", fmt.Errorf("failed to list nodes: %v", err)
 	}
 
@@ -353,4 +482,24 @@ func getMatchingTolerations(taints []corev1.Taint, tolerations []corev1.Tolerati
 		}
 	}
 	return true, result
+}
+
+// contains checks if an item exists in a given list.
+func contains(list []string, s string) bool {
+	for _, v := range list {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}
+
+// remove removes an item from a given list.
+func remove(list []string, s string) []string {
+	for i, v := range list {
+		if v == s {
+			list = append(list[:i], list[i+1:]...)
+		}
+	}
+	return list
 }

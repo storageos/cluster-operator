@@ -3,6 +3,7 @@ package storageoscluster
 import (
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	"github.com/storageos/cluster-operator/pkg/storageos"
+	"github.com/storageos/cluster-operator/pkg/util/k8s"
 )
 
 // StorageOSCluster stores the current cluster's information. It binds the
@@ -37,9 +38,14 @@ func (c *StorageOSCluster) SetDeployment(r *ReconcileStorageOSCluster) {
 		labels = map[string]string{}
 	}
 	// Add default labels.
+	// TODO: This is legacy label. Remove this with care. Ensure it's not used
+	// by any label selectors.
 	labels["app"] = "storageos"
 
-	c.deployment = storageos.NewDeployment(r.client, c.cluster, labels, r.recorder, r.scheme, r.k8sVersion, updateIfExists)
+	// Add default resource app labels.
+	labels = k8s.AddDefaultAppLabels(c.cluster.Name, labels)
+
+	c.deployment = storageos.NewDeployment(r.client, r.discoveryClient, c.cluster, labels, r.recorder, r.scheme, r.k8sVersion, updateIfExists)
 }
 
 // IsCurrentCluster compares the cluster attributes to check if the given
@@ -61,6 +67,9 @@ func (c *StorageOSCluster) Deploy(r *ReconcileStorageOSCluster) error {
 }
 
 // DeleteDeployment deletes the StorageOS Cluster deployment.
-func (c *StorageOSCluster) DeleteDeployment() error {
+func (c *StorageOSCluster) DeleteDeployment(r *ReconcileStorageOSCluster) error {
+	if c.deployment == nil {
+		c.SetDeployment(r)
+	}
 	return c.deployment.Delete()
 }

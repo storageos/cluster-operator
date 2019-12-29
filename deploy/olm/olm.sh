@@ -1,36 +1,10 @@
 # This can be used to install a specific version of OLM.
-install_olm() {
-    echo "Install OLM"
-
-    git clone --depth 1 https://github.com/operator-framework/operator-lifecycle-manager ./test/olm
-
-    # Create the following one at a time to avoid resource not found error.
-    kubectl create -f ./test/olm/deploy/upstream/manifests/0.8.1/0000_50_olm_00-namespace.yaml
-    kubectl create -f ./test/olm/deploy/upstream/manifests/0.8.1/0000_50_olm_01-olm-operator.serviceaccount.yaml
-    for num in {02..05}; do kubectl create -f ./test/olm/deploy/upstream/manifests/0.8.1/0000_50_olm_$num*; done
-
-    # TODO: Remove this once the default olm operator container is fixed, and
-    # use the default manifest.
-    # Error: flag provided but not defined: -writeStatusName
-    kubectl create -f ./deploy/0000_50_olm_06-olm-operator.deployment.yaml
-    for num in {07..12}; do kubectl create -f ./test/olm/deploy/upstream/manifests/0.8.1/0000_50_olm_$num*; done
-
-    # Wait for OLM to be ready.
-    sleep 10
-    kubectl create -f ./test/olm/deploy/upstream/manifests/0.8.1/0000_50_olm_13-packageserver.subscription.yaml
-
-    # Create this cluster role binding to grant permissions to the olm web console.
-    kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=system:serviceaccount:kube-system:default
-
-    echo
-}
-
 olm_quick_install() {
     echo "Quick Install OLM"
-    # kubectl create -f https://raw.githubusercontent.com/operator-framework/operator-lifecycle-manager/master/deploy/upstream/quickstart/olm.yaml
 
     # Use the release manifest.
-    kubectl apply -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/0.9.0/olm.yaml
+    kubectl apply -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/0.12.0/crds.yaml
+    kubectl apply -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/0.12.0/olm.yaml
 
     # Create this cluster role binding to grant permissions to the olm web console.
     kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=system:serviceaccount:kube-system:default
@@ -122,10 +96,7 @@ uninstall_storageos_operator() {
 
 uninstall_olm_quick() {
     echo "Uninstalling OLM"
-    kubectl delete -f https://raw.githubusercontent.com/operator-framework/operator-lifecycle-manager/master/deploy/upstream/quickstart/olm.yaml
+    kubectl delete -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/0.12.0/olm.yaml
+    kubectl delete -f https://github.com/operator-framework/operator-lifecycle-manager/releases/download/0.12.0/crds.yaml
     echo
-}
-
-uninstall_olm() {
-    for num in {13..00}; do kubectl delete -f ./test/olm/deploy/upstream/manifests/0.8.1/0000_50_olm_$num*; done
 }

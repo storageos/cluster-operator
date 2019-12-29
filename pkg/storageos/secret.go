@@ -17,7 +17,7 @@ func (s *Deployment) createInitSecret() error {
 		credUsernameKey: username,
 		credPasswordKey: password,
 	}
-	return s.k8sResourceManager.Secret(initSecretName, s.stos.Spec.GetResourceNS(), corev1.SecretTypeOpaque, data).Create()
+	return s.k8sResourceManager.Secret(initSecretName, s.stos.Spec.GetResourceNS(), nil, corev1.SecretTypeOpaque, data).Create()
 }
 
 func (s *Deployment) createTLSSecret() error {
@@ -29,13 +29,13 @@ func (s *Deployment) createTLSSecret() error {
 		tlsCertKey: cert,
 		tlsKeyKey:  key,
 	}
-	return s.k8sResourceManager.Secret(tlsSecretName, s.stos.Spec.GetResourceNS(), corev1.SecretTypeTLS, data).Create()
+	return s.k8sResourceManager.Secret(tlsSecretName, s.stos.Spec.GetResourceNS(), nil, corev1.SecretTypeTLS, data).Create()
 }
 
 func (s *Deployment) getAdminCreds() ([]byte, []byte, error) {
 	var username, password []byte
 	if s.stos.Spec.SecretRefName != "" && s.stos.Spec.SecretRefNamespace != "" {
-		secret, err := s.k8sResourceManager.Secret(s.stos.Spec.SecretRefName, s.stos.Spec.SecretRefNamespace, corev1.SecretTypeOpaque, nil).Get()
+		secret, err := s.k8sResourceManager.Secret(s.stos.Spec.SecretRefName, s.stos.Spec.SecretRefNamespace, nil, corev1.SecretTypeOpaque, nil).Get()
 		if err != nil {
 			return nil, nil, err
 		}
@@ -55,7 +55,7 @@ func (s *Deployment) getAdminCreds() ([]byte, []byte, error) {
 func (s *Deployment) getTLSData() ([]byte, []byte, error) {
 	var cert, key []byte
 	if s.stos.Spec.SecretRefName != "" && s.stos.Spec.SecretRefNamespace != "" {
-		secret, err := s.k8sResourceManager.Secret(s.stos.Spec.SecretRefName, s.stos.Spec.SecretRefNamespace, corev1.SecretTypeTLS, nil).Get()
+		secret, err := s.k8sResourceManager.Secret(s.stos.Spec.SecretRefName, s.stos.Spec.SecretRefNamespace, nil, corev1.SecretTypeTLS, nil).Get()
 		if err != nil {
 			return nil, nil, err
 		}
@@ -84,7 +84,7 @@ func (s *Deployment) createCSISecrets() error {
 			credUsernameKey: username,
 			credPasswordKey: password,
 		}
-		if err := s.k8sResourceManager.Secret(csiProvisionerSecretName, s.stos.Spec.GetResourceNS(), corev1.SecretTypeOpaque, data).Create(); err != nil {
+		if err := s.k8sResourceManager.Secret(csiProvisionerSecretName, s.stos.Spec.GetResourceNS(), nil, corev1.SecretTypeOpaque, data).Create(); err != nil {
 			return err
 		}
 	}
@@ -99,7 +99,7 @@ func (s *Deployment) createCSISecrets() error {
 			credUsernameKey: username,
 			credPasswordKey: password,
 		}
-		if err := s.k8sResourceManager.Secret(csiControllerPublishSecretName, s.stos.Spec.GetResourceNS(), corev1.SecretTypeOpaque, data).Create(); err != nil {
+		if err := s.k8sResourceManager.Secret(csiControllerPublishSecretName, s.stos.Spec.GetResourceNS(), nil, corev1.SecretTypeOpaque, data).Create(); err != nil {
 			return err
 		}
 	}
@@ -114,7 +114,7 @@ func (s *Deployment) createCSISecrets() error {
 			credUsernameKey: username,
 			credPasswordKey: password,
 		}
-		if err := s.k8sResourceManager.Secret(csiNodePublishSecretName, s.stos.Spec.GetResourceNS(), corev1.SecretTypeOpaque, data).Create(); err != nil {
+		if err := s.k8sResourceManager.Secret(csiNodePublishSecretName, s.stos.Spec.GetResourceNS(), nil, corev1.SecretTypeOpaque, data).Create(); err != nil {
 			return err
 		}
 	}
@@ -125,11 +125,11 @@ func (s *Deployment) createCSISecrets() error {
 // deleteCSISecrets deletes all the CSI related secrets.
 func (s *Deployment) deleteCSISecrets() error {
 	namespace := s.stos.Spec.GetResourceNS()
-	if err := s.k8sResourceManager.Secret(csiProvisionerSecretName, namespace, corev1.SecretTypeOpaque, nil).Delete(); err != nil {
+	if err := s.k8sResourceManager.Secret(csiProvisionerSecretName, namespace, nil, corev1.SecretTypeOpaque, nil).Delete(); err != nil {
 		return err
 	}
 
-	if err := s.k8sResourceManager.Secret(csiControllerPublishSecretName, namespace, corev1.SecretTypeOpaque, nil).Delete(); err != nil {
+	if err := s.k8sResourceManager.Secret(csiControllerPublishSecretName, namespace, nil, corev1.SecretTypeOpaque, nil).Delete(); err != nil {
 		return err
 	}
 
@@ -140,7 +140,7 @@ func (s *Deployment) deleteCSISecrets() error {
 // storageos-api secret and returns them.
 func (s *Deployment) getCSICreds(usernameKey, passwordKey string) (username []byte, password []byte, err error) {
 	// Get the username and password from storageos-api secret object.
-	secret, err := s.k8sResourceManager.Secret(s.stos.Spec.SecretRefName, s.stos.Spec.SecretRefNamespace, corev1.SecretTypeOpaque, nil).Get()
+	secret, err := s.k8sResourceManager.Secret(s.stos.Spec.SecretRefName, s.stos.Spec.SecretRefNamespace, nil, corev1.SecretTypeOpaque, nil).Get()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -163,12 +163,11 @@ func (s *Deployment) createTLSEtcdSecret() error {
 	}
 
 	// Fetch etcd TLS secret.
-	secret, err := s.k8sResourceManager.Secret(s.stos.Spec.TLSEtcdSecretRefName, s.stos.Spec.TLSEtcdSecretRefNamespace, corev1.SecretTypeOpaque, nil).Get()
+	secret, err := s.k8sResourceManager.Secret(s.stos.Spec.TLSEtcdSecretRefName, s.stos.Spec.TLSEtcdSecretRefNamespace, nil, corev1.SecretTypeOpaque, nil).Get()
 	if err != nil {
 		return err
 	}
-	data := secret.Data
 
 	// Create new secret with etcd TLS secret data.
-	return s.k8sResourceManager.Secret(TLSEtcdSecretName, s.stos.Spec.GetResourceNS(), corev1.SecretTypeTLS, data).Create()
+	return s.k8sResourceManager.Secret(TLSEtcdSecretName, s.stos.Spec.GetResourceNS(), nil, secret.Type, secret.Data).Create()
 }

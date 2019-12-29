@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
+	storageosapi "github.com/storageos/go-api"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -19,12 +19,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	storageosapi "github.com/storageos/go-api"
+	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 )
 
 var log = logf.Log.WithName("storageos.upgrade")
@@ -45,7 +45,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileStorageOSUpgrade{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetRecorder("storageos-upgrader")}
+	return &ReconcileStorageOSUpgrade{client: mgr.GetClient(), scheme: mgr.GetScheme(), recorder: mgr.GetEventRecorderFor("storageos-upgrader")}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -116,7 +116,8 @@ func (r *ReconcileStorageOSUpgrade) ResetCurrentUpgrade(request reconcile.Reques
 // findCurrentCluster finds the running cluster.
 func (r *ReconcileStorageOSUpgrade) findCurrentCluster() (*storageosv1.StorageOSCluster, error) {
 	clusterList := &storageosv1.StorageOSClusterList{}
-	if err := r.client.List(context.TODO(), &client.ListOptions{}, clusterList); err != nil {
+	listOpts := []client.ListOption{}
+	if err := r.client.List(context.TODO(), clusterList, listOpts...); err != nil {
 		return nil, fmt.Errorf("failed to list clusters: %v", err)
 	}
 
@@ -220,6 +221,10 @@ func (r *ReconcileStorageOSUpgrade) Reconcile(request reconcile.Request) (reconc
 	reconcilePeriod := 10 * time.Second
 	reconcileResult := reconcile.Result{RequeueAfter: reconcilePeriod}
 
+	// Return this for a immediate retry of the reconciliation loop with the
+	// same request object.
+	immediateRetryResult := reconcile.Result{Requeue: true}
+
 	// Fetch the StorageOSUpgrade instance
 	instance := &storageosv1.StorageOSUpgrade{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
@@ -237,7 +242,7 @@ func (r *ReconcileStorageOSUpgrade) Reconcile(request reconcile.Request) (reconc
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		return reconcileResult, err
+		return immediateRetryResult, err
 	}
 
 	r.SetCurrentUpgradeIfNone(instance)
@@ -256,16 +261,21 @@ func (r *ReconcileStorageOSUpgrade) Reconcile(request reconcile.Request) (reconc
 		// puller job, based on the cluster's node selector.
 		currentCluster, err := r.findCurrentCluster()
 		if err != nil {
+			log.Info("Failed to find current cluster", "error", err)
+			instance.Status.Completed = false
+			if updateErr := r.client.Status().Update(context.Background(), instance); updateErr != nil {
+				err = fmt.Errorf("%v,%v", updateErr, err)
+			}
 			// Re-queue if it fails to get the current cluster.
-			return reconcileResult, err
+			return immediateRetryResult, err
 		}
 		// Create image puller.
 		r.imagePuller = newImagePullJob(instance, currentCluster)
 		if err := controllerutil.SetControllerReference(instance, r.imagePuller, r.scheme); err != nil {
-			return reconcileResult, err
+			return immediateRetryResult, err
 		}
 		if err := r.client.Create(context.Background(), r.imagePuller); err != nil && !errors.IsAlreadyExists(err) {
-			return reconcileResult, fmt.Errorf("failed to create image puller job: %v", err)
+			return immediateRetryResult, fmt.Errorf("failed to create image puller job: %v", err)
 		}
 
 		r.recorder.Event(instance, corev1.EventTypeNormal, "PullImage", "Pulling the new container image")
@@ -285,7 +295,12 @@ func (r *ReconcileStorageOSUpgrade) Reconcile(request reconcile.Request) (reconc
 	}
 	// Re-queue if the image pull didn't complete.
 	if !r.imagePuller.Status.Completed {
-		return reconcileResult, fmt.Errorf("image pull didn't complete")
+		err := fmt.Errorf("image pull didn't complete")
+		instance.Status.Completed = false
+		if updateErr := r.client.Update(context.Background(), instance); updateErr != nil {
+			err = fmt.Errorf("%v, %v", updateErr, err)
+		}
+		return reconcileResult, err
 	}
 
 	// Find and pause the running cluster.

@@ -4,9 +4,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/storageos/cluster-operator/pkg/storageos"
+	"github.com/operator-framework/operator-sdk/pkg/metrics"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	"k8s.io/apimachinery/pkg/api/errors"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
+	"github.com/storageos/cluster-operator/pkg/storageos"
 )
 
 const (
@@ -17,18 +21,34 @@ const (
 
 	// DefaultNFSPort is the default port for NFS server.
 	DefaultNFSPort = 2049
-	// DefaultMetricsPort is the default port for NFS mertics.
-	DefaultMetricsPort = 9587
+	// DefaultHTTPPort is the default port for NFS server health and metrics.
+	DefaultHTTPPort = 80
+	// NFSPortName is the name of the port that exposes the NFS server.
+	NFSPortName = "nfs"
+	// MetricsPortName is the name of the port that exposes the NFS metrics.
+	MetricsPortName = "metrics"
+
+	// HealthEndpointPath is the path to query on the HTTP Port for health.
+	// This is hardcoded in the NFS container and not settable by the user.
+	HealthEndpointPath = "/healthz"
 )
 
 var log = logf.Log.WithName("storageos.nfsserver")
 
 // Deploy deploys a NFS server.
 func (d *Deployment) Deploy() error {
-	err := d.ensureService(DefaultNFSPort, DefaultMetricsPort)
+	err := d.ensureService(DefaultNFSPort)
 	if err != nil {
 		return err
 	}
+
+	// Create metrics service.
+	// Since we use ServiceMonitor, a separate service dedicated to metrics
+	// ports helps avoid Prometheus targets endpoints that don't serve metrics.
+	if err := d.createMetricsService(DefaultHTTPPort); err != nil {
+		return err
+	}
+
 	if err := d.createNFSConfigMap(); err != nil {
 		return err
 	}
@@ -49,7 +69,22 @@ func (d *Deployment) Deploy() error {
 	requestedCapacity := d.nfsServer.Spec.GetRequestedCapacity()
 	size := &requestedCapacity
 
-	if err := d.createStatefulSet(size, DefaultNFSPort, DefaultMetricsPort); err != nil {
+	pvcVS := d.nfsServer.Spec.PersistentVolumeClaim
+
+	// If no existing PVC Volume Source is specified in the spec, create a new
+	// PVC with NFS Server name.
+	if pvcVS.ClaimName == "" {
+		// Create a PVC with the same name as the NFS Server.
+		if err := d.createPVC(size); err != nil {
+			return err
+		}
+		pvcVS = corev1.PersistentVolumeClaimVolumeSource{
+			ClaimName: d.nfsServer.Name,
+		}
+	}
+
+	// Create a StatefulSet NFS Server with PVC Volume Source.
+	if err := d.createStatefulSet(&pvcVS, DefaultNFSPort, DefaultHTTPPort); err != nil {
 		return err
 	}
 
@@ -59,7 +94,14 @@ func (d *Deployment) Deploy() error {
 	}
 
 	if err := d.updateStatus(status); err != nil {
-		log.Error(err, "Failed to update status")
+		log.Info("Failed to update status", "error", err)
+	}
+
+	if err := d.createServiceMonitor(); err != nil {
+		// Ignore if the ServiceMonitor already exists.
+		if !errors.IsAlreadyExists(err) {
+			log.Info("Failed to create service monitor for metrics", "error", err)
+		}
 	}
 
 	return nil
@@ -70,19 +112,20 @@ func (d *Deployment) Deploy() error {
 // In 1.15 and later we can just set the "app" and "nfsserver" labels here.  For
 // now, pass all labels rather than check k8s versions.  The only downside is
 // that the nfs pod gets storageos.com labels that don't do anything directly.
-func (d *Deployment) labelsForStatefulSet(name string, labels map[string]string) map[string]string {
-	if labels == nil {
-		labels = make(map[string]string)
-	}
-
-	labels["app"] = appName
-	labels["nfsserver"] = name
+func (d *Deployment) labelsForStatefulSet() map[string]string {
+	// Get labels from the NFS k8s resource manager and add NFS Server specific
+	// labels.
+	ssLabels := d.k8sResourceManager.GetLabels()
+	// TODO: This is legacy label. Remove this with care. Ensure it's not used
+	// by any label selectors.
+	ssLabels["app"] = appName
+	ssLabels["nfsserver"] = d.nfsServer.Name
 
 	if !d.cluster.Spec.DisableFencing {
-		labels["storageos.com/fenced"] = "true"
+		ssLabels["storageos.com/fenced"] = "true"
 	}
 
-	return labels
+	return ssLabels
 }
 
 func (d *Deployment) createClusterRoleBindingForSCC() error {
@@ -98,7 +141,7 @@ func (d *Deployment) createClusterRoleBindingForSCC() error {
 		Name:     storageos.OpenShiftSCCClusterRoleName,
 		APIGroup: "rbac.authorization.k8s.io",
 	}
-	return d.k8sResourceManager.ClusterRoleBinding(d.getClusterRoleBindingName(), subjects, roleRef).Create()
+	return d.k8sResourceManager.ClusterRoleBinding(d.getClusterRoleBindingName(), nil, subjects, roleRef).Create()
 }
 
 func (d *Deployment) getClusterRoleBindingName() string {
@@ -110,5 +153,21 @@ func (d *Deployment) getServiceAccountName() string {
 }
 
 func (d *Deployment) createServiceAccountForNFSServer() error {
-	return d.k8sResourceManager.ServiceAccount(d.getServiceAccountName(), d.nfsServer.Namespace).Create()
+	return d.k8sResourceManager.ServiceAccount(d.getServiceAccountName(), d.nfsServer.Namespace, nil).Create()
+}
+
+func (d *Deployment) createServiceMonitor() error {
+
+	metricsService, err := d.getMetricsService()
+	if err != nil {
+		return err
+	}
+
+	// Create the ServiceMonitor resource for the metrics service.
+	_, err = metrics.CreateServiceMonitors(d.kConfig, d.nfsServer.Namespace, []*corev1.Service{metricsService})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

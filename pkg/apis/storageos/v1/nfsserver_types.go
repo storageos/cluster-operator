@@ -11,9 +11,6 @@ import (
 
 // Constants for NFSServer default values and different phases.
 const (
-	// DefaultNFSContainerImage is the name of the Ganesha container to run.
-	DefaultNFSContainerImage = "storageos/nfs:test"
-
 	DefaultNFSVolumeCapacity = "1Gi"
 
 	PhasePending = "Pending"
@@ -55,6 +52,10 @@ type NFSServerSpec struct {
 	// PV mount options. Not validated - mount of the PVs will simply fail if
 	// one is invalid.
 	MountOptions []string `json:"mountOptions,omitempty"`
+
+	// PersistentVolumeClaim is the PVC source of the PVC to be used with the
+	// NFS Server. If not specified, a new PVC is provisioned and used.
+	PersistentVolumeClaim corev1.PersistentVolumeClaimVolumeSource `json:"persistentVolumeClaim,omitempty"`
 }
 
 // GetStorageClassName returns the name of the StorageClass to be used for the
@@ -70,11 +71,11 @@ func (s NFSServerSpec) GetStorageClassName(clusterSCName string) string {
 }
 
 // GetContainerImage returns the NFS server container image.
-func (s NFSServerSpec) GetContainerImage() string {
+func (s NFSServerSpec) GetContainerImage(clusterNFSImage string) string {
 	if s.NFSContainer != "" {
 		return s.NFSContainer
 	}
-	return DefaultNFSContainerImage
+	return clusterNFSImage
 }
 
 // GetRequestedCapacity returns the requested capacity for the NFS volume.
@@ -140,6 +141,7 @@ type NFSServerStatus struct {
 // +kubebuilder:printcolumn:name="storageclass",type="string",JSONPath=".spec.storageClassName",description="StorageClass used for creating the NFS volume."
 // +kubebuilder:printcolumn:name="age",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:resource:path=nfsservers,shortName=nfsserver
+// +kubebuilder:subresource:status
 type NFSServer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

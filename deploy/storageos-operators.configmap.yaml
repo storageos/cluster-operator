@@ -33,6 +33,8 @@ data:
           - stos
           singular: storageoscluster
         scope: Namespaced
+        subresources:
+          status: {}
         validation:
           openAPIV3Schema:
             properties:
@@ -143,6 +145,8 @@ data:
                       hyperkubeContainer:
                         type: string
                       initContainer:
+                        type: string
+                      nfsContainer:
                         type: string
                       nodeContainer:
                         type: string
@@ -320,6 +324,8 @@ data:
           plural: jobs
           singular: job
         scope: Namespaced
+        subresources:
+          status: {}
         validation:
           openAPIV3Schema:
             properties:
@@ -403,6 +409,8 @@ data:
           plural: storageosupgrades
           singular: storageosupgrade
         scope: Namespaced
+        subresources:
+          status: {}
         validation:
           openAPIV3Schema:
             properties:
@@ -475,6 +483,8 @@ data:
           - nfsserver
           singular: nfsserver
         scope: Namespaced
+        subresources:
+          status: {}
         validation:
           openAPIV3Schema:
             properties:
@@ -531,6 +541,11 @@ data:
                     description: NFSContainer is the container image to use for the NFS
                       server.
                     type: string
+                  persistentVolumeClaim:
+                    description: PersistentVolumeClaim is the PVC source of the PVC to be
+                      used with the NFS Server. If not specified, a new PVC is provisioned
+                      and used.
+                    type: object
                   persistentVolumeReclaimPolicy:
                     description: Reclamation policy for the persistent volume shared to
                       the user's pod.
@@ -593,12 +608,12 @@ data:
         name: storageosoperator.0.0.0
         namespace: olm
         annotations:
-          capabilities: Full Lifecycle
+          capabilities: Deep Insights
           categories: "Storage"
           description: Cloud-native, persistent storage for containers.
           containerImage: storageos/cluster-operator:test
           repository: https://github.com/storageos/cluster-operator
-          createdAt: 2019-09-04T17:21:53Z
+          createdAt: 2019-12-18T15:33:32Z
           support: StorageOS, Inc
           certified: "false"
           alm-examples: |-
@@ -684,7 +699,7 @@ data:
 
           No other hardware or software is required.
 
-          StorageOS is free to use up to 100GB of presented Storage, increasing to
+          StorageOS is free to use up to 50GB of presented storage, increasing to
           500GB after registration.  For additional capacity and support plans contact
           sales@storageos.com.
 
@@ -730,6 +745,10 @@ data:
           * **Small footprint** - Lightweight container requires minimum 1 core with
           2GB of RAM.  Runs in user-space on any 64-bit Linux with no custom kernel
           modules.
+
+          ## Prerequisites
+
+          * Ensure port 5705 is open on the worker nodes.
 
           ## Required Parameters
 
@@ -796,9 +815,13 @@ data:
                 - storageos.com
                 resources:
                 - storageosclusters
+                - storageosclusters/status
                 - storageosupgrades
+                - storageosupgrades/status
                 - jobs
+                - jobs/status
                 - nfsservers
+                - nfsservers/status
                 verbs:
                 - "*"
               - apiGroups:
@@ -841,6 +864,7 @@ data:
                 - serviceaccounts
                 - secrets
                 - services
+                - services/finalizers
                 - persistentvolumeclaims
                 - persistentvolumes
                 - configmaps
@@ -871,6 +895,8 @@ data:
                 - storageclasses
                 - volumeattachments
                 - csinodeinfos
+                - csinodes
+                - csidrivers
                 verbs:
                 - create
                 - delete
@@ -878,6 +904,7 @@ data:
                 - list
                 - get
                 - update
+                - patch
               - apiGroups:
                 - apiextensions.k8s.io
                 resources:
@@ -911,6 +938,40 @@ data:
                 - use
                 resourceNames:
                 - privileged
+              - apiGroups:
+                - admissionregistration.k8s.io
+                resources:
+                - mutatingwebhookconfigurations
+                verbs:
+                - '*'
+              - apiGroups:
+                - monitoring.coreos.com
+                resources:
+                - servicemonitors
+                verbs:
+                - '*'
+              - apiGroups:
+                - apps
+                resources:
+                - deployments/finalizers
+                resourceNames:
+                - storageos-cluster-operator
+                verbs:
+                - update
+              - apiGroups:
+                - events.k8s.io
+                resources:
+                - events
+                verbs:
+                - create
+              - apiGroups:
+                - coordination.k8s.io
+                resources:
+                - leases
+                verbs:
+                - get
+                - create
+                - update
             deployments:
             - name: storageos-operator
               spec:
@@ -936,10 +997,37 @@ data:
                           fieldRef:
                             fieldPath: metadata.annotations['olm.targetNamespaces']
                       - name: OPERATOR_NAME
-                        value: "cluster-operator"
+                        value: "storageos-cluster-operator"
+                      - name: POD_NAME
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.name
+                      - name: POD_NAMESPACE
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.namespace
+                      - name: DISABLE_SCHEDULER_WEBHOOK
+                        value: "false"
                       ports:
-                      - containerPort: 8080
+                      - containerPort: 8383
                         name: metrics
+                      - containerPort: 8686
+                        name: operatormetrics
+                      - containerPort: 5720
+                        name: podschedwebhook
+                    - name: scorecard-proxy
+                      image: quay.io/operator-framework/scorecard-proxy:v0.10.0
+                      imagePullPolicy: IfNotPresent
+                      command:
+                      - scorecard-proxy
+                      ports:
+                      - containerPort: 8889
+                        name: proxy
+                      env:
+                      - name: WATCH_NAMESPACE
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.namespace
         customresourcedefinitions:
           owned:
           - name: storageosclusters.storageos.com
@@ -949,6 +1037,47 @@ data:
             description: StorageOS Cluster installs StorageOS in the cluster. It
               contains all the configuration for setting up a StorageOS cluster and
               also shows the status of the running StorageOS cluster.
+            resources:
+            - kind: Namespace
+              version: v1
+            - kind: ServiceAccount
+              version: v1
+            - kind: Role
+              version: rbac.authorization.k8s.io/v1
+            - kind: RoleBinding
+              version: rbac.authorization.k8s.io/v1
+            - kind: ClusterRole
+              version: rbac.authorization.k8s.io/v1
+            - kind: ClusterRoleBinding
+              version: rbac.authorization.k8s.io/v1
+            - kind: Secret
+              version: v1
+            - kind: DaemonSet
+              version: apps/v1
+            - kind: Service
+              version: v1
+            - kind: Ingress
+              version: extensions/v1beta1
+            - kind: Deployment
+              version: apps/v1
+            - kind: StatefulSet
+              version: apps/v1
+            - kind: StorageClass
+              version: storage.k8s.io/v1
+            - kind: StorageOSCluster
+              version: v1
+            - kind: Job
+              version: v1
+            - kind: StorageOSUpgrade
+              version: v1
+            - kind: NFSServer
+              version: v1
+            - kind: Node
+              version: v1
+            - kind: StatefulSet
+              version: v1
+            - kind: DaemonSet
+              version: v1
             specDescriptors:
             - description: Defines the various container images used in the cluster.
               displayName: Images
@@ -1069,6 +1198,9 @@ data:
             - description: Ready Nodes
               displayName: Ready
               path: ready
+            - description: Health status of StorageOS nodes.
+              displayName: Node Health Status
+              path: nodeHealthStatus
           - name: jobs.storageos.com
             version: v1
             kind: Job
@@ -1076,6 +1208,9 @@ data:
             description: StorageOS Job creates special pods that run on all the node
               and perform an administrative task. This could be used for cluster
               maintenance tasks.
+            resources:
+            - kind: DaemonSet
+              version: apps/v1
             specDescriptors:
             - description: The container image to run as the job.
               displayName: Image
@@ -1113,6 +1248,15 @@ data:
             displayName: StorageOS Upgrade
             description: StorageOS Upgrade automatically upgrades an existing
               StorageOS cluster as per the upgrade configuration.
+            resources:
+            - kind: ServiceAccount
+              version: v1
+            - kind: ClusterRole
+              version: rbac.authorization.k8s.io/v1
+            - kind: ClusterRoleBinding
+              version: rbac.authorization.k8s.io/v1
+            - kind: Job
+              version: batch/v1
             specDescriptors:
             - description: The StorageOS Node image to upgrade to.
                 e.g. `storageos/node:latest`
@@ -1130,10 +1274,52 @@ data:
              volumes. The StorageOS control plane will automatically create and
              manage NFS Server instances when a PersistentVolumeClaim requests a
              volume with AccessMode=ReadWriteMany.
+            resources:
+            - kind: Service
+              version: v1
+            - kind: ConfigMap
+              version: v1
+            - kind: ServiceAccount
+              version: v1
+            - kind: ClusterRoleBinding
+              version: rbac.authorization.k8s.io/v1
+            - kind: StatefulSet
+              version: apps/v1
             specDescriptors:
+            - description: The annotations-related configuration to add/set on
+                each Pod related object.
+              displayName: Pod annotations
+              path: annotations
+            - description: The parameters to configure the NFS export.
+              displayName: NFS export
+              path: export
+            - description: PV mount options. Not validated - mount of the PVs
+                will simply fail if one is invalid.
+              displayName: Mount Options
+              path: mountOptions
             - description: The container image of the NFS server.
               displayName: Image
               path: nfsContainer
+            - description: Reclamation policy for the persistent volume shared
+                to the user's pod.
+              displayName: PVC Reclaimation Policy
+              path: persistentVolumeReclaimPolicy
+            - description: Resources represents the minimum resources required.
+              displayName: Resources
+              path: resources
+            - description: StorageClassName is the name of the StorageClass
+                used by the NFS volume.
+              displayName: StorageClass Name
+              path: storageClassName
+            - description: Tolerations is to set the placement of NFS server
+                pods using pod toleration.
+              displayName: Pod Tolerations.
+              path: tolerations
+            - description: PersistentVolumeClaim is the PVC source of the PVC
+                to be used with the NFS Server. If not specified, a new PVC is
+                provisioned and used.
+              displayName: Persistent Volume Claim
+              path: persistentVolumeClaim
 
   packages: |-
 

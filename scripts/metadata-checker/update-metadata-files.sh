@@ -6,19 +6,21 @@ set -e
 # files. This script is used to sync the source configmap configurations with
 # the OLM manifest files.
 
-# Extract CSV from configmap, update with community operator changes and write
-# to the final CSV file.
+# Extract CSV from configmap, update with community operator changes, removes
+# OLM scorecard proxy container and write to the final CSV file.
 yq r deploy/storageos-operators.configmap.yaml \
     data.clusterServiceVersions | yq r - [0] | \
-    yq w -s deploy/olm/community-changes.yaml - > \
-    deploy/olm/storageos/storageos.clusterserviceversion.yaml
+    yq w -s deploy/olm/community-changes.yaml - | \
+    yq d - 'spec.install.spec.deployments[0].spec.template.spec.containers[1]' \
+    > deploy/olm/storageos/storageos.clusterserviceversion.yaml
 
-# Extract CSV from configmap, update with rhel operator changes and write to
-# the final CSV file.
+# Extract CSV from configmap, update with rhel operator changes, removes OLM
+# scorecard proxy container and write to the final CSV file.
 yq r deploy/storageos-operators.configmap.yaml \
     data.clusterServiceVersions | yq r - [0] | \
-    yq w -s deploy/olm/rhel-changes.yaml - > \
-    deploy/olm/csv-rhel/storageos.clusterserviceversion.yaml
+    yq w -s deploy/olm/rhel-changes.yaml - | \
+    yq d - 'spec.install.spec.deployments[0].spec.template.spec.containers[1]' \
+    > deploy/olm/csv-rhel/storageos.clusterserviceversion.yaml
 
 
 # Read metadata file configmap and update the CRD files.

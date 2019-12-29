@@ -2,10 +2,10 @@ package storageos
 
 func (s *Deployment) createStorageClass() error {
 	// Provisioner name for in-tree storage plugin.
-	provisioner := intreeProvisionerName
+	provisioner := IntreeProvisionerName
 
 	if s.stos.Spec.CSI.Enable {
-		provisioner = csiProvisionerName
+		provisioner = CSIProvisionerName
 	}
 
 	parameters := map[string]string{
@@ -51,5 +51,5 @@ func (s *Deployment) createStorageClass() error {
 		parameters[secretNameKey] = s.stos.Spec.SecretRefName
 	}
 
-	return s.k8sResourceManager.StorageClass(s.stos.Spec.GetStorageClassName(), provisioner, parameters).Create()
+	return s.k8sResourceManager.StorageClass(s.stos.Spec.GetStorageClassName(), nil, provisioner, parameters).Create()
 }

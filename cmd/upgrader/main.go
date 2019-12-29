@@ -3,10 +3,11 @@ package main
 import (
 	"os"
 
-	"github.com/storageos/cluster-operator/pkg/util/k8sutil"
 	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
+	"github.com/storageos/cluster-operator/pkg/util/k8sutil"
 )
 
 var log = logf.Log.WithName("storageos.upgrader")

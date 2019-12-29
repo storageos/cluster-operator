@@ -6,6 +6,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"github.com/storageos/cluster-operator/pkg/util/k8s"
 )
 
 // createService creates a service for storageos app with a label selector
@@ -29,18 +31,23 @@ func (s *Deployment) createService() error {
 		},
 	}
 
-	if err := s.k8sResourceManager.Service(s.stos.Spec.GetServiceName(), s.stos.Spec.GetResourceNS(), s.stos.Spec.Service.Annotations, spec).Create(); err != nil {
+	// Add ServiceFor labels for the Service.
+	labels := map[string]string{
+		k8s.ServiceFor: "storageos-api-server",
+	}
+
+	if err := s.k8sResourceManager.Service(s.stos.Spec.GetServiceName(), s.stos.Spec.GetResourceNS(), labels, s.stos.Spec.Service.Annotations, spec).Create(); err != nil {
 		return err
 	}
 
 	// Patch storageos-api secret with above service IP in apiAddress.
 	if !s.stos.Spec.CSI.Enable {
-		secret, err := s.k8sResourceManager.Secret(s.stos.Spec.SecretRefName, s.stos.Spec.SecretRefNamespace, corev1.SecretTypeOpaque, nil).Get()
+		secret, err := s.k8sResourceManager.Secret(s.stos.Spec.SecretRefName, s.stos.Spec.SecretRefNamespace, nil, corev1.SecretTypeOpaque, nil).Get()
 		if err != nil {
 			return err
 		}
 
-		svc, err := s.k8sResourceManager.Service(s.stos.Spec.GetServiceName(), s.stos.Spec.GetResourceNS(), nil, nil).Get()
+		svc, err := s.k8sResourceManager.Service(s.stos.Spec.GetServiceName(), s.stos.Spec.GetResourceNS(), nil, nil, nil).Get()
 		if err != nil {
 			return err
 		}

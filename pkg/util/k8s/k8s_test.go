@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/storageos/cluster-operator/pkg/util/k8s/resource"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
@@ -14,6 +13,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/storageos/cluster-operator/pkg/util/k8s/resource"
 )
 
 // TestResourceManager tests ResourceManager and the resources in the
@@ -36,133 +37,155 @@ func TestResourceManager(t *testing.T) {
 		{
 			name: resource.ConfigMapKind,
 			create: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.ConfigMap(nsName.Name, nsName.Namespace, nil).Create()
+				return rm.ConfigMap(nsName.Name, nsName.Namespace, nil, nil).Create()
 			},
 			delete: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.ConfigMap(nsName.Name, nsName.Namespace, nil).Delete()
+				return rm.ConfigMap(nsName.Name, nsName.Namespace, nil, nil).Delete()
 			},
 			wantResource: &corev1.ConfigMap{},
 		},
 		{
 			name: resource.DaemonSetKind,
 			create: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.DaemonSet(nsName.Name, nsName.Namespace, &appsv1.DaemonSetSpec{}).Create()
+				return rm.DaemonSet(nsName.Name, nsName.Namespace, nil, &appsv1.DaemonSetSpec{}).Create()
 			},
 			delete: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.DaemonSet(nsName.Name, nsName.Namespace, nil).Delete()
+				return rm.DaemonSet(nsName.Name, nsName.Namespace, nil, nil).Delete()
 			},
 			wantResource: &appsv1.DaemonSet{},
 		},
 		{
 			name: resource.DeploymentKind,
 			create: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.Deployment(nsName.Name, nsName.Namespace, &appsv1.DeploymentSpec{}).Create()
+				return rm.Deployment(nsName.Name, nsName.Namespace, nil, &appsv1.DeploymentSpec{}).Create()
 			},
 			delete: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.Deployment(nsName.Name, nsName.Namespace, nil).Delete()
+				return rm.Deployment(nsName.Name, nsName.Namespace, nil, nil).Delete()
 			},
 			wantResource: &appsv1.Deployment{},
 		},
 		{
 			name: resource.IngressKind,
 			create: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.Ingress(nsName.Name, nsName.Namespace, nil, &extensionsv1beta1.IngressSpec{}).Create()
+				return rm.Ingress(nsName.Name, nsName.Namespace, nil, nil, &extensionsv1beta1.IngressSpec{}).Create()
 			},
 			delete: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.Ingress(nsName.Name, nsName.Namespace, nil, nil).Delete()
+				return rm.Ingress(nsName.Name, nsName.Namespace, nil, nil, nil).Delete()
 			},
 			wantResource: &extensionsv1beta1.Ingress{},
 		},
 		{
 			name: resource.ServiceAccountKind,
 			create: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.ServiceAccount(nsName.Name, nsName.Namespace).Create()
+				return rm.ServiceAccount(nsName.Name, nsName.Namespace, nil).Create()
 			},
 			delete: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.ServiceAccount(nsName.Name, nsName.Namespace).Delete()
+				return rm.ServiceAccount(nsName.Name, nsName.Namespace, nil).Delete()
 			},
 			wantResource: &corev1.ServiceAccount{},
 		},
 		{
 			name: resource.RoleKind,
 			create: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.Role(nsName.Name, nsName.Namespace, []rbacv1.PolicyRule{}).Create()
+				return rm.Role(nsName.Name, nsName.Namespace, nil, []rbacv1.PolicyRule{}).Create()
 			},
 			delete: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.Role(nsName.Name, nsName.Namespace, nil).Delete()
+				return rm.Role(nsName.Name, nsName.Namespace, nil, nil).Delete()
 			},
 			wantResource: &rbacv1.Role{},
 		},
 		{
 			name: resource.RoleBindingKind,
 			create: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.RoleBinding(nsName.Name, nsName.Namespace, nil, &rbacv1.RoleRef{}).Create()
+				return rm.RoleBinding(nsName.Name, nsName.Namespace, nil, nil, &rbacv1.RoleRef{}).Create()
 			},
 			delete: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.RoleBinding(nsName.Name, nsName.Namespace, nil, nil).Delete()
+				return rm.RoleBinding(nsName.Name, nsName.Namespace, nil, nil, nil).Delete()
 			},
 			wantResource: &rbacv1.RoleBinding{},
 		},
 		{
 			name: resource.ClusterRoleKind,
 			create: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.ClusterRole(nsName.Name, []rbacv1.PolicyRule{}).Create()
+				return rm.ClusterRole(nsName.Name, nil, []rbacv1.PolicyRule{}).Create()
 			},
 			delete: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.ClusterRole(nsName.Name, nil).Delete()
+				return rm.ClusterRole(nsName.Name, nil, nil).Delete()
 			},
 			wantResource: &rbacv1.ClusterRole{},
 		},
 		{
 			name: resource.ClusterRoleBindingKind,
 			create: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.ClusterRoleBinding(nsName.Name, nil, &rbacv1.RoleRef{}).Create()
+				return rm.ClusterRoleBinding(nsName.Name, nil, nil, &rbacv1.RoleRef{}).Create()
 			},
 			delete: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.ClusterRoleBinding(nsName.Name, nil, nil).Delete()
+				return rm.ClusterRoleBinding(nsName.Name, nil, nil, nil).Delete()
 			},
 			wantResource: &rbacv1.ClusterRoleBinding{},
 		},
 		{
 			name: resource.SecretKind,
 			create: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.Secret(nsName.Name, nsName.Namespace, corev1.SecretTypeOpaque, map[string][]byte{}).Create()
+				return rm.Secret(nsName.Name, nsName.Namespace, nil, corev1.SecretTypeOpaque, map[string][]byte{}).Create()
 			},
 			delete: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.Secret(nsName.Name, nsName.Namespace, corev1.SecretTypeOpaque, nil).Delete()
+				return rm.Secret(nsName.Name, nsName.Namespace, nil, corev1.SecretTypeOpaque, nil).Delete()
 			},
 			wantResource: &corev1.Secret{},
 		},
 		{
 			name: resource.ServiceKind,
 			create: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.Service(nsName.Name, nsName.Namespace, map[string]string{}, &corev1.ServiceSpec{}).Create()
+				return rm.Service(nsName.Name, nsName.Namespace, map[string]string{}, map[string]string{}, &corev1.ServiceSpec{}).Create()
 			},
 			delete: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.Service(nsName.Name, nsName.Namespace, nil, nil).Delete()
+				return rm.Service(nsName.Name, nsName.Namespace, nil, nil, nil).Delete()
 			},
 			wantResource: &corev1.Service{},
 		},
 		{
 			name: resource.StatefulSetKind,
 			create: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.StatefulSet(nsName.Name, nsName.Namespace, &appsv1.StatefulSetSpec{}).Create()
+				return rm.StatefulSet(nsName.Name, nsName.Namespace, nil, &appsv1.StatefulSetSpec{}).Create()
 			},
 			delete: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.StatefulSet(nsName.Name, nsName.Namespace, nil).Delete()
+				return rm.StatefulSet(nsName.Name, nsName.Namespace, nil, nil).Delete()
 			},
 			wantResource: &appsv1.StatefulSet{},
 		},
 		{
 			name: resource.StorageClassKind,
 			create: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.StorageClass(nsName.Name, "storageos", map[string]string{}).Create()
+				return rm.StorageClass(nsName.Name, nil, "storageos", map[string]string{}).Create()
 			},
 			delete: func(rm *ResourceManager, nsName types.NamespacedName) error {
-				return rm.StorageClass(nsName.Name, "storageos", nil).Delete()
+				return rm.StorageClass(nsName.Name, nil, "storageos", nil).Delete()
 			},
 			wantResource: &storagev1.StorageClass{},
 		},
+		{
+			name: resource.PVCKind,
+			create: func(rm *ResourceManager, nsName types.NamespacedName) error {
+				return rm.PersistentVolumeClaim(nsName.Name, nsName.Namespace, nil, &corev1.PersistentVolumeClaimSpec{}).Create()
+			},
+			delete: func(rm *ResourceManager, nsName types.NamespacedName) error {
+				return rm.PersistentVolumeClaim(nsName.Name, nsName.Namespace, nil, nil).Delete()
+			},
+			wantResource: &corev1.PersistentVolumeClaim{},
+		},
+		// Testing this results in invalid kind even when a custom scheme is
+		// passed to the fake client. The default client-go scheme doesn't
+		// include CSIDriver.
+		// {
+		// 	name: resource.CSIDriverKind,
+		// 	create: func(rm *ResourceManager, nsName types.NamespacedName) error {
+		// 		return rm.CSIDriver(nsName.Name, nil, &storagev1beta1.CSIDriverSpec{}).Create()
+		// 	},
+		// 	delete: func(rm *ResourceManager, nsName types.NamespacedName) error {
+		// 		return rm.CSIDriver(nsName.Name, nil, nil).Delete()
+		// 	},
+		// },
 	}
 
 	for _, tc := range testcases {
@@ -171,9 +194,6 @@ func TestResourceManager(t *testing.T) {
 
 			labels := map[string]string{"app": "testapp"}
 			rm := NewResourceManager(client).SetLabels(labels)
-
-			rm.ServiceAccount("some-service-account", "some-ns").Create()
-			rm.Role("some-role", "some-ns", []rbacv1.PolicyRule{}).Create()
 
 			// Create resource.
 			if err := tc.create(rm, nsName); err != nil {

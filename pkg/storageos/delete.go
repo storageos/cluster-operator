@@ -15,76 +15,95 @@ import (
 func (s *Deployment) Delete() error {
 	namespace := s.stos.Spec.GetResourceNS()
 
-	if err := s.k8sResourceManager.StorageClass(s.stos.Spec.GetStorageClassName(), "", nil).Delete(); err != nil {
+	if err := s.k8sResourceManager.StorageClass(s.stos.Spec.GetStorageClassName(), nil, "", nil).Delete(); err != nil {
 		return err
 	}
 
-	if err := s.k8sResourceManager.Service(s.stos.Spec.GetServiceName(), namespace, nil, nil).Delete(); err != nil {
+	if err := s.k8sResourceManager.Service(s.stos.Spec.GetServiceName(), namespace, nil, nil, nil).Delete(); err != nil {
 		return err
 	}
 
-	if err := s.k8sResourceManager.DaemonSet(daemonsetName, namespace, nil).Delete(); err != nil {
+	if err := s.k8sResourceManager.DaemonSet(daemonsetName, namespace, nil, nil).Delete(); err != nil {
 		return err
 	}
 
-	if err := s.k8sResourceManager.Secret(initSecretName, namespace, corev1.SecretTypeOpaque, nil).Delete(); err != nil {
+	if err := s.k8sResourceManager.Secret(initSecretName, namespace, nil, corev1.SecretTypeOpaque, nil).Delete(); err != nil {
 		return err
 	}
 
-	if err := s.k8sResourceManager.ClusterRoleBinding(InitClusterBindingName, nil, nil).Delete(); err != nil {
+	if err := s.k8sResourceManager.ClusterRoleBinding(InitClusterBindingName, nil, nil, nil).Delete(); err != nil {
 		return err
 	}
 
-	if err := s.k8sResourceManager.ClusterRole(InitClusterRoleName, nil).Delete(); err != nil {
+	if err := s.k8sResourceManager.ClusterRole(InitClusterRoleName, nil, nil).Delete(); err != nil {
 		return err
 	}
 
-	if err := s.k8sResourceManager.RoleBinding(KeyManagementBindingName, namespace, nil, nil).Delete(); err != nil {
+	if err := s.k8sResourceManager.RoleBinding(KeyManagementBindingName, namespace, nil, nil, nil).Delete(); err != nil {
 		return err
 	}
 
-	if err := s.k8sResourceManager.Role(KeyManagementRoleName, namespace, nil).Delete(); err != nil {
+	if err := s.k8sResourceManager.Role(KeyManagementRoleName, namespace, nil, nil).Delete(); err != nil {
 		return err
 	}
 
-	if err := s.k8sResourceManager.ServiceAccount(DaemonsetSA, namespace).Delete(); err != nil {
+	if err := s.k8sResourceManager.RoleBinding(NFSClusterBindingName, namespace, nil, nil, nil).Delete(); err != nil {
+		return err
+	}
+
+	if err := s.k8sResourceManager.Role(NFSClusterRoleName, namespace, nil, nil).Delete(); err != nil {
+		return err
+	}
+
+	if err := s.k8sResourceManager.ServiceAccount(DaemonsetSA, namespace, nil).Delete(); err != nil {
 		return err
 	}
 
 	if s.stos.Spec.CSI.Enable {
+		// Delete CSIDriver if supported.
+		supportsCSIDriver, err := HasCSIDriverKind(s.discoveryClient)
+		if err != nil {
+			return err
+		}
+		if supportsCSIDriver {
+			if err := s.deleteCSIDriver(); err != nil {
+				return err
+			}
+		}
+
 		if err := s.deleteCSIHelper(); err != nil {
 			return err
 		}
 
-		if err := s.k8sResourceManager.ClusterRoleBinding(CSIAttacherClusterBindingName, nil, nil).Delete(); err != nil {
+		if err := s.k8sResourceManager.ClusterRoleBinding(CSIAttacherClusterBindingName, nil, nil, nil).Delete(); err != nil {
 			return err
 		}
 
-		if err := s.k8sResourceManager.ClusterRoleBinding(CSIProvisionerClusterBindingName, nil, nil).Delete(); err != nil {
+		if err := s.k8sResourceManager.ClusterRoleBinding(CSIProvisionerClusterBindingName, nil, nil, nil).Delete(); err != nil {
 			return err
 		}
 
-		if err := s.k8sResourceManager.ClusterRole(CSIAttacherClusterRoleName, nil).Delete(); err != nil {
+		if err := s.k8sResourceManager.ClusterRole(CSIAttacherClusterRoleName, nil, nil).Delete(); err != nil {
 			return err
 		}
 
-		if err := s.k8sResourceManager.ClusterRole(CSIProvisionerClusterRoleName, nil).Delete(); err != nil {
+		if err := s.k8sResourceManager.ClusterRole(CSIProvisionerClusterRoleName, nil, nil).Delete(); err != nil {
 			return err
 		}
 
-		if err := s.k8sResourceManager.ServiceAccount(s.getCSIHelperServiceAccountName(), namespace).Delete(); err != nil {
+		if err := s.k8sResourceManager.ServiceAccount(s.getCSIHelperServiceAccountName(), namespace, nil).Delete(); err != nil {
 			return err
 		}
 
-		if err := s.k8sResourceManager.ClusterRoleBinding(CSIK8SDriverRegistrarClusterBindingName, nil, nil).Delete(); err != nil {
+		if err := s.k8sResourceManager.ClusterRoleBinding(CSIK8SDriverRegistrarClusterBindingName, nil, nil, nil).Delete(); err != nil {
 			return err
 		}
 
-		if err := s.k8sResourceManager.ClusterRoleBinding(CSIDriverRegistrarClusterBindingName, nil, nil).Delete(); err != nil {
+		if err := s.k8sResourceManager.ClusterRoleBinding(CSIDriverRegistrarClusterBindingName, nil, nil, nil).Delete(); err != nil {
 			return err
 		}
 
-		if err := s.k8sResourceManager.ClusterRole(CSIDriverRegistrarClusterRoleName, nil).Delete(); err != nil {
+		if err := s.k8sResourceManager.ClusterRole(CSIDriverRegistrarClusterRoleName, nil, nil).Delete(); err != nil {
 			return err
 		}
 
@@ -101,22 +120,22 @@ func (s *Deployment) Delete() error {
 
 	// Delete cluster role for openshift security context constraints.
 	if strings.Contains(s.stos.Spec.K8sDistro, K8SDistroOpenShift) {
-		if err := s.k8sResourceManager.ClusterRoleBinding(OpenShiftSCCClusterBindingName, nil, nil).Delete(); err != nil {
+		if err := s.k8sResourceManager.ClusterRoleBinding(OpenShiftSCCClusterBindingName, nil, nil, nil).Delete(); err != nil {
 			return err
 		}
 
-		if err := s.k8sResourceManager.ClusterRole(OpenShiftSCCClusterRoleName, nil).Delete(); err != nil {
+		if err := s.k8sResourceManager.ClusterRole(OpenShiftSCCClusterRoleName, nil, nil).Delete(); err != nil {
 			return err
 		}
 	}
 
 	// Delete role for Pod Fencing.
 	if !s.stos.Spec.DisableFencing {
-		if err := s.k8sResourceManager.ClusterRoleBinding(FencingClusterBindingName, nil, nil).Delete(); err != nil {
+		if err := s.k8sResourceManager.ClusterRoleBinding(FencingClusterBindingName, nil, nil, nil).Delete(); err != nil {
 			return err
 		}
 
-		if err := s.k8sResourceManager.ClusterRole(FencingClusterRoleName, nil).Delete(); err != nil {
+		if err := s.k8sResourceManager.ClusterRole(FencingClusterRoleName, nil, nil).Delete(); err != nil {
 			return err
 		}
 	}

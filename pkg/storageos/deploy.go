@@ -5,11 +5,21 @@ import (
 	"strings"
 
 	"github.com/blang/semver"
-	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	"github.com/storageos/cluster-operator/pkg/util/k8s/resource"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
+	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
+)
+
+const (
+	// SchedulerExtenderName is the name of StorageOS scheduler.
+	SchedulerExtenderName = "storageos-scheduler"
+	// IntreeProvisionerName is the name of the k8s native provisioner.
+	IntreeProvisionerName = "kubernetes.io/storageos"
+	// CSIProvisionerName is the name of the CSI provisioner.
+	CSIProvisionerName = "storageos"
 )
 
 const (
@@ -24,16 +34,12 @@ const (
 	statefulsetKind = "statefulset"
 	deploymentKind  = "deployment"
 
-	daemonsetName         = "storageos-daemonset"
-	statefulsetName       = "storageos-statefulset"
-	csiHelperName         = "storageos-csi-helper"
-	schedulerExtenderName = "storageos-scheduler"
+	daemonsetName   = "storageos-daemonset"
+	statefulsetName = "storageos-statefulset"
+	csiHelperName   = "storageos-csi-helper"
 
 	tlsSecretType       = "kubernetes.io/tls"
 	storageosSecretType = "kubernetes.io/storageos"
-
-	intreeProvisionerName = "kubernetes.io/storageos"
-	csiProvisionerName    = "storageos"
 
 	defaultFSType                            = "ext4"
 	secretNamespaceKey                       = "adminSecretNamespace"
@@ -100,6 +106,14 @@ func (s *Deployment) Deploy() error {
 		return err
 	}
 
+	if err := s.createClusterRoleForNFS(); err != nil {
+		return err
+	}
+
+	if err := s.createClusterRoleBindingForNFS(); err != nil {
+		return err
+	}
+
 	if err := s.createClusterRoleForInit(); err != nil {
 		return err
 	}
@@ -137,6 +151,17 @@ func (s *Deployment) Deploy() error {
 	}
 
 	if s.stos.Spec.CSI.Enable {
+		// Create CSIDriver if supported.
+		supportsCSIDriver, err := HasCSIDriverKind(s.discoveryClient)
+		if err != nil {
+			return err
+		}
+		if supportsCSIDriver {
+			if err := s.createCSIDriver(); err != nil {
+				return err
+			}
+		}
+
 		// Create CSI exclusive resources.
 		if err := s.createCSISecrets(); err != nil {
 			return err
@@ -259,16 +284,24 @@ func CSIV1Supported(version string) bool {
 	return versionSupported(version, "1.13.0")
 }
 
+// CSIExternalAttacherV2Supported returns true for k8s 1.14+
+func CSIExternalAttacherV2Supported(version string) bool {
+	return versionSupported(version, "1.14.0")
+}
+
+// versionSupported takes two versions, current version (haveVersion) and a
+// minimum requirement version (wantVersion) and checks if the current version
+// is supported by comparing it with the minimum requirement.
 func versionSupported(haveVersion, wantVersion string) bool {
 	supportedVersion, err := semver.Parse(wantVersion)
 	if err != nil {
-		log.Error(err, "Failed to parse version", "want", wantVersion)
+		log.Info("Failed to parse version", "error", err, "want", wantVersion)
 		return false
 	}
 
 	currentVersion, err := semver.Parse(haveVersion)
 	if err != nil {
-		log.Error(err, "Failed to parse version", "have", haveVersion)
+		log.Info("Failed to parse version", "error", err, "have", haveVersion)
 		return false
 	}
 
@@ -338,11 +371,38 @@ func getPodNames(pods []corev1.Pod) []string {
 
 // GetNodeIPs returns a slice of IPs, given a slice of nodes.
 func GetNodeIPs(nodes []corev1.Node) []string {
-	var ips []string
+	ips := []string{}
 	for _, node := range nodes {
-		ips = append(ips, node.Status.Addresses[0].Address)
+		// Prefer InternalIP
+		if internalIP := GetNodeInternalIP(node.Status.Addresses); internalIP != "" {
+			ips = append(ips, internalIP)
+			continue
+		}
+		// Otherwise use first in list.
+		if address := GetFirstAddress(node.Status.Addresses); address != "" {
+			ips = append(ips, address)
+			continue
+		}
 	}
 	return ips
+}
+
+// GetNodeInternalIP the InternaIP from a slice of addresses, if it exists.
+func GetNodeInternalIP(addresses []corev1.NodeAddress) string {
+	for _, addr := range addresses {
+		if addr.Type == corev1.NodeInternalIP {
+			return addr.Address
+		}
+	}
+	return ""
+}
+
+// GetFirstAddress returns the first address from a slice of addresses.
+func GetFirstAddress(addresses []corev1.NodeAddress) string {
+	for _, addr := range addresses {
+		return addr.Address
+	}
+	return ""
 }
 
 // addPodTolerationForRecovery adds pod tolerations for cases when a node isn't

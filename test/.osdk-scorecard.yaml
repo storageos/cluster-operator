@@ -1,0 +1,33 @@
+scorecard:
+  plugins:
+    - olm:
+        cr-manifest:
+          - deploy/crds/storageos_v1_storageoscluster_cr.yaml
+        olm-deployed: true
+        csv-path: deploy/olm/storageos/storageos.clusterserviceversion.yaml
+        namespace: olm
+    # - olm:
+    #     cr-manifest:
+    #       - deploy/crds/storageos_v1_job_cr.yaml
+    #     olm-deployed: true
+    #     csv-path: deploy/olm/storageos/storageos.clusterserviceversion.yaml
+    #     namespace: olm
+    # - olm:
+    #     cr-manifest:
+    #       - deploy/crds/storageos_v1_storageosupgrade_cr.yaml
+    #     olm-deployed: true
+    #     csv-path: deploy/olm/storageos/storageos.clusterserviceversion.yaml
+    #     namespace: olm
+    # - olm:
+    #     cr-manifest:
+    #       - deploy/crds/storageos_v1_nfsserver_cr.yaml
+    #     olm-deployed: true
+    #     csv-path: deploy/olm/storageos/storageos.clusterserviceversion.yaml
+    #     namespace: olm
+    - basic:
+        cr-manifest:
+          - deploy/crds/storageos_v1_storageoscluster_cr.yaml
+        olm-deployed: true
+        csv-path: deploy/olm/storageos/storageos.clusterserviceversion.yaml
+        namespace: olm
+

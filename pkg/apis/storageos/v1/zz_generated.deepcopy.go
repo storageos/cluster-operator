@@ -91,7 +91,7 @@ func (in *Job) DeepCopyObject() runtime.Object {
 func (in *JobList) DeepCopyInto(out *JobList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Job, len(*in))
@@ -229,7 +229,7 @@ func (in *NFSServer) DeepCopyObject() runtime.Object {
 func (in *NFSServerList) DeepCopyInto(out *NFSServerList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]NFSServer, len(*in))
@@ -282,6 +282,7 @@ func (in *NFSServerSpec) DeepCopyInto(out *NFSServerSpec) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	out.PersistentVolumeClaim = in.PersistentVolumeClaim
 	return
 }
 
@@ -430,7 +431,7 @@ func (in *StorageOSClusterKVBackend) DeepCopy() *StorageOSClusterKVBackend {
 func (in *StorageOSClusterList) DeepCopyInto(out *StorageOSClusterList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]StorageOSCluster, len(*in))
@@ -579,7 +580,7 @@ func (in *StorageOSUpgrade) DeepCopyObject() runtime.Object {
 func (in *StorageOSUpgradeList) DeepCopyInto(out *StorageOSUpgradeList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]StorageOSUpgrade, len(*in))

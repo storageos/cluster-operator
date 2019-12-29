@@ -5,8 +5,17 @@ import (
 	"fmt"
 	"reflect"
 
-	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
+)
+
+const (
+	// nfsServerPodLabelSelector is the label that can be used to select all the
+	// pods of NFS Server.
+	nfsServerPodLabelSelector = "nfsserver"
 )
 
 func (s *Deployment) updateStatus(status *storageosv1.NFSServerStatus) error {
@@ -24,8 +33,10 @@ func (s *Deployment) updateStatus(status *storageosv1.NFSServerStatus) error {
 			}
 		}
 	}
+
+	// Update subresource status.
 	s.nfsServer.Status = *status
-	return s.client.Update(context.Background(), s.nfsServer)
+	return s.client.Status().Update(context.Background(), s.nfsServer)
 }
 
 // getStatus determines the status of the NFS Server deployment.
@@ -37,15 +48,30 @@ func (s *Deployment) getStatus() (*storageosv1.NFSServerStatus, error) {
 		AccessModes:  "",
 	}
 
-	ss, err := s.k8sResourceManager.StatefulSet(s.nfsServer.Name, s.nfsServer.Namespace, nil).Get()
+	// Check if the StatefulSet exists.
+	_, err := s.k8sResourceManager.StatefulSet(s.nfsServer.Name, s.nfsServer.Namespace, nil, nil).Get()
 	if err != nil {
+		if errors.IsNotFound(err) {
+			// Return empty status without any error. Resources haven't been
+			// created yet.
+			return status, nil
+		}
 		return status, err
 	}
 
-	svc, err := s.k8sResourceManager.Service(s.nfsServer.Name, s.nfsServer.Namespace, nil, nil).Get()
+	// Check if the Service exists.
+	svc, err := s.k8sResourceManager.Service(s.nfsServer.Name, s.nfsServer.Namespace, nil, nil, nil).Get()
 	if err != nil {
+		if errors.IsNotFound(err) {
+			// Return empty status without any error. Resources haven't been
+			// created yet.
+			return status, nil
+		}
 		return status, err
 	}
+
+	// We got both StatefulSet and Service without error, so upgrade to Pending.
+	status.Phase = storageosv1.PhasePending
 
 	// Set access mode.
 	if s.nfsServer.Spec.Export.Name == "" {
@@ -54,17 +80,26 @@ func (s *Deployment) getStatus() (*storageosv1.NFSServerStatus, error) {
 		status.AccessModes = getAccessMode(s.nfsServer.Spec.Export.Server.AccessMode)
 	}
 
-	// We got both without error, so upgrade to Pending.
-	status.Phase = storageosv1.PhasePending
-
 	// If the service is created, set the cluster address as the endpoint.
 	if svc.Spec.ClusterIP != "" {
 		status.RemoteTarget = svc.Spec.ClusterIP
 
-		// If the NFS pod is also ready, then we can mark the NFS Server as
+		// Get the NFS Server pods and check their status.
+		listOpts := []client.ListOption{
+			client.MatchingLabels{nfsServerPodLabelSelector: s.nfsServer.Name},
+		}
+		podList := &corev1.PodList{}
+		if err := s.client.List(context.Background(), podList, listOpts...); err != nil {
+			return status, err
+		}
+
+		// If any of the NFS pods are ready, then we can mark the NFS Server as
 		// online.
-		if ss.Status.ReadyReplicas > 0 {
-			status.Phase = storageosv1.PhaseRunning
+		for _, pod := range podList.Items {
+			if pod.Status.Phase == corev1.PodRunning {
+				status.Phase = storageosv1.PhaseRunning
+				break
+			}
 		}
 	}
 

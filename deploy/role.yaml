@@ -3,14 +3,23 @@ kind: ClusterRole
 metadata:
   creationTimestamp: null
   name: storageos-operator
+  labels:
+    app.kubernetes.io/name: storageos-operator
+    app.kubernetes.io/instance: storageos-cluster-operator
+    app.kubernetes.io/component: operator
+    app.kubernetes.io/part-of: storageos
 rules:
 - apiGroups:
   - storageos.com
   resources:
   - storageosclusters
+  - storageosclusters/status
   - storageosupgrades
+  - storageosupgrades/status
   - jobs
+  - jobs/status
   - nfsservers
+  - nfsservers/status
   verbs:
   - '*'
 - apiGroups:
@@ -53,6 +62,7 @@ rules:
   - serviceaccounts
   - secrets
   - services
+  - services/finalizers
   - persistentvolumeclaims
   - persistentvolumes
   - configmaps
@@ -84,6 +94,8 @@ rules:
   - storageclasses
   - volumeattachments
   - csinodeinfos
+  - csinodes
+  - csidrivers
   verbs:
   - create
   - delete
@@ -91,6 +103,7 @@ rules:
   - list
   - get
   - update
+  - patch
 - apiGroups:
   - apiextensions.k8s.io
   resources:
@@ -124,3 +137,37 @@ rules:
   - update
   - get
   - use
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - mutatingwebhookconfigurations
+  verbs:
+  - '*'
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - '*'
+- apiGroups:
+  - apps
+  resources:
+  - deployments/finalizers
+  resourceNames:
+  - storageos-cluster-operator
+  verbs:
+  - update
+- apiGroups:
+  - events.k8s.io
+  resources:
+  - events
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - create
+  - update

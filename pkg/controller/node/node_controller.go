@@ -7,6 +7,9 @@ import (
 	"strings"
 	"time"
 
+	storageosapi "github.com/storageos/go-api"
+	storageoserror "github.com/storageos/go-api/serror"
+	storageostypes "github.com/storageos/go-api/types"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -14,15 +17,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
-	storageosapi "github.com/storageos/go-api"
-	storageoserror "github.com/storageos/go-api/serror"
-	storageostypes "github.com/storageos/go-api/types"
 )
 
 var log = logf.Log.WithName("storageos.node")
@@ -79,6 +79,10 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 	reconcilePeriod := 5 * time.Second
 	reconcileResult := reconcile.Result{RequeueAfter: reconcilePeriod}
 
+	// Return this for a immediate retry of the reconciliation loop with the
+	// same request object.
+	immediateRetryResult := reconcile.Result{Requeue: true}
+
 	// Fetch the Node instance
 	instance := &corev1.Node{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
@@ -101,7 +105,7 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 			return reconcile.Result{}, nil
 		}
 		// Requeue the request in order to retry getting the cluster.
-		log.Error(err, "Failed to find current cluster")
+		log.Info("Failed to find current cluster", "error", err)
 		return reconcileResult, err
 	}
 
@@ -114,40 +118,46 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 		r.stosClient.clusterUID != cluster.GetUID() {
 
 		if err := r.setClientForCluster(cluster); err != nil {
-			log.Error(err, "Failed to configure api client")
+			log.Info("Failed to configure api client", "error", err)
 			return reconcileResult, err
 		}
 	}
 
+	// Check if the node is part of StorageOS cluster.
+	node, err := r.stosClient.Node(instance.Name)
+	if err != nil {
+		if err == storageosapi.ErrNoSuchNode {
+			// Not a StorageOS node, skip.
+			return reconcile.Result{}, nil
+		}
+		// Retry immediately if failed to determine if the node is part of the
+		// cluster.
+		return immediateRetryResult, err
+	}
+
 	// Sync labels to StorageOS node object.
-	if err = r.syncLabels(instance.Name, instance.Labels); err != nil {
+	if err = r.syncLabels(node, instance.Labels); err != nil {
 		if storageoserror.ErrorKind(err) == storageoserror.APIUncontactable {
-			log.V(4).Info("Waiting for StorageOS API to become ready")
+			log.Info("Waiting for StorageOS API to become ready")
 			return reconcileResult, nil
 		}
 
 		// Error syncing labels - requeue the request.
-		log.V(4).Info("Failed to sync node labels", "error", err)
+		log.Info("Failed to sync node labels", "error", err)
 		return reconcileResult, nil
 	}
 
-	return reconcileResult, nil
+	return reconcile.Result{}, nil
 }
 
 // SyncNodeLabels applies the Kubernetes node labels to StorageOS node objects.
-func (r *ReconcileNode) syncLabels(name string, labels map[string]string) error {
-	if len(name) == 0 || len(labels) == 0 {
+func (r *ReconcileNode) syncLabels(node *storageostypes.Node, labels map[string]string) error {
+	if len(labels) == 0 {
 		return nil
 	}
 
 	if r.stosClient == nil {
 		return ErrNoAPIClient
-	}
-
-	// Get StorageOS node
-	node, err := r.stosClient.Node(name)
-	if err != nil {
-		return err
 	}
 
 	// Initialize the map if empty.
@@ -192,14 +202,15 @@ func (r *ReconcileNode) syncLabels(name string, labels map[string]string) error 
 		Context:     ctx,
 	}
 
-	_, err = r.stosClient.NodeUpdate(opts)
+	_, err := r.stosClient.NodeUpdate(opts)
 	return err
 }
 
 // findCurrentCluster finds the running cluster.
 func (r *ReconcileNode) findCurrentCluster() (*storageosv1.StorageOSCluster, error) {
 	clusterList := &storageosv1.StorageOSClusterList{}
-	if err := r.client.List(context.TODO(), &client.ListOptions{}, clusterList); err != nil {
+	listOpts := []client.ListOption{}
+	if err := r.client.List(context.TODO(), clusterList, listOpts...); err != nil {
 		return nil, fmt.Errorf("failed to list clusters: %v", err)
 	}
 

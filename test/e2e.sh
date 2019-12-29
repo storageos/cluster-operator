@@ -3,11 +3,8 @@
 set -Eeuxo pipefail
 
 readonly REPO_ROOT="${REPO_ROOT:-$(git rev-parse --show-toplevel)}"
-readonly K8S_1_14="v1.14.2"
-readonly K8S_1_13="v1.13.2"
-# Two different versions of KinD due to a breaking change between the versions.
-readonly KIND_1_14_LINK="https://docs.google.com/uc?export=download&id=1-oy-ui0ZE_T3Fglz1c8ZgnW8U-A4yS8u"
-readonly KIND_1_13_LINK="https://docs.google.com/uc?export=download&id=1C_Jrj68Y685N5KcOqDQtfjeAZNW2UvNB"
+readonly K8S_LATEST="v1.17.0"
+readonly KIND_LINK="https://github.com/kubernetes-sigs/kind/releases/download/v0.6.1/kind-linux-amd64"
 
 enable_lio() {
     echo "Enable LIO"
@@ -23,12 +20,6 @@ enable_lio() {
 run_kind() {
     echo "Download kind binary..."
 
-    if [ "$1" == "$K8S_1_13" ]; then
-        KIND_LINK=$KIND_1_13_LINK
-    else
-        KIND_LINK=$KIND_1_14_LINK
-    fi
-
     # docker run --rm -it -v "$(pwd)":/go/bin golang go get sigs.k8s.io/kind && sudo mv kind /usr/local/bin/
     wget -O kind $KIND_LINK --no-check-certificate && chmod +x kind && sudo mv kind /usr/local/bin/
     echo "Download kubectl..."
@@ -39,10 +30,8 @@ run_kind() {
     # kind create cluster --image=kindest/node:"$K8S_VERSION"
     kind create cluster --image storageos/kind-node:$1 --name kind-1
 
-    echo "Export kubeconfig..."
-    # shellcheck disable=SC2155
-    export KUBECONFIG="$(kind get kubeconfig-path --name="kind-1")"
-    cp $(kind get kubeconfig-path --name="kind-1") ~/.kube/config
+    echo "Set kubectl config context..."
+    kubectl config use-context kind-kind-1
     echo
 
     echo "Get cluster info..."
@@ -141,7 +130,7 @@ install_operatorsdk() {
 print_pod_details_and_logs() {
     local namespace="${1?Namespace is required}"
 
-    kubectl get pods --show-all --no-headers --namespace "$namespace" | awk '{ print $1 }' | while read -r pod; do
+    kubectl get pods --no-headers --namespace "$namespace" | awk '{ print $1 }' | while read -r pod; do
         if [[ -n "$pod" ]]; then
             printf '\n================================================================================\n'
             printf ' Details from pod %s\n' "$pod"
@@ -158,7 +147,7 @@ print_pod_details_and_logs() {
             printf '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n'
 
             local init_containers
-            init_containers=$(kubectl get pods --show-all --output jsonpath="{.spec.initContainers[*].name}" --namespace "$namespace" "$pod")
+            init_containers=$(kubectl get pods --output jsonpath="{.spec.initContainers[*].name}" --namespace "$namespace" "$pod")
             for container in $init_containers; do
                 printf -- '\n--------------------------------------------------------------------------------\n'
                 printf ' Logs of init container %s in pod %s\n' "$container" "$pod"
@@ -172,7 +161,7 @@ print_pod_details_and_logs() {
             done
 
             local containers
-            containers=$(kubectl get pods --show-all --output jsonpath="{.spec.containers[*].name}" --namespace "$namespace" "$pod")
+            containers=$(kubectl get pods --output jsonpath="{.spec.containers[*].name}" --namespace "$namespace" "$pod")
             for container in $containers; do
                 printf '\n--------------------------------------------------------------------------------\n'
                 printf -- ' Logs of container %s in pod %s\n' "$container" "$pod"
@@ -202,14 +191,23 @@ operator-sdk-e2e-cleanup() {
         storageos:csi-provisioner storageos:driver-registrar \
         storageos:openshift-scc storageos:pod-fencer \
         storageos:scheduler-extender storageos:init \
-        --ignore-not-found=true
+        storageos:nfs-provisioner --ignore-not-found=true
 
     # Delete all the cluster role bindings.
     kubectl delete clusterrolebinding storageos:csi-attacher \
         storageos:csi-provisioner storageos:driver-registrar \
         storageos:k8s-driver-registrar storageos:openshift-scc \
         storageos:pod-fencer storageos:scheduler-extender \
-        storageos:init --ignore-not-found=true
+        storageos:init storageos:nfs-provisioner --ignore-not-found=true
+
+    # Delete NFSServer statefulset.
+    kubectl delete statefulset.apps/example-nfsserver --ignore-not-found=true
+
+    # Delete webhook service.
+    kubectl -n storageos-operator delete service/storageos-scheduler-webhook --ignore-not-found=true
+
+    # Delete webhook config.
+    kubectl delete mutatingwebhookconfigurations storageos-scheduler-webhook --ignore-not-found=true
 }
 
 main() {
@@ -224,17 +222,7 @@ main() {
         # Update CR with k8sDistro set to openshift
         yq w -i deploy/storageos-operators.olm.cr.yaml spec.k8sDistro openshift
     elif [ "$1" = "kind" ]; then
-        # OLM installation fails on k8s 1.14 with error "failed to connect
-        # service" in CI only. Works fine locally.
-        # Refer: https://github.com/operator-framework/operator-lifecycle-manager/issues/740
-        # Using k8s 1.13 with old KinD for OLM until that's fixed.
-        # New KinD with k8s 1.14 uses containerd and has an incompatible node
-        # image.
-        if [ "$2" = "olm" ]; then
-            run_kind $K8S_1_13
-        else
-            run_kind $K8S_1_14
-        fi
+        run_kind $K8S_LATEST
     fi
 
     install_operatorsdk
@@ -255,14 +243,8 @@ main() {
         docker save storageos/cluster-operator:test > cluster-operator.tar
         docker cp cluster-operator.tar $x:/cluster-operator.tar
 
-        if [ "$2" = "olm" ]; then
-            # kind-olm runs on old KinD with docker.
-            # Docker load image from tar archive (KinD with docker).
-            docker exec $x bash -c "docker load < /cluster-operator.tar"
-        else
-            # containerd load image from tar archive (KinD with containerd).
-            docker exec $x bash -c "ctr -n k8s.io images import --base-name docker.io/storageos/cluster-operator:test /cluster-operator.tar"
-        fi
+        # containerd load image from tar archive (KinD with containerd).
+        docker exec $x bash -c "ctr -n k8s.io images import --base-name docker.io/storageos/cluster-operator:test /cluster-operator.tar"
     fi
 
     if [ "$2" = "olm" ]; then
@@ -286,6 +268,10 @@ main() {
 
         # Install storageos with CSI helpers as Deployment.
         install_storageos_csi_deployment
+
+        # Run scorecard tests on the olm-deployed operator.
+        make scorecard-test
+
         uninstall_storageos
     else
         # Add taint on the node.
@@ -296,6 +282,9 @@ main() {
         # deploy/service_account.yaml has a static namespace. Creating operator in
         # other namespace will result in permission errors.
         kubectl create ns storageos-operator
+
+        # Apply Prometheus ServiceMonitor CRD.
+        kubectl apply -f deploy/monitoring_coreos_v1_servicemonitor_crd.yaml
 
         # Run the e2e test in the created namespace.
         #

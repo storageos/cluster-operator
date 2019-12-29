@@ -6,14 +6,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/blang/semver"
+	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
-	storageos "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
-	nfs "github.com/storageos/cluster-operator/pkg/nfs"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	kdiscovery "k8s.io/client-go/discovery"
+
+	"github.com/storageos/cluster-operator/internal/pkg/discovery"
+	storageos "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 )
 
 // Constants used in NFS server test utils.
@@ -49,27 +53,49 @@ func DeployNFSServer(t *testing.T, ctx *framework.TestCtx, nfsServer *storageos.
 		return err
 	}
 
-	// // NOTE: This is disabled for now, because NFS server pod fails to mount
-	// // volume on OpenShift 3.11 because of limited CSI support, resulting in
-	// // test failure. When an OpenShift 3.11 CSI support workaround is added, or
-	// // when OpenShift 4 is added in the CI, this can be enabled again.
-	// err = WaitForStatefulSet(t, f.KubeClient, nfsServer.Namespace, nfsServer.Name, RetryInterval, Timeout*2)
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
-
-	// NOTE: Temporary resource creation check only. Remove once the above check
-	// is added.
-	// Wait for 5 seconds here because there's no wait for the StatefulSet to be
-	// ready. This will provide time for the PVC to be provisioned.
-	time.Sleep(5 * time.Second)
-	statefulset := &appsv1.StatefulSet{}
-	namespacedName := types.NamespacedName{
-		Name:      nfsServer.Name,
-		Namespace: nfsServer.Namespace,
+	// Minimum version for running the complete test.
+	minVersion := semver.Version{
+		Major: 1, Minor: 13, Patch: 0,
 	}
-	if f.Client.Get(goctx.TODO(), namespacedName, statefulset); err != nil {
-		return err
+
+	featureSupported, err := featureSupportAvailable(minVersion)
+	if err != nil {
+		return fmt.Errorf("failed to check platform support for NFS Server test: %v", err)
+	}
+
+	if featureSupported {
+		// Wait for NFS Server StatefulSet to be ready.
+		err = WaitForStatefulSet(t, f.KubeClient, nfsServer.Namespace, nfsServer.Name, RetryInterval, Timeout*2)
+		if err != nil {
+			return err
+		}
+
+		// Check the Service endpoints to be selected properly.
+		nfsServiceEndpoints := &corev1.Endpoints{}
+		namespacedName := types.NamespacedName{
+			Name:      nfsServer.Name,
+			Namespace: nfsServer.Namespace,
+		}
+		if err := f.Client.Get(goctx.TODO(), namespacedName, nfsServiceEndpoints); err != nil {
+			return err
+		}
+		if len(nfsServiceEndpoints.Subsets) < 1 {
+			return fmt.Errorf("NFS Server Service has no selected endpoints")
+		}
+	} else {
+		// Wait for 10 seconds here because there's no wait for the StatefulSet
+		// to be ready. This will provide time for the PVC to be provisioned.
+		time.Sleep(10 * time.Second)
+		// Since the feature is not supported, only check if the StatefulSet
+		// is created.
+		statefulset := &appsv1.StatefulSet{}
+		namespacedName := types.NamespacedName{
+			Name:      nfsServer.Name,
+			Namespace: nfsServer.Namespace,
+		}
+		if f.Client.Get(goctx.TODO(), namespacedName, statefulset); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -105,23 +131,42 @@ func NFSServerTest(t *testing.T, ctx *framework.TestCtx) {
 		t.Fatal(err)
 	}
 
+	// Check if a ServiceMonitor was created.
+	// ServiceMonitor is only created when the ServiceMonitor CRD is known in
+	// the cluster.
+	serviceMonitorExists, err := hasServiceMonitor()
+	if err != nil {
+		t.Error("failed to check if ServiceMonitor exists", err)
+	}
+	if serviceMonitorExists {
+		serviceMonitor := &monitoringv1.ServiceMonitor{}
+		smNSName := types.NamespacedName{
+			Name:      fmt.Sprintf("%s-%s", testNFSServer.Name, "metrics"),
+			Namespace: defaultNS,
+		}
+		if err := f.Client.Get(goctx.TODO(), smNSName, serviceMonitor); err != nil {
+			t.Error("failed to get NFS metrics ServiceMonitor", err)
+		}
+	}
+
 	// Delete the NFS server.
 	if err := f.Client.Delete(goctx.TODO(), testNFSServer); err != nil {
 		t.Error("failed to delete NFS Server", err)
 	}
 
-	// Delete the PVC used by NFS server because it's not cleaned up when the
-	// server is deleted.
-	pvc := &corev1.PersistentVolumeClaim{}
-	pvcNSName := types.NamespacedName{
-		// PVC name format: <pvc-prefix>-<statefulset-pod-name>
-		Name:      fmt.Sprintf("%s-%s-%s", nfs.PVCNamePrefix, nfsServerName, "0"),
-		Namespace: defaultNS,
+	// Wait for NFS resources to be deleted automatically.
+	time.Sleep(5 * time.Second)
+}
+
+// hasServiceMonitor checks if Prometheus Service Monitor CRD is registered in
+// the cluster.
+func hasServiceMonitor() (bool, error) {
+	apiVersion := "monitoring.coreos.com/v1"
+	kind := "ServiceMonitor"
+
+	dc, err := kdiscovery.NewDiscoveryClientForConfig(framework.Global.KubeConfig)
+	if err != nil {
+		return false, err
 	}
-	if err := f.Client.Get(goctx.TODO(), pvcNSName, pvc); err != nil {
-		t.Error("failed to get PVC", err)
-	}
-	if err := f.Client.Delete(goctx.TODO(), pvc); err != nil {
-		t.Error("failed to delete PVC", err)
-	}
+	return discovery.HasResource(dc, apiVersion, kind)
 }

@@ -13,11 +13,12 @@ import (
 
 // k8s APIVersion constants.
 const (
-	APIv1         = "v1"
-	APIappsv1     = "apps/v1"
-	APIextv1beta1 = "extensions/v1beta1"
-	APIrbacv1     = "rbac.authorization.k8s.io/v1"
-	APIstoragev1  = "storage.k8s.io/v1"
+	APIv1             = "v1"
+	APIappsv1         = "apps/v1"
+	APIextv1beta1     = "extensions/v1beta1"
+	APIrbacv1         = "rbac.authorization.k8s.io/v1"
+	APIstoragev1      = "storage.k8s.io/v1"
+	APIstoragev1beta1 = "storage.k8s.io/v1beta1"
 )
 
 // CreateOrUpdate creates or updates an existing k8s resource.

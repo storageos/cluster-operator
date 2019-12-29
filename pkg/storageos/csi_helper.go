@@ -4,6 +4,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/storageos/cluster-operator/pkg/util/k8s"
 )
 
 const (
@@ -30,6 +32,10 @@ func (s *Deployment) createCSIHelper() error {
 // csiHelperStatefulSet returns a CSI helper StatefulSet object.
 func (s Deployment) createCSIHelperStatefulSet(replicas int32) error {
 	podLabels := podLabelsForCSIHelpers(s.stos.Name, statefulsetKind)
+	containers, err := s.csiHelperContainers()
+	if err != nil {
+		return err
+	}
 	spec := &appsv1.StatefulSetSpec{
 		Replicas: &replicas,
 		Selector: &metav1.LabelSelector{
@@ -41,7 +47,7 @@ func (s Deployment) createCSIHelperStatefulSet(replicas int32) error {
 			},
 			Spec: corev1.PodSpec{
 				ServiceAccountName: StatefulsetSA,
-				Containers:         s.csiHelperContainers(),
+				Containers:         containers,
 				Volumes:            s.csiHelperVolumes(),
 			},
 		},
@@ -49,12 +55,16 @@ func (s Deployment) createCSIHelperStatefulSet(replicas int32) error {
 
 	s.addCommonPodProperties(&spec.Template.Spec)
 
-	return s.k8sResourceManager.StatefulSet(statefulsetName, s.stos.Spec.GetResourceNS(), spec).Create()
+	return s.k8sResourceManager.StatefulSet(statefulsetName, s.stos.Spec.GetResourceNS(), nil, spec).Create()
 }
 
 // csiHelperDeployment returns a CSI helper Deployment object.
 func (s Deployment) createCSIHelperDeployment(replicas int32) error {
 	podLabels := podLabelsForCSIHelpers(s.stos.Name, deploymentKind)
+	containers, err := s.csiHelperContainers()
+	if err != nil {
+		return err
+	}
 	spec := &appsv1.DeploymentSpec{
 		Replicas: &replicas,
 		Selector: &metav1.LabelSelector{
@@ -66,7 +76,7 @@ func (s Deployment) createCSIHelperDeployment(replicas int32) error {
 			},
 			Spec: corev1.PodSpec{
 				ServiceAccountName: CSIHelperSA,
-				Containers:         s.csiHelperContainers(),
+				Containers:         containers,
 				Volumes:            s.csiHelperVolumes(),
 			},
 		},
@@ -74,7 +84,7 @@ func (s Deployment) createCSIHelperDeployment(replicas int32) error {
 
 	s.addCommonPodProperties(&spec.Template.Spec)
 
-	return s.k8sResourceManager.Deployment(csiHelperName, s.stos.Spec.GetResourceNS(), spec).Create()
+	return s.k8sResourceManager.Deployment(csiHelperName, s.stos.Spec.GetResourceNS(), nil, spec).Create()
 }
 
 // addCommonPodProperties adds common pod properties to a given pod spec. The
@@ -92,7 +102,7 @@ func (s Deployment) addCommonPodProperties(podSpec *corev1.PodSpec) error {
 
 // csiHelperContainers returns a list of containers that should be part of the
 // CSI helper pods.
-func (s Deployment) csiHelperContainers() []corev1.Container {
+func (s Deployment) csiHelperContainers() ([]corev1.Container, error) {
 	containers := []corev1.Container{
 		{
 			Image:           s.stos.Spec.GetCSIExternalProvisionerImage(CSIV1Supported(s.k8sVersion)),
@@ -117,7 +127,7 @@ func (s Deployment) csiHelperContainers() []corev1.Container {
 			},
 		},
 		{
-			Image:           s.stos.Spec.GetCSIExternalAttacherImage(CSIV1Supported(s.k8sVersion)),
+			Image:           s.stos.Spec.GetCSIExternalAttacherImage(CSIV1Supported(s.k8sVersion), CSIExternalAttacherV2Supported(s.k8sVersion)),
 			Name:            "csi-external-attacher",
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Args: []string{
@@ -143,7 +153,23 @@ func (s Deployment) csiHelperContainers() []corev1.Container {
 	// with the other CSI helpers.
 	// CSI v0 requires the driver registrar to be run with the driver instances
 	// only.
-	if CSIV1Supported(s.k8sVersion) {
+	// In k8s 1.13, csi-cluster-driver-registrar was required to be run along
+	// with the CSI helpers. This was responsible for the creation of CSIDriver
+	// resource belonging to the CRD csidrivers.csi.storage.k8s.io. In k8s
+	// 1.14+ this was replaced by a CSIDriver built-in resource belonging to
+	// API group csidrivers.storage.k8s.io. This is no longer automatically
+	// created. The deployment tools should create this resource.
+	//
+	// Add csi-cluster-driver-registrar if the built-in csidrivers resource is
+	// not supported by the k8s api server.
+	supportsCSIDriver, err := HasCSIDriverKind(s.discoveryClient)
+	if err != nil {
+		return containers, err
+	}
+
+	// If CSIDriver is not supported but CSI v1 is supported, run
+	// cluster-driver-registrar.
+	if !supportsCSIDriver && CSIV1Supported(s.k8sVersion) {
 		driverReg := corev1.Container{
 			Image:           s.stos.Spec.GetCSIClusterDriverRegistrarImage(),
 			Name:            "csi-driver-k8s-registrar",
@@ -178,7 +204,7 @@ func (s Deployment) csiHelperContainers() []corev1.Container {
 		containers = append(containers, driverReg)
 	}
 
-	return containers
+	return containers, nil
 }
 
 // csiHelperVolumes returns a list of volumes that should be part of the CSI
@@ -204,18 +230,20 @@ func (s Deployment) deleteCSIHelper() error {
 	// different kinds.
 	switch s.stos.Spec.GetCSIDeploymentStrategy() {
 	case deploymentKind:
-		return s.k8sResourceManager.Deployment(csiHelperName, s.stos.Spec.GetResourceNS(), nil).Delete()
+		return s.k8sResourceManager.Deployment(csiHelperName, s.stos.Spec.GetResourceNS(), nil, nil).Delete()
 	default:
-		return s.k8sResourceManager.StatefulSet(statefulsetName, s.stos.Spec.GetResourceNS(), nil).Delete()
+		return s.k8sResourceManager.StatefulSet(statefulsetName, s.stos.Spec.GetResourceNS(), nil, nil).Delete()
 	}
 }
 
 // podLabelsForCSIHelpers takes the name of a cluster custom resource and the
 // kind of helper, and returns labels for the pods of the helpers.
 func podLabelsForCSIHelpers(name, kind string) map[string]string {
-	return map[string]string{
+	// Combine CSI Helper specific labels with the default app labels.
+	labels := map[string]string{
 		"app":          appName,
 		"storageos_cr": name,
 		"kind":         kind,
 	}
+	return k8s.AddDefaultAppLabels(name, labels)
 }

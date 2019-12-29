@@ -38,8 +38,9 @@ func (s *Deployment) updateStorageOSStatus(status *storageosv1.StorageOSClusterS
 		}
 	}
 
+	// Update subresource status.
 	s.stos.Status = *status
-	return s.client.Update(context.Background(), s.stos)
+	return s.client.Status().Update(context.Background(), s.stos)
 }
 
 // getStorageOSStatus queries health of all the nodes in the join token and
@@ -74,7 +75,7 @@ func (s *Deployment) getStorageOSStatus() (*storageosv1.StorageOSClusterStatus, 
 		}
 	}
 
-	phase := storageosv1.ClusterPhaseInitial
+	phase := storageosv1.ClusterPhaseCreating
 	if readyNodes == totalNodes {
 		phase = storageosv1.ClusterPhaseRunning
 	}

@@ -1,0 +1,14 @@
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: prometheus-nfs
+spec:
+  image: quay.io/prometheus/prometheus:v2.13.1
+  serviceAccountName: prometheus-nfs
+  serviceMonitorSelector:
+    matchLabels:
+      app.kubernetes.io/name: storageos
+      app.kubernetes.io/component: nfs-server
+      app.kubernetes.io/service-for: nfs-metrics
+      # nfsserver: some-pvc-name
+  enableAdminAPI: false

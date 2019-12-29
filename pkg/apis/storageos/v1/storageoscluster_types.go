@@ -17,7 +17,19 @@ type ClusterPhase string
 // Constants for operator defaults values and different phases.
 const (
 	ClusterPhaseInitial ClusterPhase = ""
-	ClusterPhaseRunning              = "Running"
+	// A cluster is in running phase when the cluster health is reported
+	// healthy, all the StorageOS nodes are ready.
+	ClusterPhaseRunning ClusterPhase = "Running"
+	// A cluster is in creating phase when the cluster resource provisioning as
+	// started
+	ClusterPhaseCreating ClusterPhase = "Creating"
+	// A cluster is in pending phase when the creation hasn't started. This can
+	// happen if there's an existing cluster and the new cluster provisioning is
+	// not allowed by the operator.
+	ClusterPhasePending ClusterPhase = "Pending"
+	// A cluster is in terminating phase when the cluster delete is initiated.
+	// The cluster object is waiting for the finalizers to be executed.
+	ClusterPhaseTerminating ClusterPhase = "Terminating"
 
 	DefaultNamespace = "storageos"
 
@@ -30,16 +42,18 @@ const (
 
 	DefaultIngressHostname = "storageos.local"
 
-	DefaultNodeContainerImage                 = "storageos/node:1.4.0"
+	DefaultNodeContainerImage                 = "storageos/node:1.5.2"
 	DefaultInitContainerImage                 = "storageos/init:1.0.0"
 	CSIv1ClusterDriverRegistrarContainerImage = "quay.io/k8scsi/csi-cluster-driver-registrar:v1.0.1"
-	CSIv1NodeDriverRegistrarContainerImage    = "quay.io/k8scsi/csi-node-driver-registrar:v1.0.1"
-	CSIv1ExternalProvisionerContainerImage    = "storageos/csi-provisioner:v1.0.1"
-	CSIv1ExternalAttacherContainerImage       = "quay.io/k8scsi/csi-attacher:v1.0.1"
-	CSIv1LivenessProbeContainerImage          = "quay.io/k8scsi/livenessprobe:v1.0.1"
+	CSIv1NodeDriverRegistrarContainerImage    = "quay.io/k8scsi/csi-node-driver-registrar:v1.2.0"
+	CSIv1ExternalProvisionerContainerImage    = "storageos/csi-provisioner:v1.4.0"
+	CSIv1ExternalAttacherContainerImage       = "quay.io/k8scsi/csi-attacher:v1.2.1"
+	CSIv1ExternalAttacherv2ContainerImage     = "quay.io/k8scsi/csi-attacher:v2.0.0"
+	CSIv1LivenessProbeContainerImage          = "quay.io/k8scsi/livenessprobe:v1.1.0"
 	CSIv0DriverRegistrarContainerImage        = "quay.io/k8scsi/driver-registrar:v0.4.2"
-	CSIv0ExternalProvisionerContainerImage    = "storageos/csi-provisioner:v0.4.2"
+	CSIv0ExternalProvisionerContainerImage    = "storageos/csi-provisioner:v0.4.3"
 	CSIv0ExternalAttacherContainerImage       = "quay.io/k8scsi/csi-attacher:v0.4.2"
+	DefaultNFSContainerImage                  = "storageos/nfs:1.0.0"
 
 	DefaultHyperkubeContainerRegistry = "gcr.io/google_containers/hyperkube"
 
@@ -222,6 +236,7 @@ type StorageOSClusterStatus struct {
 // +kubebuilder:printcolumn:name="age",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:resource:path=storageosclusters,shortName=stos
 // +kubebuilder:singular=storageoscluster
+// +kubebuilder:subresource:status
 type StorageOSCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -317,11 +332,16 @@ func (s StorageOSClusterSpec) GetCSIExternalProvisionerImage(csiv1 bool) string 
 }
 
 // GetCSIExternalAttacherImage returns CSI external attacher container image.
-func (s StorageOSClusterSpec) GetCSIExternalAttacherImage(csiv1 bool) string {
+// CSI v0, CSI v1 on k8s 1.13 and CSI v1 on k8s 1.14+ require different versions
+// of external attacher.
+func (s StorageOSClusterSpec) GetCSIExternalAttacherImage(csiv1 bool, attacherv2Supported bool) string {
 	if s.Images.CSIExternalAttacherContainer != "" {
 		return s.Images.CSIExternalAttacherContainer
 	}
 	if csiv1 {
+		if attacherv2Supported {
+			return CSIv1ExternalAttacherv2ContainerImage
+		}
 		return CSIv1ExternalAttacherContainerImage
 	}
 	return CSIv0ExternalAttacherContainerImage
@@ -344,6 +364,15 @@ func (s StorageOSClusterSpec) GetHyperkubeImage(k8sVersion string) string {
 	}
 	// Add version prefix "v" in the tag.
 	return fmt.Sprintf("%s:v%s", DefaultHyperkubeContainerRegistry, k8sVersion)
+}
+
+// GetNFSServerImage returns NFS server container image used as the default
+// image in the cluster.
+func (s StorageOSClusterSpec) GetNFSServerImage() string {
+	if s.Images.NFSContainer != "" {
+		return s.Images.NFSContainer
+	}
+	return DefaultNFSContainerImage
 }
 
 // GetServiceName returns the service name.
@@ -500,6 +529,7 @@ type ContainerImages struct {
 	CSIExternalAttacherContainer       string `json:"csiExternalAttacherContainer,omitempty"`
 	CSILivenessProbeContainer          string `json:"csiLivenessProbeContainer,omitempty"`
 	HyperkubeContainer                 string `json:"hyperkubeContainer,omitempty"`
+	NFSContainer                       string `json:"nfsContainer,omitempty"`
 }
 
 // StorageOSClusterCSI contains CSI configurations.

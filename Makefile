@@ -1,10 +1,10 @@
 OPERATOR_IMAGE ?= storageos/cluster-operator:test
 GO_BUILD_CMD = go build -v
 GO_ENV = GOOS=linux CGO_ENABLED=0
-SDK_VERSION = v0.8.0
+SDK_VERSION = v0.10.0
 MACHINE = $(shell uname -m)
 BUILD_IMAGE = golang:1.12.9
-BASE_IMAGE = storageos/base-image:0.1.0
+BASE_IMAGE = storageos/base-image:0.2.1
 
 # When this file name is modified, the new name must be added in .travis.yml
 # file as well for publishing the file at release.
@@ -53,7 +53,7 @@ lint:
 	go vet ./...
 
 unittest:
-	go test -v -race `go list -v ./... | grep -v test/e2e | grep -v test/olm`
+	go test -v -race `go list -v ./... | grep -v test/e2e | grep -v olm`
 
 operator-sdk:
 	# Download sdk only if it's not available.
@@ -113,3 +113,8 @@ release:
 # Create a single manifest for installing the operator.
 generate-install-manifest: install-yq
 	bash scripts/create-manifest.sh $(OPERATOR_IMAGE)
+
+# Runs the operator-sdk scorecard tests. Expects the operator to be installed
+# using OLM first.
+scorecard-test:
+	bash test/scorecard-test.sh

@@ -61,7 +61,7 @@ func TestClusterCSI(t *testing.T) {
 
 	testutil.ClusterStatusCheck(t, testStorageOS.Status, 1)
 
-	daemonset, err := f.KubeClient.AppsV1().DaemonSets(resourceNS).Get("storageos-daemonset", metav1.GetOptions{IncludeUninitialized: true})
+	daemonset, err := f.KubeClient.AppsV1().DaemonSets(resourceNS).Get("storageos-daemonset", metav1.GetOptions{})
 	if err != nil {
 		t.Fatalf("failed to get storageos-daemonset: %v", err)
 	}
@@ -83,6 +83,9 @@ func TestClusterCSI(t *testing.T) {
 			t.Errorf("unexpected number of daemonset pod containers:\n\t(GOT) %d\n\t(WNT) %d", len(daemonset.Spec.Template.Spec.Containers), 2)
 		}
 	}
+
+	// Test CSIDriver resource existence.
+	testutil.CSIDriverResourceTest(t, deploy.CSIProvisionerName)
 
 	testutil.NodeLabelSyncTest(t, f.KubeClient)
 }
