@@ -323,7 +323,7 @@ func (r *ReconcileStorageOSCluster) updateSpec(m *storageosv1.StorageOSCluster) 
 	}
 
 	if !m.Spec.DisableScheduler {
-		properties[&m.Spec.Images.HyperkubeContainer] = m.Spec.GetHyperkubeImage(r.k8sVersion)
+		properties[&m.Spec.Images.KubeSchedulerContainer] = m.Spec.GetKubeSchedulerImage(r.k8sVersion)
 	}
 
 	if m.Spec.CSI.Enable {
