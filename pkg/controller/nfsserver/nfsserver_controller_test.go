@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/storageos/cluster-operator/internal/pkg/image"
 	storageosapis "github.com/storageos/cluster-operator/pkg/apis"
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 )
@@ -67,7 +68,7 @@ func TestUpdateSpec(t *testing.T) {
 			wantNFSServer: getTestNFSServer("nfs1", "default",
 				storageosv1.NFSServerSpec{
 					StorageClassName: "fast",
-					NFSContainer:     storageosv1.DefaultNFSContainerImage,
+					NFSContainer:     image.DefaultNFSContainerImage,
 				},
 				emptyNFSStatus,
 			),
@@ -101,7 +102,7 @@ func TestUpdateSpec(t *testing.T) {
 				"nfs1", "default",
 				storageosv1.NFSServerSpec{
 					StorageClassName: "fast",
-					NFSContainer:     storageosv1.DefaultNFSContainerImage,
+					NFSContainer:     image.DefaultNFSContainerImage,
 				}, emptyNFSStatus),
 			wantUpdate: false,
 		},
