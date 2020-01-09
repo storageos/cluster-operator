@@ -3,6 +3,7 @@ package storageos
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -24,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/storageos/cluster-operator/internal/pkg/image"
 	storageosapis "github.com/storageos/cluster-operator/pkg/apis"
 	api "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 )
@@ -1750,6 +1752,196 @@ func TestGetNodeIPs(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := GetNodeIPs(tt.nodes); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetNodeIPs() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestContainerImageSelection checks which container images are selected for
+// StorageOS deployment based on env vars and StorageOSCluster config.
+// This test should be moved to a separate package with the Get Image functions
+// api package.
+func TestContainerImageSelection(t *testing.T) {
+	// Constants to be used to associate image with their get image function.
+	const (
+		storageOSNodeImage             = "StorageOSNode"
+		storageOSInitImage             = "StorageOSInit"
+		csiNodeDriverRegistrarImage    = "CSINodeDriverRegistrar"
+		csiClusterDriverRegistrarImage = "CSIClusterDriverRegistrar"
+		csiExternalProvisionerImage    = "CSIExternalProvisioner"
+		csiExternalAttacherImage       = "CSIExternalAttacher"
+		csiLivenessProbeImage          = "CSILivenessProbe"
+		kubeSchedulerImage             = "KubeScheduler"
+		nfsImage                       = "NFS"
+	)
+
+	// Given image name, cluster spec and k8s version, return the appropriate
+	// image.
+	getImage := func(name string, spec api.StorageOSClusterSpec, k8sVersion string) string {
+		csiV1Supported := CSIV1Supported(k8sVersion)
+		attacherV2Supported := CSIExternalAttacherV2Supported(k8sVersion)
+
+		switch name {
+		case storageOSNodeImage:
+			return spec.GetNodeContainerImage()
+		case storageOSInitImage:
+			return spec.GetInitContainerImage()
+		case csiClusterDriverRegistrarImage:
+			return spec.GetCSIClusterDriverRegistrarImage()
+		case csiNodeDriverRegistrarImage:
+			return spec.GetCSINodeDriverRegistrarImage(csiV1Supported)
+		case csiExternalProvisionerImage:
+			return spec.GetCSIExternalProvisionerImage(csiV1Supported)
+		case csiExternalAttacherImage:
+			return spec.GetCSIExternalAttacherImage(csiV1Supported, attacherV2Supported)
+		case csiLivenessProbeImage:
+			return spec.GetCSILivenessProbeImage()
+		case kubeSchedulerImage:
+			return spec.GetKubeSchedulerImage(k8sVersion)
+		case nfsImage:
+			return spec.GetNFSServerImage()
+		default:
+			return ""
+		}
+	}
+
+	testcases := []struct {
+		name        string
+		envVars     map[string]string
+		clusterSpec api.StorageOSClusterSpec
+		k8sVersion  string
+		wantImages  map[string]string
+	}{
+		{
+			name: "images from env var - k8s 1.13",
+			envVars: map[string]string{
+				image.StorageOSNodeImageEnvVar:               "foo/node:1",
+				image.StorageOSInitImageEnvVar:               "foo/init:1",
+				image.CSIv1ClusterDriverRegistrarImageEnvVar: "foo/cdr:1",
+				image.CSIv1NodeDriverRegistrarImageEnvVar:    "foo/ndr:1",
+				image.CSIv1ExternalProvisionerImageEnvVar:    "foo/ep:1",
+				// k8s 1.13 supports CSI external attacher v1 only.
+				image.CSIv1ExternalAttacherImageEnvVar: "foo/ea:1",
+				image.CSIv1LivenessProbeImageEnvVar:    "foo/lp:1",
+				image.KubeSchedulerImageEnvVar:         "foo/ks:1",
+				image.NFSImageEnvVar:                   "foo/nfs:1",
+			},
+			k8sVersion: "1.13.0",
+			wantImages: map[string]string{
+				storageOSNodeImage:             "foo/node:1",
+				storageOSInitImage:             "foo/init:1",
+				csiClusterDriverRegistrarImage: "foo/cdr:1",
+				csiNodeDriverRegistrarImage:    "foo/ndr:1",
+				csiExternalProvisionerImage:    "foo/ep:1",
+				csiExternalAttacherImage:       "foo/ea:1",
+				csiLivenessProbeImage:          "foo/lp:1",
+				kubeSchedulerImage:             "foo/ks:1",
+				nfsImage:                       "foo/nfs:1",
+			},
+		},
+		{
+			name: "images override from cluster spec - k8s 1.13",
+			envVars: map[string]string{
+				image.StorageOSNodeImageEnvVar:               "foo/node:1",
+				image.StorageOSInitImageEnvVar:               "foo/init:1",
+				image.CSIv1ClusterDriverRegistrarImageEnvVar: "foo/cdr:1",
+				image.CSIv1NodeDriverRegistrarImageEnvVar:    "foo/ndr:1",
+				image.CSIv1ExternalProvisionerImageEnvVar:    "foo/ep:1",
+				// k8s 1.13 supports CSI external attacher v1 only.
+				image.CSIv1ExternalAttacherImageEnvVar: "foo/ea:1",
+				image.CSIv1LivenessProbeImageEnvVar:    "foo/lp:1",
+				image.KubeSchedulerImageEnvVar:         "foo/ks:1",
+				image.NFSImageEnvVar:                   "foo/nfs:1",
+			},
+			clusterSpec: api.StorageOSClusterSpec{
+				Images: api.ContainerImages{
+					NodeContainer:                      "zoo/node:1",
+					InitContainer:                      "zoo/init:1",
+					CSIClusterDriverRegistrarContainer: "zoo/cdr:1",
+					CSINodeDriverRegistrarContainer:    "zoo/ndr:1",
+					CSIExternalProvisionerContainer:    "zoo/ep:1",
+					CSIExternalAttacherContainer:       "zoo/ea:1",
+					CSILivenessProbeContainer:          "zoo/lp:1",
+					KubeSchedulerContainer:             "zoo/ks:1",
+					NFSContainer:                       "zoo/nfs:1",
+				},
+			},
+			k8sVersion: "1.13.0",
+			wantImages: map[string]string{
+				storageOSNodeImage:             "zoo/node:1",
+				storageOSInitImage:             "zoo/init:1",
+				csiClusterDriverRegistrarImage: "zoo/cdr:1",
+				csiNodeDriverRegistrarImage:    "zoo/ndr:1",
+				csiExternalProvisionerImage:    "zoo/ep:1",
+				csiExternalAttacherImage:       "zoo/ea:1",
+				csiLivenessProbeImage:          "zoo/lp:1",
+				kubeSchedulerImage:             "zoo/ks:1",
+				nfsImage:                       "zoo/nfs:1",
+			},
+		},
+		{
+			name:       "no env vars, no overrides, fallback images - k8s 1.13",
+			k8sVersion: "1.13.0",
+			wantImages: map[string]string{
+				storageOSNodeImage:             image.DefaultNodeContainerImage,
+				storageOSInitImage:             image.DefaultInitContainerImage,
+				csiClusterDriverRegistrarImage: image.CSIv1ClusterDriverRegistrarContainerImage,
+				csiNodeDriverRegistrarImage:    image.CSIv1NodeDriverRegistrarContainerImage,
+				csiExternalProvisionerImage:    image.CSIv1ExternalProvisionerContainerImage,
+				csiExternalAttacherImage:       image.CSIv1ExternalAttacherContainerImage,
+				csiLivenessProbeImage:          image.CSIv1LivenessProbeContainerImage,
+				kubeSchedulerImage:             fmt.Sprintf("%s:%s", image.DefaultKubeSchedulerContainerRegistry, "v1.13.0"),
+				nfsImage:                       image.DefaultNFSContainerImage,
+			},
+		},
+		{
+			name: "env var images - k8s 1.12 - CSIv0",
+			envVars: map[string]string{
+				image.CSIv0DriverRegistrarImageEnvVar:     "foo/dr:1",
+				image.CSIv0ExternalProvisionerImageEnvVar: "foo/ep:1",
+				image.CSIv0ExternalAttacherImageEnvVar:    "foo/ea:1",
+			},
+			k8sVersion: "1.12.0",
+			// Only relevant images.
+			// Use CSI v0 helper images.
+			wantImages: map[string]string{
+				csiNodeDriverRegistrarImage: "foo/dr:1",
+				csiExternalProvisionerImage: "foo/ep:1",
+				csiExternalAttacherImage:    "foo/ea:1",
+			},
+		},
+		{
+			name: "env var images - k8s 1.14 - CSIv1",
+			envVars: map[string]string{
+				image.CSIv1ExternalAttacherv2ImageEnvVar: "foo/ea:2",
+			},
+			k8sVersion: "1.14.0",
+			// Only relevant images.
+			// Use attacher v2 image.
+			wantImages: map[string]string{
+				csiExternalAttacherImage: "foo/ea:2",
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			for k, v := range tc.envVars {
+				os.Setenv(k, v)
+			}
+
+			defer func() {
+				for k := range tc.envVars {
+					os.Unsetenv(k)
+				}
+			}()
+
+			for imgName, wantImg := range tc.wantImages {
+				gotImg := getImage(imgName, tc.clusterSpec, tc.k8sVersion)
+				if gotImg != wantImg {
+					t.Errorf("unexpected image selected for %s:\n\t(WNT) %s\n\t(GOT) %s", imgName, wantImg, gotImg)
+				}
 			}
 		})
 	}

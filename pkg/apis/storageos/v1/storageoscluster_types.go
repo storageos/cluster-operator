@@ -6,6 +6,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/storageos/cluster-operator/internal/pkg/image"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -41,23 +43,6 @@ const (
 	DefaultServiceInternalPort = 5705
 
 	DefaultIngressHostname = "storageos.local"
-
-	DefaultNodeContainerImage                 = "storageos/node:1.5.2"
-	DefaultInitContainerImage                 = "storageos/init:1.0.0"
-	CSIv1ClusterDriverRegistrarContainerImage = "quay.io/k8scsi/csi-cluster-driver-registrar:v1.0.1"
-	CSIv1NodeDriverRegistrarContainerImage    = "quay.io/k8scsi/csi-node-driver-registrar:v1.2.0"
-	CSIv1ExternalProvisionerContainerImage    = "storageos/csi-provisioner:v1.4.0"
-	CSIv1ExternalAttacherContainerImage       = "quay.io/k8scsi/csi-attacher:v1.2.1"
-	CSIv1ExternalAttacherv2ContainerImage     = "quay.io/k8scsi/csi-attacher:v2.0.0"
-	CSIv1LivenessProbeContainerImage          = "quay.io/k8scsi/livenessprobe:v1.1.0"
-	CSIv0DriverRegistrarContainerImage        = "quay.io/k8scsi/driver-registrar:v0.4.2"
-	CSIv0ExternalProvisionerContainerImage    = "storageos/csi-provisioner:v0.4.3"
-	CSIv0ExternalAttacherContainerImage       = "quay.io/k8scsi/csi-attacher:v0.4.2"
-	DefaultNFSContainerImage                  = "storageos/nfs:1.0.0"
-
-	DefaultHyperkubeContainerRegistry = "gcr.io/google_containers/hyperkube"
-
-	DefaultKubeSchedulerContainerRegistry = "gcr.io/google-containers/kube-scheduler"
 
 	DefaultPluginRegistrationPath = "/var/lib/kubelet/plugins_registry"
 	OldPluginRegistrationPath     = "/var/lib/kubelet/plugins"
@@ -291,7 +276,7 @@ func (s StorageOSClusterSpec) GetNodeContainerImage() string {
 	if s.Images.NodeContainer != "" {
 		return s.Images.NodeContainer
 	}
-	return DefaultNodeContainerImage
+	return image.GetDefaultImage(image.StorageOSNodeImageEnvVar, image.DefaultNodeContainerImage)
 }
 
 // GetInitContainerImage returns init container image.
@@ -299,7 +284,7 @@ func (s StorageOSClusterSpec) GetInitContainerImage() string {
 	if s.Images.InitContainer != "" {
 		return s.Images.InitContainer
 	}
-	return DefaultInitContainerImage
+	return image.GetDefaultImage(image.StorageOSInitImageEnvVar, image.DefaultInitContainerImage)
 }
 
 // GetCSINodeDriverRegistrarImage returns CSI node driver registrar container image.
@@ -308,9 +293,9 @@ func (s StorageOSClusterSpec) GetCSINodeDriverRegistrarImage(csiv1 bool) string 
 		return s.Images.CSINodeDriverRegistrarContainer
 	}
 	if csiv1 {
-		return CSIv1NodeDriverRegistrarContainerImage
+		return image.GetDefaultImage(image.CSIv1NodeDriverRegistrarImageEnvVar, image.CSIv1NodeDriverRegistrarContainerImage)
 	}
-	return CSIv0DriverRegistrarContainerImage
+	return image.GetDefaultImage(image.CSIv0DriverRegistrarImageEnvVar, image.CSIv0DriverRegistrarContainerImage)
 }
 
 // GetCSIClusterDriverRegistrarImage returns CSI cluster driver registrar
@@ -319,7 +304,7 @@ func (s StorageOSClusterSpec) GetCSIClusterDriverRegistrarImage() string {
 	if s.Images.CSIClusterDriverRegistrarContainer != "" {
 		return s.Images.CSIClusterDriverRegistrarContainer
 	}
-	return CSIv1ClusterDriverRegistrarContainerImage
+	return image.GetDefaultImage(image.CSIv1ClusterDriverRegistrarImageEnvVar, image.CSIv1ClusterDriverRegistrarContainerImage)
 }
 
 // GetCSIExternalProvisionerImage returns CSI external provisioner container image.
@@ -328,9 +313,9 @@ func (s StorageOSClusterSpec) GetCSIExternalProvisionerImage(csiv1 bool) string 
 		return s.Images.CSIExternalProvisionerContainer
 	}
 	if csiv1 {
-		return CSIv1ExternalProvisionerContainerImage
+		return image.GetDefaultImage(image.CSIv1ExternalProvisionerImageEnvVar, image.CSIv1ExternalProvisionerContainerImage)
 	}
-	return CSIv0ExternalProvisionerContainerImage
+	return image.GetDefaultImage(image.CSIv0ExternalProvisionerImageEnvVar, image.CSIv0ExternalProvisionerContainerImage)
 }
 
 // GetCSIExternalAttacherImage returns CSI external attacher container image.
@@ -342,11 +327,11 @@ func (s StorageOSClusterSpec) GetCSIExternalAttacherImage(csiv1 bool, attacherv2
 	}
 	if csiv1 {
 		if attacherv2Supported {
-			return CSIv1ExternalAttacherv2ContainerImage
+			return image.GetDefaultImage(image.CSIv1ExternalAttacherv2ImageEnvVar, image.CSIv1ExternalAttacherv2ContainerImage)
 		}
-		return CSIv1ExternalAttacherContainerImage
+		return image.GetDefaultImage(image.CSIv1ExternalAttacherImageEnvVar, image.CSIv1ExternalAttacherContainerImage)
 	}
-	return CSIv0ExternalAttacherContainerImage
+	return image.GetDefaultImage(image.CSIv0ExternalAttacherImageEnvVar, image.CSIv0ExternalAttacherContainerImage)
 }
 
 // GetCSILivenessProbeImage returns CSI liveness probe container image.
@@ -354,7 +339,7 @@ func (s StorageOSClusterSpec) GetCSILivenessProbeImage() string {
 	if s.Images.CSILivenessProbeContainer != "" {
 		return s.Images.CSILivenessProbeContainer
 	}
-	return CSIv1LivenessProbeContainerImage
+	return image.GetDefaultImage(image.CSIv1LivenessProbeImageEnvVar, image.CSIv1LivenessProbeContainerImage)
 }
 
 // GetHyperkubeImage returns hyperkube container image for a given k8s version.
@@ -364,8 +349,11 @@ func (s StorageOSClusterSpec) GetHyperkubeImage(k8sVersion string) string {
 	if s.Images.HyperkubeContainer != "" {
 		return s.Images.HyperkubeContainer
 	}
+
+	// NOTE: Hyperkube is not being used anywhere for now. Hyperkube image is
+	// not available to be set via environment variable.
 	// Add version prefix "v" in the tag.
-	return fmt.Sprintf("%s:v%s", DefaultHyperkubeContainerRegistry, k8sVersion)
+	return fmt.Sprintf("%s:v%s", image.DefaultHyperkubeContainerRegistry, k8sVersion)
 }
 
 // GetKubeSchedulerImage returns kube-scheduler container image for a given k8s
@@ -375,8 +363,16 @@ func (s StorageOSClusterSpec) GetKubeSchedulerImage(k8sVersion string) string {
 	if s.Images.KubeSchedulerContainer != "" {
 		return s.Images.KubeSchedulerContainer
 	}
+
+	// Kube-scheduler image is dynamically selected based on the k8s version.
+	// We create an image name for a fallback image based on the k8s version.
+	// If kube-scheduler image is not specified in the environment variable, the
+	// fallback image is used.
+
 	// Add version prefix "v" in the tag.
-	return fmt.Sprintf("%s:v%s", DefaultKubeSchedulerContainerRegistry, k8sVersion)
+	fallbackImage := fmt.Sprintf("%s:v%s", image.DefaultKubeSchedulerContainerRegistry, k8sVersion)
+
+	return image.GetDefaultImage(image.KubeSchedulerImageEnvVar, fallbackImage)
 }
 
 // GetNFSServerImage returns NFS server container image used as the default
@@ -385,7 +381,7 @@ func (s StorageOSClusterSpec) GetNFSServerImage() string {
 	if s.Images.NFSContainer != "" {
 		return s.Images.NFSContainer
 	}
-	return DefaultNFSContainerImage
+	return image.GetDefaultImage(image.NFSImageEnvVar, image.DefaultNFSContainerImage)
 }
 
 // GetServiceName returns the service name.

@@ -58,6 +58,18 @@ metadata.namespace: placeholder
 metadata.annotations.containerImage: storageos/cluster-operator:$NEW_VERSION
 spec.version: $NEW_VERSION
 spec.install.spec.deployments[0].spec.template.spec.containers[0].image: storageos/cluster-operator:$NEW_VERSION
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[0].value:
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[1].value:
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[2].value:
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[3].value:
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[4].value:
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[5].value:
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[6].value:
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[7].value:
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[8].value:
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[9].value:
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[10].value:
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[11].value:
 spec.replaces: storageosoperator.v$PREV_VERSION
 EOF
 echo
@@ -139,6 +151,18 @@ metadata.annotations.alm-examples: |-
 
 spec.version: $NEW_VERSION
 spec.install.spec.deployments[0].spec.template.spec.containers[0].image: registry.connect.redhat.com/storageos/cluster-operator:$NEW_VERSION
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[0].value:
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[1].value:
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[2].value:
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[3].value:
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[4].value:
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[5].value:
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[6].value:
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[7].value:
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[8].value:
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[9].value:
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[10].value:
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[11].value:
 spec.customresourcedefinitions.owned[2].specDescriptors[0].description: The StorageOS Node image to upgrade to. e.g. \`registry.connect.redhat.com/storageos/node:latest\`
 spec.replaces: storageosoperator.v$PREV_VERSION
 EOF

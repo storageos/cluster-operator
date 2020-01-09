@@ -16,6 +16,13 @@ The release requires
 checked-in before `version` is tagged. These files should have the container
 image set to tag `version`.
 
+NOTE: The CSV must have related images in the operator deployment as environment
+variables. Unlike before, the default version of StorageOS node container image
+must be set in the CSV file. When there's a new version of node container, or
+any other container images, update release-gen.sh with the new node container
+tag in the operator changes template, before running the following release
+generator command. Image update should apply to both operatorhub and rhel CSVs.
+
 To create the CSV files and update all the associated files with the new release
 version, run `NEW_VERSION=<version> make release`. This will run
 `release-gen.sh`, updating all the intermediate files(`*-changes.yaml`) that are
