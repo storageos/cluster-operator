@@ -1,30 +1,38 @@
 package storageos
 
 import (
-	"strconv"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/storageos/cluster-operator/pkg/util/k8s"
 )
 
 const (
-	hostnameEnvVar                      = "HOSTNAME"
-	adminUsernameEnvVar                 = "ADMIN_USERNAME"
-	adminPasswordEnvVar                 = "ADMIN_PASSWORD"
-	joinEnvVar                          = "JOIN"
-	advertiseIPEnvVar                   = "ADVERTISE_IP"
-	namespaceEnvVar                     = "NAMESPACE"
-	disableFencingEnvVar                = "DISABLE_FENCING"
-	disableTelemetryEnvVar              = "DISABLE_TELEMETRY"
-	disableTCMUEnvVar                   = "DISABLE_TCMU"
-	forceTCMUEnvVar                     = "FORCE_TCMU"
-	deviceDirEnvVar                     = "DEVICE_DIR"
-	csiEndpointEnvVar                   = "CSI_ENDPOINT"
-	csiVersionEnvVar                    = "CSI_VERSION"
+
+	// Hostname is the name we use to refer to a node.
+	hostnameEnvVar = "HOSTNAME"
+
+	// First cluster user's username.
+	bootstrapUsernameEnvVar = "BOOTSTRAP_USERNAME"
+	// First cluster user's password.
+	bootstrapPasswordEnvVar = "BOOTSTRAP_PASSWORD"
+	// Namespace created on startup
+	// TODO: not sure we need/want this if namespaces are created on demand?
+	// bootstrapNamespaceEnvVar = "BOOTSTRAP_NAMESPACE"
+
+	advertiseIPEnvVar  = "ADVERTISE_IP"
+	addressEnvVar      = "ADDRESS"
+	kubeNodeNameEnvVar = "KUBE_NODE_NAME"
+
+	// Operator vars
+	daemonSetNameEnvVar      = "DAEMONSET_NAME"
+	daemonSetNamespaceEnvVar = "DAEMONSET_NAMESPACE"
+
+	sysAdminCap = "SYS_ADMIN"
+	debugVal    = "xdebug"
+
+	// V1 Only
 	csiRequireCredsCreateEnvVar         = "CSI_REQUIRE_CREDS_CREATE_VOL"
 	csiRequireCredsDeleteEnvVar         = "CSI_REQUIRE_CREDS_DELETE_VOL"
 	csiProvisionCredsUsernameEnvVar     = "CSI_PROVISION_CREDS_USERNAME"
@@ -36,17 +44,6 @@ const (
 	csiRequireCredsNodePubEnvVar        = "CSI_REQUIRE_CREDS_NODE_PUB_VOL"
 	csiNodePubCredsUsernameEnvVar       = "CSI_NODE_PUB_CREDS_USERNAME"
 	csiNodePubCredsPasswordEnvVar       = "CSI_NODE_PUB_CREDS_PASSWORD"
-	addressEnvVar                       = "ADDRESS"
-	kubeNodeNameEnvVar                  = "KUBE_NODE_NAME"
-	kvAddrEnvVar                        = "KV_ADDR"
-	kvBackendEnvVar                     = "KV_BACKEND"
-	debugEnvVar                         = "LOG_LEVEL"
-	k8sDistroEnvVar                     = "K8S_DISTRO"
-	daemonSetNameEnvVar                 = "DAEMONSET_NAME"
-	daemonSetNamespaceEnvVar            = "DAEMONSET_NAMESPACE"
-
-	sysAdminCap = "SYS_ADMIN"
-	debugVal    = "xdebug"
 )
 
 func (s *Deployment) createDaemonSet() error {
@@ -54,6 +51,8 @@ func (s *Deployment) createDaemonSet() error {
 	privileged := true
 	mountPropagationBidirectional := corev1.MountPropagationBidirectional
 	allowPrivilegeEscalation := true
+	configMapOptional := false
+	configMapFileMode := int32(0600)
 
 	spec := &appsv1.DaemonSetSpec{
 		Selector: &metav1.LabelSelector{
@@ -72,6 +71,16 @@ func (s *Deployment) createDaemonSet() error {
 					{
 						Name:  "storageos-init",
 						Image: s.stos.Spec.GetInitContainerImage(),
+						EnvFrom: []corev1.EnvFromSource{
+							corev1.EnvFromSource{
+								ConfigMapRef: &corev1.ConfigMapEnvSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: configmapName,
+									},
+									Optional: &configMapOptional,
+								},
+							},
+						},
 						Env: []corev1.EnvVar{
 							// Environmental variables for the init container to
 							// help query the DaemonSet resource and get the
@@ -119,25 +128,13 @@ func (s *Deployment) createDaemonSet() error {
 							ContainerPort: 5705,
 							Name:          "api",
 						}},
-						LivenessProbe: &corev1.Probe{
-							InitialDelaySeconds: int32(65),
-							TimeoutSeconds:      int32(10),
-							FailureThreshold:    int32(5),
-							Handler: corev1.Handler{
-								HTTPGet: &corev1.HTTPGetAction{
-									Path: "/v1/health",
-									Port: intstr.IntOrString{Type: intstr.String, StrVal: "api"},
-								},
-							},
-						},
-						ReadinessProbe: &corev1.Probe{
-							InitialDelaySeconds: int32(65),
-							TimeoutSeconds:      int32(10),
-							FailureThreshold:    int32(5),
-							Handler: corev1.Handler{
-								HTTPGet: &corev1.HTTPGetAction{
-									Path: "/v1/health",
-									Port: intstr.IntOrString{Type: intstr.String, StrVal: "api"},
+						EnvFrom: []corev1.EnvFromSource{
+							corev1.EnvFromSource{
+								ConfigMapRef: &corev1.ConfigMapEnvSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: configmapName,
+									},
+									Optional: &configMapOptional,
 								},
 							},
 						},
@@ -151,7 +148,7 @@ func (s *Deployment) createDaemonSet() error {
 								},
 							},
 							{
-								Name: adminUsernameEnvVar,
+								Name: bootstrapUsernameEnvVar,
 								ValueFrom: &corev1.EnvVarSource{
 									SecretKeyRef: &corev1.SecretKeySelector{
 										LocalObjectReference: corev1.LocalObjectReference{
@@ -162,7 +159,7 @@ func (s *Deployment) createDaemonSet() error {
 								},
 							},
 							{
-								Name: adminPasswordEnvVar,
+								Name: bootstrapPasswordEnvVar,
 								ValueFrom: &corev1.EnvVarSource{
 									SecretKeyRef: &corev1.SecretKeySelector{
 										LocalObjectReference: corev1.LocalObjectReference{
@@ -173,44 +170,12 @@ func (s *Deployment) createDaemonSet() error {
 								},
 							},
 							{
-								Name:  joinEnvVar,
-								Value: s.stos.Spec.Join,
-							},
-							{
 								Name: advertiseIPEnvVar,
 								ValueFrom: &corev1.EnvVarSource{
 									FieldRef: &corev1.ObjectFieldSelector{
 										FieldPath: "status.podIP",
 									},
 								},
-							},
-							{
-								Name:  namespaceEnvVar,
-								Value: s.stos.Spec.GetResourceNS(),
-							},
-							{
-								Name:  disableFencingEnvVar,
-								Value: strconv.FormatBool(s.stos.Spec.DisableFencing),
-							},
-							{
-								Name:  disableTelemetryEnvVar,
-								Value: strconv.FormatBool(s.stos.Spec.DisableTelemetry),
-							},
-							{
-								Name:  disableTCMUEnvVar,
-								Value: strconv.FormatBool(s.stos.Spec.DisableTCMU),
-							},
-							{
-								Name:  forceTCMUEnvVar,
-								Value: strconv.FormatBool(s.stos.Spec.ForceTCMU),
-							},
-							{
-								Name:  csiVersionEnvVar,
-								Value: s.stos.Spec.GetCSIVersion(CSIV1Supported(s.k8sVersion)),
-							},
-							{
-								Name:  k8sDistroEnvVar,
-								Value: s.stos.Spec.K8sDistro,
 							},
 						},
 						SecurityContext: &corev1.SecurityContext{
@@ -233,6 +198,10 @@ func (s *Deployment) createDaemonSet() error {
 								Name:             "state",
 								MountPath:        "/var/lib/storageos",
 								MountPropagation: &mountPropagationBidirectional,
+							},
+							{
+								Name:      "config",
+								MountPath: "/etc/storageos",
 							},
 						},
 					},
@@ -270,6 +239,18 @@ func (s *Deployment) createDaemonSet() error {
 							},
 						},
 					},
+					{
+						Name: "config",
+						VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: configmapName,
+								},
+								DefaultMode: &configMapFileMode,
+								Optional:    &configMapOptional,
+							},
+						},
+					},
 				},
 			},
 		},
@@ -288,13 +269,14 @@ func (s *Deployment) createDaemonSet() error {
 
 	s.addNodeAffinity(podSpec)
 
+	// TODO: update when V2 supports health endpoint.
+	if !s.nodev2 {
+		s.addNodeContainerProbes(nodeContainer)
+	}
+
 	if err := s.addTolerations(podSpec); err != nil {
 		return err
 	}
-
-	nodeContainer.Env = s.addKVBackendEnvVars(nodeContainer.Env)
-
-	nodeContainer.Env = s.addDebugEnvVars(nodeContainer.Env)
 
 	s.addNodeContainerResources(nodeContainer)
 
@@ -303,43 +285,6 @@ func (s *Deployment) createDaemonSet() error {
 	s.addCSI(podSpec)
 
 	return s.k8sResourceManager.DaemonSet(daemonsetName, s.stos.Spec.GetResourceNS(), nil, spec).Create()
-}
-
-// addKVBackendEnvVars checks if KVBackend is set and sets the appropriate env vars.
-func (s *Deployment) addKVBackendEnvVars(env []corev1.EnvVar) []corev1.EnvVar {
-	kvStoreEnv := []corev1.EnvVar{}
-	if s.stos.Spec.KVBackend.Address != "" {
-		kvAddressEnv := corev1.EnvVar{
-			Name:  kvAddrEnvVar,
-			Value: s.stos.Spec.KVBackend.Address,
-		}
-		kvStoreEnv = append(kvStoreEnv, kvAddressEnv)
-	}
-
-	if s.stos.Spec.KVBackend.Backend != "" {
-		kvBackendEnv := corev1.EnvVar{
-			Name:  kvBackendEnvVar,
-			Value: s.stos.Spec.KVBackend.Backend,
-		}
-		kvStoreEnv = append(kvStoreEnv, kvBackendEnv)
-	}
-
-	if len(kvStoreEnv) > 0 {
-		return append(env, kvStoreEnv...)
-	}
-	return env
-}
-
-// addDebugEnvVars checks if the debug mode is set and set the appropriate env var.
-func (s *Deployment) addDebugEnvVars(env []corev1.EnvVar) []corev1.EnvVar {
-	if s.stos.Spec.Debug {
-		debugEnvVar := corev1.EnvVar{
-			Name:  debugEnvVar,
-			Value: debugVal,
-		}
-		return append(env, debugEnvVar)
-	}
-	return env
 }
 
 // podLabelsForDaemonSet takes the name of a cluster custom resource and returns

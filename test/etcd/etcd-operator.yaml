@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: etcd-operator
+spec:
+  selector:
+    matchLabels:
+      app: etcd-operator
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: etcd-operator
+    spec:
+      containers:
+      - name: etcd-operator
+        # Use newer fork: https://github.com/coreos/etcd-operator/issues/2131
+        image: cbws/etcd-operator:v0.10.0
+        command:
+        - etcd-operator
+        # Uncomment to act for resources in all namespaces. More information in doc/user/clusterwide.md
+        #- -cluster-wide
+        env:
+        - name: MY_POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: MY_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name

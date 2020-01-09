@@ -60,7 +60,7 @@ const (
 )
 
 func getDefaultCSIEndpoint(pluginRegistrationPath string) string {
-	return fmt.Sprintf("%s%s%s", "unix:/", pluginRegistrationPath, DefaultCSIEndpoint)
+	return fmt.Sprintf("%s%s%s", "unix://", pluginRegistrationPath, DefaultCSIEndpoint)
 }
 
 func getDefaultCSIPluginDir(pluginRegistrationPath string) string {

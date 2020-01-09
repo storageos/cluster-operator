@@ -18,6 +18,9 @@ const (
 	schedulerConfigConfigMapName = "storageos-scheduler-config"
 	schedulerConfigKey           = "config.yaml"
 
+	uriPathV1 = "/v1/scheduler"
+	uriPathV2 = "/v2/k8s/scheduler"
+
 	// schedulerReplicas is the number of instances of kube-scheduler.
 	schedulerReplicas = 1
 )
@@ -174,11 +177,15 @@ func (s Deployment) createSchedulerPolicy() error {
 `
 	// Service address format: <service-name>.<namespace>.svc.cluster.local.
 	serviceEndpoint := fmt.Sprintf("%s.%s.svc.cluster.local", s.stos.Spec.GetServiceName(), s.stos.Spec.GetResourceNS())
+	uriPath := uriPathV1
+	if s.nodev2 {
+		uriPath = uriPathV2
+	}
 	policyData := schedulerPolicyTemplate{
 		FilterVerb:     "filter",
 		PrioritizeVerb: "prioritize",
 		EnableHTTPS:    false,
-		URLPrefix:      fmt.Sprintf("http://%s:5705/v1/scheduler", serviceEndpoint),
+		URLPrefix:      fmt.Sprintf("http://%s:5705%s", serviceEndpoint, uriPath),
 	}
 
 	// Render the policy configuration.

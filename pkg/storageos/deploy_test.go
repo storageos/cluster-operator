@@ -5,9 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
-	"strconv"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -284,74 +282,6 @@ func TestCreateDaemonSet(t *testing.T) {
 			}
 		}
 
-		// Check telemetry option.
-		telemetryEnvVarFound := false
-		wantDisableTelemetry := strconv.FormatBool(tc.wantDisableTelemetry)
-		for _, env := range createdDaemonset.Spec.Template.Spec.Containers[0].Env {
-			if env.Name == disableTelemetryEnvVar {
-				telemetryEnvVarFound = true
-				if env.Value != wantDisableTelemetry {
-					t.Errorf("unexpected disableTelemetry value:\n\t(WNT) %s\n\t(GOT) %s", wantDisableTelemetry, env.Value)
-				}
-			}
-		}
-
-		// Telemetry must be set.
-		if !telemetryEnvVarFound {
-			t.Errorf("disableTelemetry env var not set, expected to be set")
-		}
-
-		// Check fencing option.
-		fencingEnvVarFound := false
-		wantDisableFencing := strconv.FormatBool(tc.wantDisableFencing)
-		for _, env := range createdDaemonset.Spec.Template.Spec.Containers[0].Env {
-			if env.Name == disableFencingEnvVar {
-				fencingEnvVarFound = true
-				if env.Value != wantDisableFencing {
-					t.Errorf("unexpected disableFencing value:\n\t(WNT) %s\n\t(GOT) %s", wantDisableFencing, env.Value)
-				}
-			}
-		}
-
-		// Fencing must be set.
-		if !fencingEnvVarFound {
-			t.Errorf("disableFencing env var not set, expected to be set")
-		}
-
-		// Check disable tcmu option.
-		disableTCMUEnvVarFound := false
-		wantDisableTCMU := strconv.FormatBool(tc.wantDisableTCMU)
-		for _, env := range createdDaemonset.Spec.Template.Spec.Containers[0].Env {
-			if env.Name == disableTCMUEnvVar {
-				disableTCMUEnvVarFound = true
-				if env.Value != wantDisableTCMU {
-					t.Errorf("unexpected disableTCMU value:\n\t(WNT) %s\n\t(GOT) %s", wantDisableTCMU, env.Value)
-				}
-			}
-		}
-
-		// Disable TCMU must be set.
-		if !disableTCMUEnvVarFound {
-			t.Errorf("disableTCMU env var not set, expected to be set")
-		}
-
-		// Check force tcmu option.
-		ForceTCMUEnvVarFound := false
-		wantForceTCMU := strconv.FormatBool(tc.wantForceTCMU)
-		for _, env := range createdDaemonset.Spec.Template.Spec.Containers[0].Env {
-			if env.Name == forceTCMUEnvVar {
-				ForceTCMUEnvVarFound = true
-				if env.Value != wantForceTCMU {
-					t.Errorf("unexpected forceTCMU value:\n\t(WNT) %s\n\t(GOT) %s", wantForceTCMU, env.Value)
-				}
-			}
-		}
-
-		// Force TCMU must be set.
-		if !ForceTCMUEnvVarFound {
-			t.Errorf("forceTCMU env var not set, expected to be set")
-		}
-
 		if tc.wantTLSEtcd {
 			// Check if the TLS certs volume exists in the spec.
 			volumeFound := false
@@ -375,61 +305,6 @@ func TestCreateDaemonSet(t *testing.T) {
 			if !volumeMountFound {
 				t.Error("TLS etcd certs volume mount not found in the node container")
 			}
-
-			// Check if etcd TLS certs env vars are set for the node container.
-			tlsEtcdCAEnvVarFound := false
-			tlsEtcdClientCertEnvVarFound := false
-			tlsEtcdClientKeyEnvVarFound := false
-
-			for _, env := range createdDaemonset.Spec.Template.Spec.Containers[0].Env {
-				switch env.Name {
-				case tlsEtcdCAEnvVar:
-					tlsEtcdCAEnvVarFound = true
-					// Check the env var value.
-					wantCAPath := filepath.Join(tlsEtcdRootPath, tlsEtcdCA)
-					if env.Value != wantCAPath {
-						t.Errorf("unexpected %q value:\n\t(WNT) %q\n\t(GOT) %q", env.Name, wantCAPath, env.Value)
-					}
-				case tlsEtcdClientCertEnvVar:
-					tlsEtcdClientCertEnvVarFound = true
-					wantCertPath := filepath.Join(tlsEtcdRootPath, tlsEtcdClientCert)
-					if env.Value != wantCertPath {
-						t.Errorf("unexpected %q value:\n\t(WNT) %q\n\t(GOT) %q", env.Name, wantCertPath, env.Value)
-					}
-				case tlsEtcdClientKeyEnvVar:
-					tlsEtcdClientKeyEnvVarFound = true
-					wantKeyPath := filepath.Join(tlsEtcdRootPath, tlsEtcdClientKey)
-					if env.Value != wantKeyPath {
-						t.Errorf("unexpected %q value:\n\t(WNT) %q\n\t(GOT) %q", env.Name, wantKeyPath, env.Value)
-					}
-				}
-			}
-
-			if !tlsEtcdCAEnvVarFound {
-				t.Errorf("%q env var not set, expected to be set", tlsEtcdCAEnvVar)
-			}
-			if !tlsEtcdClientCertEnvVarFound {
-				t.Errorf("%q env var not set, expected to be set", tlsEtcdClientCertEnvVar)
-			}
-			if !tlsEtcdClientKeyEnvVarFound {
-				t.Errorf("%q env var not set, expected to be set", tlsEtcdClientKeyEnvVar)
-			}
-		}
-
-		// Check k8sDistro matches if set
-		k8sDistroEnvVarFound := false
-		for _, env := range createdDaemonset.Spec.Template.Spec.Containers[0].Env {
-			if env.Name == k8sDistroEnvVar {
-				k8sDistroEnvVarFound = true
-				if env.Value != tc.wantK8sDistro {
-					t.Errorf("unexpected k8sDistro value:\n\t(WNT) %s\n\t(GOT) %s", tc.wantK8sDistro, env.Value)
-				}
-			}
-		}
-
-		// k8sDistro must be set, but can be empty
-		if !k8sDistroEnvVarFound {
-			t.Errorf("k8sDistro env var not set, expected to be set")
 		}
 
 		stosCluster.Spec = api.StorageOSClusterSpec{}
@@ -558,7 +433,7 @@ func TestCreateCSIHelper(t *testing.T) {
 func TestDeployLegacy(t *testing.T) {
 	const (
 		containersCount = 1
-		volumesCount    = 4
+		volumesCount    = 5 // includes ConfigMap volume
 	)
 
 	stosCluster := &api.StorageOSCluster{
@@ -646,7 +521,7 @@ func TestDeployCSI(t *testing.T) {
 	const (
 		kubeletPluginsWatcherDriverRegArgsCount = 3
 		containersCount                         = 2
-		volumesCount                            = 9
+		volumesCount                            = 10 //Includes ConfigMap volume
 	)
 
 	stosCluster := &api.StorageOSCluster{
@@ -794,42 +669,40 @@ func TestDeployKVBackend(t *testing.T) {
 		t.Fatalf("failed to deploy cluster: %v", err)
 	}
 
-	createdDaemonset := &appsv1.DaemonSet{
+	createdConfigMap := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "DaemonSet",
+			APIVersion: "core/v1",
+			Kind:       "ConfigMap",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      daemonsetName,
+			Name:      configmapName,
 			Namespace: stosCluster.Spec.GetResourceNS(),
 		},
 	}
 
-	nsName := types.NamespacedName{
-		Name:      daemonsetName,
+	cmNamespacedName := types.NamespacedName{
+		Name:      configmapName,
 		Namespace: defaultNS,
 	}
 
-	if err := c.Get(context.Background(), nsName, createdDaemonset); err != nil {
-		t.Fatal("failed to get the created daemonset", err)
+	if err := c.Get(context.Background(), cmNamespacedName, createdConfigMap); err != nil {
+		t.Fatal("failed to get the created configmap", err)
 	}
-
-	podSpec := createdDaemonset.Spec.Template.Spec.Containers[0]
 
 	foundKVAddr := false
 	foundKVBackend := false
 
-	for _, e := range podSpec.Env {
-		switch e.Name {
+	for k, v := range createdConfigMap.Data {
+		switch k {
 		case kvAddrEnvVar:
 			foundKVAddr = true
-			if e.Value != testKVAddr {
-				t.Errorf("unexpected %s value:\n\t(GOT) %s\n\t(WNT) %s", kvAddrEnvVar, e.Value, testKVAddr)
+			if v != testKVAddr {
+				t.Errorf("unexpected %s value:\n\t(GOT) %s\n\t(WNT) %s", etcdEndpointsEnvVar, v, testKVAddr)
 			}
 		case kvBackendEnvVar:
 			foundKVBackend = true
-			if e.Value != testBackend {
-				t.Errorf("unexpected %s value:\n\t(GOT) %s\n\t(WNT) %s", kvBackendEnvVar, e.Value, testBackend)
+			if v != testBackend {
+				t.Errorf("unexpected %s value:\n\t(GOT) %s\n\t(WNT) %s", kvBackendEnvVar, v, testBackend)
 			}
 		}
 	}
@@ -870,42 +743,40 @@ func TestDeployDebug(t *testing.T) {
 		t.Fatalf("failed to deploy cluster: %v", err)
 	}
 
-	createdDaemonset := &appsv1.DaemonSet{
+	createdConfigMap := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "DaemonSet",
+			APIVersion: "core/v1",
+			Kind:       "ConfigMap",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      daemonsetName,
+			Name:      configmapName,
 			Namespace: stosCluster.Spec.GetResourceNS(),
 		},
 	}
 
-	nsName := types.NamespacedName{
-		Name:      daemonsetName,
+	cmNamespacedName := types.NamespacedName{
+		Name:      configmapName,
 		Namespace: defaultNS,
 	}
 
-	if err := c.Get(context.Background(), nsName, createdDaemonset); err != nil {
-		t.Fatal("failed to get the created daemonset", err)
+	if err := c.Get(context.Background(), cmNamespacedName, createdConfigMap); err != nil {
+		t.Fatal("failed to get the created configmap", err)
 	}
-
-	podSpec := createdDaemonset.Spec.Template.Spec.Containers[0]
 
 	foundDebug := false
 
-	for _, e := range podSpec.Env {
-		switch e.Name {
-		case debugEnvVar:
+	for k, v := range createdConfigMap.Data {
+		switch k {
+		case logLevelEnvVar:
 			foundDebug = true
-			if e.Value != debugVal {
-				t.Errorf("unexpected %s value:\n\t(GOT) %s\n\t(WNT) %s", debugEnvVar, e.Value, debugVal)
+			if v != debugVal {
+				t.Errorf("unexpected %s value:\n\t(GOT) %s\n\t(WNT) %s", logLevelEnvVar, v, debugVal)
 			}
 		}
 	}
 
 	if !foundDebug {
-		t.Errorf("expected %s to be in the pod spec env", debugEnvVar)
+		t.Errorf("expected %s to be in the pod spec env", logLevelEnvVar)
 	}
 }
 

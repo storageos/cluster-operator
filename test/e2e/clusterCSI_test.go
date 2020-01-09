@@ -58,7 +58,6 @@ func TestClusterCSI(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	testutil.ClusterStatusCheck(t, testStorageOS.Status, 1)
 
 	daemonset, err := f.KubeClient.AppsV1().DaemonSets(resourceNS).Get("storageos-daemonset", metav1.GetOptions{})
