@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: etcd-operator
+  namespace: default
 spec:
   selector:
     matchLabels:
@@ -29,3 +30,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+      tolerations:
+      - key: key
+        operator: Equal
+        value: value
+        effect: NoSchedule

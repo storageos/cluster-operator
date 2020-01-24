@@ -2,6 +2,7 @@ apiVersion: "etcd.database.coreos.com/v1beta2"
 kind: "EtcdCluster"
 metadata:
   name: "etcd"
+  namespace: default
   ## Adding this annotation make this cluster managed by clusterwide operators
   ## namespaced operators ignore it
   # annotations:
@@ -9,3 +10,9 @@ metadata:
 spec:
   size: 1
   version: "3.2.28"
+  pod:
+    tolerations:
+    - key: key
+      operator: Equal
+      value: value
+      effect: NoSchedule

@@ -7,6 +7,7 @@ import (
 
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	storageos "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	deploy "github.com/storageos/cluster-operator/pkg/storageos"
@@ -67,11 +68,10 @@ func TestClusterCSINodeV2(t *testing.T) {
 	// }
 	// testutil.ClusterStatusCheck(t, testStorageOS.Status, 1)
 
-	// TODO - Check when the status endpoints are ready.
-	// daemonset, err := f.KubeClient.AppsV1().DaemonSets(resourceNS).Get("storageos-daemonset", metav1.GetOptions{})
-	// if err != nil {
-	// 	t.Fatalf("failed to get storageos-daemonset: %v", err)
-	// }
+	daemonset, err := f.KubeClient.AppsV1().DaemonSets(resourceNS).Get("storageos-daemonset", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("failed to get storageos-daemonset: %v", err)
+	}
 
 	//Check the number of containers in daemonset pod spec.
 	if len(daemonset.Spec.Template.Spec.Containers) != 3 {
