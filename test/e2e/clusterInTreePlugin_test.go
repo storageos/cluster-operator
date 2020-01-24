@@ -63,7 +63,7 @@ func TestClusterInTreePlugin(t *testing.T) {
 
 	// Check the number of containers in daemonset pod spec.
 	if len(daemonset.Spec.Template.Spec.Containers) != 1 {
-		t.Errorf("unexpected number of daemonset pod containers:\n\t(GOT) %d\n\t(WNT) %d", len(daemonset.Spec.Template.Spec.Containers), 2)
+		t.Errorf("unexpected number of daemonset pod containers:\n\t(GOT) %d\n\t(WNT) %d", len(daemonset.Spec.Template.Spec.Containers), 1)
 	}
 
 	// Test pod scheduler mutating admission contoller.
