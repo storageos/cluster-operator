@@ -21,6 +21,8 @@ const (
 	IntreeProvisionerName = "kubernetes.io/storageos"
 	// CSIProvisionerName is the name of the CSI provisioner.
 	CSIProvisionerName = "storageos"
+	// StorageOSProvisionerName is the new CSI provisioner name.
+	StorageOSProvisionerName = "csi.storageos.com"
 )
 
 const (
@@ -292,7 +294,7 @@ func (s *Deployment) addNodeContainerProbes(nodeContainer *corev1.Container) {
 			},
 		},
 	}
-	nodeContainer.LivenessProbe = &corev1.Probe{
+	nodeContainer.ReadinessProbe = &corev1.Probe{
 		InitialDelaySeconds: int32(65),
 		TimeoutSeconds:      int32(10),
 		FailureThreshold:    int32(5),

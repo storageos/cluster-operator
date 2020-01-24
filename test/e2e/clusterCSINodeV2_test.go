@@ -82,7 +82,7 @@ func TestClusterCSINodeV2(t *testing.T) {
 	testutil.StorageOSClusterCRAttributesTest(t, testutil.TestClusterCRName, namespace)
 
 	// Test CSIDriver resource existence.
-	testutil.CSIDriverResourceTest(t, deploy.CSIProvisionerName)
+	testutil.CSIDriverResourceTest(t, deploy.StorageOSProvisionerName)
 
 	// Test node label sync.
 	// TODO: Currently relies on v1 CLI.
