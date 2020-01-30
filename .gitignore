@@ -6,6 +6,9 @@ build/yq
 deploy/test
 /olm
 storageos-operator.yaml
+cluster-operator.tar
+pf.log
+
 # Created by https://www.gitignore.io/api/go,vim,emacs,visualstudiocode
 ### Emacs ###
 # -*- mode: gitignore; -*-

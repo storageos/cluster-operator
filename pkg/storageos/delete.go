@@ -27,6 +27,10 @@ func (s *Deployment) Delete() error {
 		return err
 	}
 
+	if err := s.k8sResourceManager.ConfigMap(configmapName, namespace, nil, nil).Delete(); err != nil {
+		return err
+	}
+
 	if err := s.k8sResourceManager.Secret(initSecretName, namespace, nil, corev1.SecretTypeOpaque, nil).Delete(); err != nil {
 		return err
 	}

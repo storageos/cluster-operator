@@ -133,7 +133,7 @@ func main() {
 		// Configure a pod scheduler webhook handler with StorageOS provisioner
 		// and scheduler.
 		webhookHandler := &scheduler.PodSchedulerSetter{
-			Provisioners:           []string{storageos.CSIProvisionerName, storageos.IntreeProvisionerName},
+			Provisioners:           []string{storageos.CSIProvisionerName, storageos.IntreeProvisionerName, storageos.StorageOSProvisionerName},
 			SchedulerName:          storageos.SchedulerExtenderName,
 			SchedulerAnnotationKey: podSchedulerAnnotationKey,
 		}

@@ -6,6 +6,10 @@ func (s *Deployment) createStorageClass() error {
 
 	if s.stos.Spec.CSI.Enable {
 		provisioner = CSIProvisionerName
+		// Check if it's a v2 deployment and use the appropriate provisioner.
+		if s.nodev2 {
+			provisioner = StorageOSProvisionerName
+		}
 	}
 
 	parameters := map[string]string{

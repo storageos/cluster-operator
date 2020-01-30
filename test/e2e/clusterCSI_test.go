@@ -58,7 +58,6 @@ func TestClusterCSI(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	testutil.ClusterStatusCheck(t, testStorageOS.Status, 1)
 
 	daemonset, err := f.KubeClient.AppsV1().DaemonSets(resourceNS).Get("storageos-daemonset", metav1.GetOptions{})
@@ -76,7 +75,7 @@ func TestClusterCSI(t *testing.T) {
 	//Check the number of containers in daemonset pod spec.
 	if deploy.CSIV1Supported(version) {
 		if len(daemonset.Spec.Template.Spec.Containers) != 3 {
-			t.Errorf("unexpected number of daemonset pod containers:\n\t(GOT) %d\n\t(WNT) %d", len(daemonset.Spec.Template.Spec.Containers), 2)
+			t.Errorf("unexpected number of daemonset pod containers:\n\t(GOT) %d\n\t(WNT) %d", len(daemonset.Spec.Template.Spec.Containers), 3)
 		}
 	} else {
 		if len(daemonset.Spec.Template.Spec.Containers) != 2 {
