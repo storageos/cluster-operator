@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -ex
 
 # This script reads all the configurations from OLM configmap, combines with
 # *-changes.yaml file, if applicable, and updates the CSV, CRD and package
@@ -14,14 +14,16 @@ yq r deploy/storageos-operators.configmap.yaml \
     yq d - 'spec.install.spec.deployments[0].spec.template.spec.containers[1]' \
     > deploy/olm/storageos/storageos.clusterserviceversion.yaml
 
-# Extract CSV from configmap, update with rhel operator changes, removes OLM
+# Extract CSV from configmap, update with marketplace changes, removes OLM
 # scorecard proxy container and write to the final CSV file.
-yq r deploy/storageos-operators.configmap.yaml \
-    data.clusterServiceVersions | yq r - [0] | \
-    yq w -s deploy/olm/rhel-changes.yaml - | \
-    yq d - 'spec.install.spec.deployments[0].spec.template.spec.containers[1]' \
-    > deploy/olm/csv-rhel/storageos.clusterserviceversion.yaml
-
+for target in rhel rhm-1tb rhm-10tb; do
+    [ -d deploy/olm/csv-${target} ] || mkdir -p deploy/olm/csv-${target}
+    yq r deploy/storageos-operators.configmap.yaml \
+        data.clusterServiceVersions | yq r - [0] | \
+        yq w -s deploy/olm/${target}-changes.yaml - | \
+        yq d - 'spec.install.spec.deployments[0].spec.template.spec.containers[1]' \
+        > deploy/olm/csv-${target}/storageos.clusterserviceversion.yaml
+done
 
 # Read metadata file configmap and update the CRD files.
 
