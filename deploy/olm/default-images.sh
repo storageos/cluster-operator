@@ -1,0 +1,13 @@
+RELATED_IMAGE_STORAGEOS_NODE=registry.connect.redhat.com/storageos/node:${NEW_VERSION}
+RELATED_IMAGE_STORAGEOS_INIT=registry.connect.redhat.com/storageos/init:1.0.1
+RELATED_IMAGE_CSIV1_CLUSTER_DRIVER_REGISTRAR=registry.redhat.io/openshift4/ose-csi-driver-registrar:v4.3
+RELATED_IMAGE_CSIV1_NODE_DRIVER_REGISTRAR=registry.redhat.io/openshift4/ose-csi-node-driver-registrar:v4.3
+RELATED_IMAGE_CSIV1_EXTERNAL_PROVISIONER=registry.connect.redhat.com/storageos/csi-provisioner:v1.4.0-1
+RELATED_IMAGE_CSIV1_EXTERNAL_ATTACHER=registry.redhat.io/openshift4/ose-csi-external-attacher:v4.3
+RELATED_IMAGE_CSIV1_EXTERNAL_ATTACHER_V2=registry.redhat.io/openshift4/ose-csi-external-attacher:v4.3
+RELATED_IMAGE_CSIV1_LIVENESS_PROBE=registry.redhat.io/openshift4/ose-csi-livenessprobe:v4.3
+RELATED_IMAGE_CSIV0_DRIVER_REGISTRAR=
+RELATED_IMAGE_CSIV0_EXTERNAL_PROVISIONER=
+RELATED_IMAGE_CSIV0_EXTERNAL_ATTACHER=
+RELATED_IMAGE_NFS=registry.connect.redhat.com/storageos/nfs:1.0.1
+RELATED_IMAGE_KUBE_SCHEDULER=registry.connect.redhat.com/storageos/kube-scheduler:v1.17.0

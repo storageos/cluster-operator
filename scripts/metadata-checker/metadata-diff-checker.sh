@@ -38,17 +38,18 @@ yq r deploy/storageos-operators.configmap.yaml \
     > $csvfile
 check_diff $targetfile $csvfile
 
-# Check rhel CSV file.
-csvfile=$TMP_DIR/rhel-csv.yaml
-targetfile=deploy/olm/csv-rhel/storageos.clusterserviceversion.yaml
-# Generate a rhel CSV file.
-yq r deploy/storageos-operators.configmap.yaml \
-    data.clusterServiceVersions | yq r - [0] | \
-    yq w -s deploy/olm/rhel-changes.yaml - | \
-    yq d - 'spec.install.spec.deployments[0].spec.template.spec.containers[1]' \
-    > $csvfile
-check_diff $targetfile $csvfile
-
+# Check marketplace CSV files.
+for target in rhel rhm-1tb rhm-10tb; do
+    csvfile=$TMP_DIR/${target}-csv.yaml
+    targetfile=deploy/olm/csv-${target}/storageos.clusterserviceversion.yaml
+    # Generate a rhel CSV file.
+    yq r deploy/storageos-operators.configmap.yaml \
+        data.clusterServiceVersions | yq r - [0] | \
+        yq w -s deploy/olm/${target}-changes.yaml - | \
+        yq d - 'spec.install.spec.deployments[0].spec.template.spec.containers[1]' \
+        > $csvfile
+    check_diff $targetfile $csvfile
+done
 
 ##################
 # Check CRD files.
