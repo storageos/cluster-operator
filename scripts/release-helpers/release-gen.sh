@@ -31,6 +31,9 @@ PREV_VERSION_COMMUNITY=$(yq r $COMMUNITY_CHANGES_FILE [spec.version])
 
 # Ensure that the previous versions are the same before proceeding.
 for target in $EDITIONS; do
+  if [ ! -f deploy/olm/${target}-changes.yaml ]; then
+    continue
+  fi
   PREV_VERSION_EDITION=$(yq r deploy/olm/${target}-changes.yaml [spec.version])
   if [ "$PREV_VERSION_COMMUNITY" != "$PREV_VERSION_EDITION" ]; then
       echo "$COMMUNITY_CHANGES_FILE and $PREV_VERSION_EDITION have different version numbers."
@@ -97,7 +100,7 @@ for target in ${EDITIONS}; do
     RELATED_IMAGE_CSIV0_EXTERNAL_PROVISIONER \
     RELATED_IMAGE_CSIV0_EXTERNAL_ATTACHER \
     RELATED_IMAGE_NFS \
-    RELATED_IMAGE_KUBE_SCHEDULER 
+    RELATED_IMAGE_KUBE_SCHEDULER
 
   # Load default images for OLM installs into env vars.
   source deploy/olm/default-images.sh
