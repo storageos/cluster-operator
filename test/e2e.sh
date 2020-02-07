@@ -228,6 +228,10 @@ operator-sdk-e2e-cleanup() {
 
     # Delete webhook config.
     kubectl delete mutatingwebhookconfigurations storageos-scheduler-webhook --ignore-not-found=true
+
+    # Clean up StorageOS devices
+    sudo umount storageos || true
+    sudo rm -rf /var/lib/storageos/* || true
 }
 
 main() {
