@@ -75,8 +75,12 @@ spec:
               value: "storageos-cluster-operator"
             - name: DISABLE_SCHEDULER_WEBHOOK
               value: "false"
+            - name: JAEGER_ENDPOINT
+              value: ""
+            - name: JAEGER_SERVICE_NAME
+              value: ""
       tolerations:
       - key: "key"
         operator: "Equal"
         value: "value"
-        effect: "NoSchedule" 
+        effect: "NoSchedule"

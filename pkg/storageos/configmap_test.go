@@ -1,6 +1,7 @@
 package storageos
 
 import (
+	"os"
 	"reflect"
 	"testing"
 
@@ -8,8 +9,6 @@ import (
 )
 
 func Test_configFromSpec(t *testing.T) {
-
-	t.Parallel()
 
 	v1DefaultSpec := storageosv1.StorageOSClusterSpec{}
 	v1DefaultConfig := map[string]string{
@@ -40,6 +39,7 @@ func Test_configFromSpec(t *testing.T) {
 	tests := []struct {
 		name       string
 		spec       storageosv1.StorageOSClusterSpec
+		env        map[string]string
 		csiv1      bool
 		nodev2     bool
 		wantbase   map[string]string
@@ -370,12 +370,45 @@ func Test_configFromSpec(t *testing.T) {
 				k8sDistroEnvVar: "some-distro-name",
 			},
 		},
+		{
+			name: "v2 jaeger endpoint",
+			spec: v2DefaultSpec,
+			env: map[string]string{
+				jaegerEndpointEnvVar: "http:/1.2.3.4:1234",
+			},
+			csiv1:    true,
+			nodev2:   true,
+			wantbase: v2DefaultConfig,
+			wantcustom: map[string]string{
+				jaegerEndpointEnvVar: "http:/1.2.3.4:1234",
+			},
+		},
+		{
+			name: "v2 jaeger service name",
+			spec: v2DefaultSpec,
+			env: map[string]string{
+				jaegerServiceNameEnvVar: "test-1234",
+			},
+			csiv1:    true,
+			nodev2:   true,
+			wantbase: v2DefaultConfig,
+			wantcustom: map[string]string{
+				jaegerServiceNameEnvVar: "test-1234",
+			},
+		},
 	}
 	for _, tt := range tests {
-		var tt = tt
 		t.Run(tt.name, func(t *testing.T) {
-
-			t.Parallel()
+			// Set wanted env vars.
+			// Don't parallelize tests as they will conflict.
+			for k, v := range tt.env {
+				os.Setenv(k, v)
+				defer func(k string) {
+					if err := os.Unsetenv(k); err != nil {
+						t.Fatal(err)
+					}
+				}(k)
+			}
 
 			var want = make(map[string]string)
 			for k, v := range tt.wantbase {

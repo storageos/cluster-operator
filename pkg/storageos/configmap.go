@@ -2,6 +2,7 @@ package storageos
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
 
@@ -108,6 +109,11 @@ const (
 
 	// Logger format: text or json.
 	logFormatEnvVar = "LOG_FORMAT"
+
+	// Tracing configuration.  Intended for internal development use only and
+	// should not be documented externally.
+	jaegerEndpointEnvVar    = "JAEGER_ENDPOINT"
+	jaegerServiceNameEnvVar = "JAEGER_SERVICE_NAME"
 
 	// Etcd TLS cert file names.
 	tlsEtcdCA         = "etcd-client-ca.crt"
@@ -268,6 +274,16 @@ func v2ConfigFromSpec(spec storageosv1.StorageOSClusterSpec) map[string]string {
 	config[logLevelEnvVar] = "info"
 	if spec.Debug {
 		config[logLevelEnvVar] = debugVal
+	}
+
+	// Set Jaeger configuration, only if set as an env var in the operator. We
+	// do this because we don't want to publish configuration options in the CRD
+	// that are intended for developer use only.
+	if val := os.Getenv(jaegerEndpointEnvVar); val != "" {
+		config[jaegerEndpointEnvVar] = val
+	}
+	if val := os.Getenv(jaegerServiceNameEnvVar); val != "" {
+		config[jaegerServiceNameEnvVar] = val
 	}
 
 	return config
