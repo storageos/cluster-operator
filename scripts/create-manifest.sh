@@ -33,7 +33,23 @@ do
     cat $i >> $INSTALL_MANIFEST
 done
 
+# Set operator install env vars. Be careful of the ordering if they change!
+OPERATOR_MANIFEST=deploy/operator-generated.yaml
+cp deploy/operator.yaml $OPERATOR_MANIFEST
+
+if [ -n "$JAEGER_ENDPOINT" ]; then
+    build/yq w -i $OPERATOR_MANIFEST spec.template.spec.containers[0].env[18].value $JAEGER_ENDPOINT
+fi
+if [ -n "$JAEGER_SERVICE_NAME" ]; then
+    build/yq w -i $OPERATOR_MANIFEST spec.template.spec.containers[0].env[19].value $JAEGER_SERVICE_NAME
+fi
+
 # Write the operator manifest with the proper container image tag.
 echo "---" >> $INSTALL_MANIFEST
-echo "Copying deploy/operator.yaml with image $OPERATOR_IMAGE"
-build/yq w deploy/operator.yaml spec.template.spec.containers[0].image $OPERATOR_IMAGE >> $INSTALL_MANIFEST
+echo "Copying $OPERATOR_MANIFEST with image $OPERATOR_IMAGE"
+build/yq w $OPERATOR_MANIFEST spec.template.spec.containers[0].image $OPERATOR_IMAGE >> $INSTALL_MANIFEST
+
+if [ -f "$OPERATOR_MANIFEST" ]; then
+    rm -f "$OPERATOR_MANIFEST"
+fi
+
