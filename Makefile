@@ -8,7 +8,12 @@ BASE_IMAGE = storageos/base-image:0.2.1
 
 # When this file name is modified, the new name must be added in .travis.yml
 # file as well for publishing the file at release.
-METADATA_FILE = storageos-olm-metadata.zip
+METADATA_FILE_OLM = storageos-olm-metadata.zip
+METADATA_FILE_RHM_1TB = storageos-rhm-1tb-metadata.zip
+METADATA_FILE_RHM_10TB = storageos-rhm-10tb-metadata.zip
+
+# Target for build outputs
+OUTPUT = build/_output
 
 LDFLAGS += -X github.com/storageos/cluster-operator/pkg/controller/storageosupgrade.operatorImage=$(OPERATOR_IMAGE)
 
@@ -17,7 +22,7 @@ all: lint unittest build/upgrader build/cluster-operator
 build/upgrader:
 	@echo "Building upgrader"
 	$(GO_ENV) $(GO_BUILD_CMD) \
-		-o ./build/_output/bin/upgrader \
+		-o ./$(OUTPUT)/bin/upgrader \
 		./cmd/upgrader
 
 build/cluster-operator:
@@ -72,21 +77,40 @@ install-yq:
 		chmod +x build/yq; \
 	fi
 
-# Generate metadata bundle for openshift metadata scanner.
-metadata-zip:
-	# Remove any existing metadata bundle.
-	rm -f build/_output/$(METADATA_FILE)
-	# Ensure the target path exists.
-	mkdir -p build/_output/
+# Generate metadata bundles for openshift metadata scanner.
+metadata-zip: $(OUTPUT) $(OUTPUT)/$(METADATA_FILE_OLM) $(OUTPUT)/$(METADATA_FILE_RHM_1TB) $(OUTPUT)/$(METADATA_FILE_RHM_10TB)
+
+$(OUTPUT):
+	mkdir -p $(OUTPUT)
+
+$(OUTPUT)/$(METADATA_FILE_OLM): $(OUTPUT)
 	# -j strips the parent directories and adds the files at the root. This is
 	# a requirement for the openshift metadata scanner.
-	zip -j build/_output/$(METADATA_FILE) \
+	zip -j $(OUTPUT)/$(METADATA_FILE_OLM) \
 		deploy/olm/storageos/storageos.package.yaml \
 		deploy/olm/storageos/storageoscluster.crd.yaml \
 		deploy/olm/storageos/storageosjob.crd.yaml \
 		deploy/olm/storageos/storageosupgrade.crd.yaml \
 		deploy/olm/storageos/storageosnfsserver.crd.yaml \
 		deploy/olm/csv-rhel/storageos.v*.clusterserviceversion.yaml
+
+$(OUTPUT)/$(METADATA_FILE_RHM_1TB): $(OUTPUT)
+	zip -j $(OUTPUT)/$(METADATA_FILE_RHM_1TB) \
+		deploy/olm/storageos/storageos.package.yaml \
+		deploy/olm/storageos/storageoscluster.crd.yaml \
+		deploy/olm/storageos/storageosjob.crd.yaml \
+		deploy/olm/storageos/storageosupgrade.crd.yaml \
+		deploy/olm/storageos/storageosnfsserver.crd.yaml \
+		deploy/olm/csv-rhm-1tb/storageos.v*.clusterserviceversion.yaml
+
+$(OUTPUT)/$(METADATA_FILE_RHM_10TB): $(OUTPUT)
+	zip -j $(OUTPUT)/$(METADATA_FILE_RHM_10TB) \
+		deploy/olm/storageos/storageos.package.yaml \
+		deploy/olm/storageos/storageoscluster.crd.yaml \
+		deploy/olm/storageos/storageosjob.crd.yaml \
+		deploy/olm/storageos/storageosupgrade.crd.yaml \
+		deploy/olm/storageos/storageosnfsserver.crd.yaml \
+		deploy/olm/csv-rhm-10tb/storageos.v*.clusterserviceversion.yaml
 
 metadata-update:
 	# Update all the metadata files in-place.
@@ -101,10 +125,22 @@ olm-lint: generate
 		python:3 bash -c "pip install operator-courier && operator-courier verify --ui_validate_io /storageos"
 
 # Create a metadata zip file and lint the bundle.
-metadata-bundle-lint: metadata-zip
-	docker run -it --rm -v $(PWD)/build/_output/:/metadata \
+metadata-bundle-lint: metadata-zip metadata-bundle-lint-olm metadata-bundle-lint-rhm-1tb metadata-bundle-lint-rhm-10tb
+
+metadata-bundle-lint-olm:
+	docker run -it --rm -v $(PWD)/$(OUTPUT):/metadata \
 		-w /home/test/ \
-		python:3 bash -c "pip install operator-courier && unzip /metadata/$(METADATA_FILE) -d out && operator-courier --verbose verify --ui_validate_io out/"
+		python:3 bash -c "pip install operator-courier && unzip /metadata/$(METADATA_FILE_OLM) -d out && operator-courier --verbose verify --ui_validate_io out/"
+
+metadata-bundle-lint-rhm-1tb:
+	docker run -it --rm -v $(PWD)/$(OUTPUT):/metadata \
+		-w /home/test/ \
+		python:3 bash -c "pip install operator-courier && unzip /metadata/$(METADATA_FILE_RHM_1TB) -d out && operator-courier --verbose verify --ui_validate_io out/"
+
+metadata-bundle-lint-rhm-10tb:
+	docker run -it --rm -v $(PWD)/$(OUTPUT):/metadata \
+		-w /home/test/ \
+		python:3 bash -c "pip install operator-courier && unzip /metadata/$(METADATA_FILE_RHM_10TB) -d out && operator-courier --verbose verify --ui_validate_io out/"
 
 # Prepare the repo for a new release.
 release:

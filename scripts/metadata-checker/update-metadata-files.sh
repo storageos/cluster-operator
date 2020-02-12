@@ -18,7 +18,7 @@ yq r deploy/storageos-operators.configmap.yaml \
 # scorecard proxy container and write to the final CSV file.
 for target in rhel rhm-1tb rhm-10tb; do
     [ -d deploy/olm/csv-${target} ] || mkdir -p deploy/olm/csv-${target}
-    yq r deploy/storageos-operators.configmap.yaml \
+    yq r deploy/storageos-operators.rhel.configmap.yaml \
         data.clusterServiceVersions | yq r - [0] | \
         yq w -s deploy/olm/${target}-changes.yaml - | \
         yq d - 'spec.install.spec.deployments[0].spec.template.spec.containers[1]' \

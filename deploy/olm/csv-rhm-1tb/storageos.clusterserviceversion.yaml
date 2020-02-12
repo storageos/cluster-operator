@@ -384,7 +384,7 @@ spec:
                 image: registry.connect.redhat.com/storageos/cluster-operator:1.5.3
                 env:
                 - name: RELATED_IMAGE_STORAGEOS_NODE
-                  value: registry.connect.redhat.com/storageos/node:1.5.3
+                  value: registry.connect.redhat.com/storageos/node-1tb:1.5.3
                 - name: RELATED_IMAGE_STORAGEOS_INIT
                   value: registry.connect.redhat.com/storageos/init:1.0.1
                 - name: RELATED_IMAGE_CSIV1_CLUSTER_DRIVER_REGISTRAR
@@ -712,4 +712,4 @@ spec:
           with the NFS Server. If not specified, a new PVC is provisioned and used.
         displayName: Persistent Volume Claim
         path: persistentVolumeClaim
-  replaces: storageosoperator.v1.5.2
+  replaces: storageosoperator.v1.5.3

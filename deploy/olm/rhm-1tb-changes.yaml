@@ -68,7 +68,7 @@ metadata.annotations.alm-examples: |-
 
 spec.version: 1.5.3
 spec.install.spec.deployments[0].spec.template.spec.containers[0].image: registry.connect.redhat.com/storageos/cluster-operator:1.5.3
-spec.install.spec.deployments[0].spec.template.spec.containers[0].env[0].value: "registry.connect.redhat.com/storageos/node:1.5.3"
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[0].value: "registry.connect.redhat.com/storageos/node-1tb:1.5.3"
 spec.install.spec.deployments[0].spec.template.spec.containers[0].env[1].value: "registry.connect.redhat.com/storageos/init:1.0.1"
 spec.install.spec.deployments[0].spec.template.spec.containers[0].env[2].value: "registry.connect.redhat.com/storageos/csi-cluster-driver-registrar:v1.0.1"
 spec.install.spec.deployments[0].spec.template.spec.containers[0].env[3].value: "registry.connect.redhat.com/storageos/csi-node-driver-registrar:v1.2.0"
@@ -79,4 +79,3 @@ spec.install.spec.deployments[0].spec.template.spec.containers[0].env[7].value: 
 spec.install.spec.deployments[0].spec.template.spec.containers[0].env[8].value: "registry.connect.redhat.com/storageos/nfs:1.0.1"
 spec.install.spec.deployments[0].spec.template.spec.containers[0].env[9].value: "registry.connect.redhat.com/storageos/kube-scheduler:v1.17.0"
 spec.customresourcedefinitions.owned[2].specDescriptors[0].description: The StorageOS Node image to upgrade to. e.g. `registry.connect.redhat.com/storageos/node:latest`
-spec.replaces: storageosoperator.v1.5.2
