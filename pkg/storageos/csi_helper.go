@@ -110,7 +110,6 @@ func (s Deployment) csiHelperContainers() ([]corev1.Container, error) {
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Args: []string{
 				"--v=5",
-				"--provisioner=storageos",
 				"--csi-address=$(ADDRESS)",
 				"--extra-create-metadata",
 			},
