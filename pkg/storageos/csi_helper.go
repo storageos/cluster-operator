@@ -112,6 +112,7 @@ func (s Deployment) csiHelperContainers() ([]corev1.Container, error) {
 				"--v=5",
 				"--provisioner=storageos",
 				"--csi-address=$(ADDRESS)",
+				"--extra-create-metadata",
 			},
 			Env: []corev1.EnvVar{
 				{
