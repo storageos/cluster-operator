@@ -1648,7 +1648,7 @@ func TestContainerImageSelection(t *testing.T) {
 
 	// Given image name, cluster spec and k8s version, return the appropriate
 	// image.
-	getImage := func(name string, spec api.StorageOSClusterSpec, k8sVersion string) string {
+	getImage := func(name string, spec api.StorageOSClusterSpec, k8sVersion string, nodeV2 bool) string {
 		csiV1Supported := CSIV1Supported(k8sVersion)
 		attacherV2Supported := CSIExternalAttacherV2Supported(k8sVersion)
 
@@ -1662,7 +1662,7 @@ func TestContainerImageSelection(t *testing.T) {
 		case csiNodeDriverRegistrarImage:
 			return spec.GetCSINodeDriverRegistrarImage(csiV1Supported)
 		case csiExternalProvisionerImage:
-			return spec.GetCSIExternalProvisionerImage(csiV1Supported)
+			return spec.GetCSIExternalProvisionerImage(csiV1Supported, nodeV2)
 		case csiExternalAttacherImage:
 			return spec.GetCSIExternalAttacherImage(csiV1Supported, attacherV2Supported)
 		case csiLivenessProbeImage:
@@ -1681,6 +1681,7 @@ func TestContainerImageSelection(t *testing.T) {
 		envVars     map[string]string
 		clusterSpec api.StorageOSClusterSpec
 		k8sVersion  string
+		nodev2      bool
 		wantImages  map[string]string
 	}{
 		{
@@ -1751,14 +1752,30 @@ func TestContainerImageSelection(t *testing.T) {
 			},
 		},
 		{
-			name:       "no env vars, no overrides, fallback images - k8s 1.13",
+			name:       "no env vars, no overrides, fallback images - k8s 1.13, node v1",
 			k8sVersion: "1.13.0",
 			wantImages: map[string]string{
 				storageOSNodeImage:             image.DefaultNodeContainerImage,
 				storageOSInitImage:             image.DefaultInitContainerImage,
 				csiClusterDriverRegistrarImage: image.CSIv1ClusterDriverRegistrarContainerImage,
 				csiNodeDriverRegistrarImage:    image.CSIv1NodeDriverRegistrarContainerImage,
-				csiExternalProvisionerImage:    image.CSIv1ExternalProvisionerContainerImage,
+				csiExternalProvisionerImage:    image.CSIv1ExternalProvisionerContainerImageV1,
+				csiExternalAttacherImage:       image.CSIv1ExternalAttacherContainerImage,
+				csiLivenessProbeImage:          image.CSIv1LivenessProbeContainerImage,
+				kubeSchedulerImage:             fmt.Sprintf("%s:%s", image.DefaultKubeSchedulerContainerRegistry, "v1.13.0"),
+				nfsImage:                       image.DefaultNFSContainerImage,
+			},
+		},
+		{
+			name:       "no env vars, no overrides, fallback images - k8s 1.13, node v2",
+			k8sVersion: "1.13.0",
+			nodev2:     true,
+			wantImages: map[string]string{
+				storageOSNodeImage:             image.DefaultNodeContainerImage,
+				storageOSInitImage:             image.DefaultInitContainerImage,
+				csiClusterDriverRegistrarImage: image.CSIv1ClusterDriverRegistrarContainerImage,
+				csiNodeDriverRegistrarImage:    image.CSIv1NodeDriverRegistrarContainerImage,
+				csiExternalProvisionerImage:    image.CSIv1ExternalProvisionerContainerImageV2,
 				csiExternalAttacherImage:       image.CSIv1ExternalAttacherContainerImage,
 				csiLivenessProbeImage:          image.CSIv1LivenessProbeContainerImage,
 				kubeSchedulerImage:             fmt.Sprintf("%s:%s", image.DefaultKubeSchedulerContainerRegistry, "v1.13.0"),
@@ -1809,10 +1826,41 @@ func TestContainerImageSelection(t *testing.T) {
 			}()
 
 			for imgName, wantImg := range tc.wantImages {
-				gotImg := getImage(imgName, tc.clusterSpec, tc.k8sVersion)
+				gotImg := getImage(imgName, tc.clusterSpec, tc.k8sVersion, tc.nodev2)
 				if gotImg != wantImg {
 					t.Errorf("unexpected image selected for %s:\n\t(WNT) %s\n\t(GOT) %s", imgName, wantImg, gotImg)
 				}
+			}
+		})
+	}
+}
+
+func Test_NodeV2Image(t *testing.T) {
+
+	t.Parallel()
+
+	tests := []struct {
+		image string
+		want  bool
+	}{
+		{image: "storageos/node", want: false},
+		{image: "storageos/node:1.0.0", want: false},
+		{image: "storageos/node:1.2.0-alpha1", want: false},
+		{image: "storageos/node:7c46250197bf", want: false},
+		{image: "storageos/node:2.0.0", want: true},
+		{image: "storageos/node:2.0.0-alpha1", want: true},
+		{image: "storageos/node:c2-7c46250197bf", want: true},
+		{image: "myregistryhost:5000/storageos/node:1.0.0", want: false},
+		{image: "myregistryhost:5000/storageos/node:2.0.0", want: true},
+		{image: "invalidscheme://myregistryhost:5000/storageos/node:2.0.0", want: true},
+		{image: "2.0.0", want: false},
+	}
+	for _, tt := range tests {
+		var tt = tt
+		t.Run(tt.image, func(t *testing.T) {
+			t.Parallel()
+			if got := NodeV2Image(tt.image); got != tt.want {
+				t.Errorf("NodeV2Image(%s) = %v, want %v", tt.image, got, tt.want)
 			}
 		})
 	}
