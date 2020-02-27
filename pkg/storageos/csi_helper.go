@@ -105,12 +105,11 @@ func (s Deployment) addCommonPodProperties(podSpec *corev1.PodSpec) error {
 func (s Deployment) csiHelperContainers() ([]corev1.Container, error) {
 	containers := []corev1.Container{
 		{
-			Image:           s.stos.Spec.GetCSIExternalProvisionerImage(CSIV1Supported(s.k8sVersion)),
+			Image:           s.stos.Spec.GetCSIExternalProvisionerImage(CSIV1Supported(s.k8sVersion), s.nodev2),
 			Name:            "csi-external-provisioner",
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Args: []string{
 				"--v=5",
-				"--provisioner=storageos",
 				"--csi-address=$(ADDRESS)",
 			},
 			Env: []corev1.EnvVar{
@@ -147,6 +146,11 @@ func (s Deployment) csiHelperContainers() ([]corev1.Container, error) {
 				},
 			},
 		},
+	}
+
+	// v2 provisioner requires additional startup flag.
+	if s.nodev2 {
+		containers[0].Args = append(containers[0].Args, "--extra-create-metadata")
 	}
 
 	// CSI v1 requires running CSI driver registrar to register the driver along

@@ -325,6 +325,23 @@ func CSIExternalAttacherV2Supported(version string) bool {
 	return versionSupported(version, "1.14.0")
 }
 
+// NodeV2Image returns true if the image tag starts with "2." or contains "c2".
+func NodeV2Image(image string) bool {
+
+	parts := strings.Split(image, ":")
+	if len(parts) < 2 {
+		return false
+	}
+
+	if strings.HasPrefix(parts[len(parts)-1], "2.") {
+		return true
+	}
+
+	// Temporary dev tag check.
+	// TODO: remove once we have proper tags.
+	return strings.Contains(parts[len(parts)-1], "c2")
+}
+
 // versionSupported takes two versions, current version (haveVersion) and a
 // minimum requirement version (wantVersion) and checks if the current version
 // is supported by comparing it with the minimum requirement.
