@@ -308,14 +308,14 @@ func (s StorageOSClusterSpec) GetCSIClusterDriverRegistrarImage() string {
 }
 
 // GetCSIExternalProvisionerImage returns CSI external provisioner container image.
-func (s StorageOSClusterSpec) GetCSIExternalProvisionerImage(csiv1 bool, v2 bool) string {
+func (s StorageOSClusterSpec) GetCSIExternalProvisionerImage(csiv1 bool, nodev2 bool) string {
 	if s.Images.CSIExternalProvisionerContainer != "" {
 		return s.Images.CSIExternalProvisionerContainer
 	}
 	if csiv1 {
 		// v2 requires a more recent provisioner that passes PVC name &
 		// namespace as annotations.
-		if v2 {
+		if nodev2 {
 			return image.GetDefaultImage(image.CSIv1ExternalProvisionerImageEnvVar, image.CSIv1ExternalProvisionerContainerImageV2)
 		}
 		return image.GetDefaultImage(image.CSIv1ExternalProvisionerImageEnvVar, image.CSIv1ExternalProvisionerContainerImageV1)
