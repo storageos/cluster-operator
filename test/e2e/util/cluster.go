@@ -86,18 +86,6 @@ func SetupOperator(t *testing.T, ctx *framework.TestCtx) {
 		t.Fatalf("failed to initialize cluster resources: %v", err)
 	}
 	t.Log("Initialized cluster resources")
-
-	namespace, err := ctx.GetNamespace()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	f := framework.Global
-
-	err = e2eutil.WaitForDeployment(t, f.KubeClient, namespace, "storageos-cluster-operator", 1, RetryInterval, Timeout)
-	if err != nil {
-		t.Fatal(err)
-	}
 }
 
 // ClusterStatusCheck checks the values of cluster status based on a given
