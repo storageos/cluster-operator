@@ -260,6 +260,7 @@ spec:
           - configmaps
           - replicationcontrollers
           - pods/binding
+          - pods/status
           - endpoints
           verbs:
           - create
@@ -354,6 +355,7 @@ spec:
           - events
           verbs:
           - create
+          - patch
         - apiGroups:
           - coordination.k8s.io
           resources:

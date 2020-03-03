@@ -872,6 +872,7 @@ data:
                 - configmaps
                 - replicationcontrollers
                 - pods/binding
+                - pods/status
                 - endpoints
                 verbs:
                 - create
@@ -966,6 +967,7 @@ data:
                 - events
                 verbs:
                 - create
+                - patch
               - apiGroups:
                 - coordination.k8s.io
                 resources:
