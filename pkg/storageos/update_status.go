@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"reflect"
 	"strings"
@@ -13,6 +14,16 @@ import (
 	storageosapi "github.com/storageos/go-api"
 	"github.com/storageos/go-api/types"
 	v1 "k8s.io/api/core/v1"
+)
+
+var (
+	// nodeHealthTimeout specifies how long we should wait for the api to
+	// return health results.
+	nodeHealthTimeout = time.Second
+
+	// nodeLivenessTimeout specifies how long we should wait for a connection to
+	// the node's api port.
+	nodeLivenessTimeout = time.Second
 )
 
 func (s *Deployment) updateStorageOSStatus(status *storageosv1.StorageOSClusterStatus) error {
@@ -43,11 +54,7 @@ func (s *Deployment) updateStorageOSStatus(status *storageosv1.StorageOSClusterS
 	return s.client.Status().Update(context.Background(), s.stos)
 }
 
-// getStorageOSStatus queries health of all the nodes in the join token and
-// returns the cluster status.
 func (s *Deployment) getStorageOSStatus() (*storageosv1.StorageOSClusterStatus, error) {
-
-	var totalNodes, readyNodes int
 
 	// Create an empty array because it's used to create cluster status. An
 	// uninitialized array results in error at cluster status validation.
@@ -57,14 +64,59 @@ func (s *Deployment) getStorageOSStatus() (*storageosv1.StorageOSClusterStatus, 
 	// Everything is empty if join token is empty.
 	if len(s.stos.Spec.Join) > 0 {
 		nodeIPs = strings.Split(s.stos.Spec.Join, ",")
-		totalNodes = len(nodeIPs)
 	}
 
+	if s.nodev2 {
+		return s.getStorageOSV2Status(nodeIPs)
+	}
+	return s.getStorageOSV1Status(nodeIPs)
+}
+
+// getStorageOSV2Status queries health of all the nodes in the cluster and
+// returns the cluster status.
+//
+// NodeHealthStatus is deprecated and not set for V2.
+func (s *Deployment) getStorageOSV2Status(nodeIPs []string) (*storageosv1.StorageOSClusterStatus, error) {
+	var readyNodes int
+
+	totalNodes := len(nodeIPs)
+	memberStatus := new(storageosv1.MembersStatus)
+
+	for _, ip := range nodeIPs {
+		if isListening(ip, storageosapi.DefaultPort, nodeLivenessTimeout) {
+			readyNodes++
+			memberStatus.Ready = append(memberStatus.Ready, ip)
+		} else {
+			memberStatus.Unready = append(memberStatus.Unready, ip)
+		}
+	}
+
+	phase := storageosv1.ClusterPhaseCreating
+	if readyNodes == totalNodes {
+		phase = storageosv1.ClusterPhaseRunning
+	}
+
+	return &storageosv1.StorageOSClusterStatus{
+		Phase:            phase,
+		Nodes:            nodeIPs,
+		NodeHealthStatus: make(map[string]storageosv1.NodeHealth),
+		Ready:            fmt.Sprintf("%d/%d", readyNodes, totalNodes),
+		Members:          *memberStatus,
+	}, nil
+}
+
+// getStorageOSV1Status queries health of all the nodes in the join token and
+// returns the cluster status.
+func (s *Deployment) getStorageOSV1Status(nodeIPs []string) (*storageosv1.StorageOSClusterStatus, error) {
+
+	var readyNodes int
+
+	totalNodes := len(nodeIPs)
 	healthStatus := make(map[string]storageosv1.NodeHealth)
 	memberStatus := new(storageosv1.MembersStatus)
 
 	for _, node := range nodeIPs {
-		if status, err := getNodeHealth(node, 1); err == nil {
+		if status, err := getNodeHealth(node, nodeHealthTimeout); err == nil {
 			healthStatus[node] = *status
 			if isHealthy(status) {
 				readyNodes++
@@ -97,10 +149,21 @@ func isHealthy(health *storageosv1.NodeHealth) bool {
 	return false
 }
 
-func getNodeHealth(address string, timeout int) (*storageosv1.NodeHealth, error) {
+func isListening(host string, port string, timeout time.Duration) bool {
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), timeout)
+	if err != nil {
+		return false
+	}
+	if conn != nil {
+		defer conn.Close()
+	}
+	return true
+}
+
+func getNodeHealth(address string, timeout time.Duration) (*storageosv1.NodeHealth, error) {
 	healthEndpointFormat := "http://%s:%s/v1/" + storageosapi.HealthAPIPrefix
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(timeout))
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	client := &http.Client{}
