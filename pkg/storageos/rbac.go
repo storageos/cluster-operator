@@ -240,6 +240,7 @@ func (s *Deployment) createClusterRoleForScheduler() error {
 				"replicationcontrollers",
 				"pods",
 				"pods/binding",
+				"pods/status",
 				"services",
 				"endpoints",
 				"events",
@@ -264,7 +265,7 @@ func (s *Deployment) createClusterRoleForScheduler() error {
 		{
 			APIGroups: []string{"events.k8s.io"},
 			Resources: []string{"events"},
-			Verbs:     []string{"create"},
+			Verbs:     []string{"create", "patch"},
 		},
 		{
 			APIGroups: []string{"coordination.k8s.io"},
