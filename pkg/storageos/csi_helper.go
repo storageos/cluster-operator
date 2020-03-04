@@ -110,6 +110,7 @@ func (s Deployment) csiHelperContainers() ([]corev1.Container, error) {
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Args: []string{
 				"--v=5",
+				"--provisioner=storageos", // deprecated in v1.1.0, but required for v1.0.0 (CSI v0).
 				"--csi-address=$(ADDRESS)",
 			},
 			Env: []corev1.EnvVar{
