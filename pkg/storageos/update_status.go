@@ -16,6 +16,16 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
+var (
+	// nodeHealthTimeout specifies how long we should wait for the api to
+	// return health results.
+	nodeHealthTimeout = time.Second
+
+	// nodeLivenessTimeout specifies how long we should wait for a connection to
+	// the node's api port.
+	nodeLivenessTimeout = time.Second
+)
+
 func (s *Deployment) updateStorageOSStatus(status *storageosv1.StorageOSClusterStatus) error {
 	if reflect.DeepEqual(s.stos.Status, *status) {
 		return nil
@@ -73,7 +83,7 @@ func (s *Deployment) getStorageOSV2Status(nodeIPs []string) (*storageosv1.Storag
 	memberStatus := new(storageosv1.MembersStatus)
 
 	for _, ip := range nodeIPs {
-		if isListening(ip, storageosapi.DefaultPort, 2*time.Second) {
+		if isListening(ip, storageosapi.DefaultPort, nodeLivenessTimeout) {
 			readyNodes++
 			memberStatus.Ready = append(memberStatus.Ready, ip)
 		} else {
@@ -106,7 +116,7 @@ func (s *Deployment) getStorageOSV1Status(nodeIPs []string) (*storageosv1.Storag
 	memberStatus := new(storageosv1.MembersStatus)
 
 	for _, node := range nodeIPs {
-		if status, err := getNodeHealth(node, 1); err == nil {
+		if status, err := getNodeHealth(node, nodeHealthTimeout); err == nil {
 			healthStatus[node] = *status
 			if isHealthy(status) {
 				readyNodes++
@@ -142,7 +152,6 @@ func isHealthy(health *storageosv1.NodeHealth) bool {
 func isListening(host string, port string, timeout time.Duration) bool {
 	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), timeout)
 	if err != nil {
-		fmt.Println("Connecting error:", err)
 		return false
 	}
 	if conn != nil {
@@ -151,10 +160,10 @@ func isListening(host string, port string, timeout time.Duration) bool {
 	return true
 }
 
-func getNodeHealth(address string, timeout int) (*storageosv1.NodeHealth, error) {
+func getNodeHealth(address string, timeout time.Duration) (*storageosv1.NodeHealth, error) {
 	healthEndpointFormat := "http://%s:%s/v1/" + storageosapi.HealthAPIPrefix
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(timeout))
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	client := &http.Client{}
