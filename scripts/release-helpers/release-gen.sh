@@ -190,6 +190,10 @@ echo "Updating container image labels..."
 # Update operator version.
 sed -i -e "s/version=.*/version=\"$NEW_VERSION\" \\\/g" build/Dockerfile build/rhel-build-service/Dockerfile
 
+echo "Updating StorageOS API client user-agent..."
+# Update user-agent.
+sed -i -e "s/UserAgent\ =.*/UserAgent\ =\ \"cluster-operator\/$NEW_VERSION\"/g" internal/pkg/client/storageos/common/constant.go
+
 # Update all the metadata files with above changes.
 echo "Updating all the metadata files..."
 bash scripts/metadata-checker/update-metadata-files.sh
