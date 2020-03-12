@@ -4,12 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	storageosapi "github.com/storageos/go-api"
-	storageoserror "github.com/storageos/go-api/serror"
-	storageostypes "github.com/storageos/go-api/types"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -22,7 +19,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	storageosclientcommon "github.com/storageos/cluster-operator/internal/pkg/client/storageos/common"
+	storageosclientv1 "github.com/storageos/cluster-operator/internal/pkg/client/storageos/v1"
+	storageosclientv2 "github.com/storageos/cluster-operator/internal/pkg/client/storageos/v2"
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
+	storageos "github.com/storageos/cluster-operator/pkg/storageos"
 )
 
 var log = logf.Log.WithName("storageos.node")
@@ -30,7 +31,6 @@ var log = logf.Log.WithName("storageos.node")
 // Node controller errors.
 var (
 	ErrCurrentClusterNotFound = errors.New("current cluster not found")
-	ErrNoAPIClient            = errors.New("api client not available")
 )
 
 // Add creates a new Node Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -123,87 +123,75 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 		}
 	}
 
-	// Check if the node is part of StorageOS cluster.
-	node, err := r.stosClient.Node(instance.Name)
-	if err != nil {
-		if err == storageosapi.ErrNoSuchNode {
-			// Not a StorageOS node, skip.
-			return reconcile.Result{}, nil
-		}
-		// Retry immediately if failed to determine if the node is part of the
-		// cluster.
-		return immediateRetryResult, err
-	}
-
-	// Sync labels to StorageOS node object.
-	if err = r.syncLabels(node, instance.Labels); err != nil {
-		if storageoserror.ErrorKind(err) == storageoserror.APIUncontactable {
-			log.Info("Waiting for StorageOS API to become ready")
-			return reconcileResult, nil
+	// Check if client is initialized.
+	if r.stosClient.client.V1 != nil {
+		node, err := r.stosClient.client.GetNodeV1(instance.Name)
+		if err != nil {
+			if err == storageosapi.ErrNoSuchNode {
+				// Not a StorageOS node, skip.
+				return reconcile.Result{}, nil
+			}
+			// Retry immediately if failed to determine if the node is part of the
+			// cluster.
+			return immediateRetryResult, err
 		}
 
-		// Error syncing labels - requeue the request.
-		log.Info("Failed to sync node labels", "error", err)
-		return reconcileResult, nil
+		if updateLabels(node.Labels, instance.Labels) {
+			if err := r.stosClient.client.UpdateNodeV1(node); err != nil {
+				log.Info("Failed to sync node labels", "error", err)
+				return reconcileResult, nil
+			}
+		}
+	} else if r.stosClient.client.V2 != nil {
+		node, err := r.stosClient.client.GetNodeV2(instance.Name)
+		if err != nil {
+			if err == storageosclientcommon.ErrResourceNotFound {
+				// Not a StorageOS node, skip.
+				return reconcile.Result{}, nil
+			}
+			// Retry immediately if failed to determine if the node is part of the
+			// cluster.
+			return immediateRetryResult, err
+		}
+
+		if updateLabels(node.Labels, instance.Labels) {
+			if err := r.stosClient.client.UpdateNodeV2(node); err != nil {
+				log.Info("Failed to sync node labels", "error", err)
+				return reconcileResult, nil
+			}
+		}
+	} else {
+		// Retry with an initialized client.
+		log.Info("StorageOS API client not initialized")
+		return reconcileResult, err
 	}
 
 	return reconcile.Result{}, nil
 }
 
-// SyncNodeLabels applies the Kubernetes node labels to StorageOS node objects.
-func (r *ReconcileNode) syncLabels(node *storageostypes.Node, labels map[string]string) error {
-	if len(labels) == 0 {
-		return nil
-	}
-
-	if r.stosClient == nil {
-		return ErrNoAPIClient
-	}
-
-	// Initialize the map if empty.
-	if len(node.Labels) == 0 {
-		node.Labels = make(map[string]string)
-	}
-
-	// Check if the k8s node labels already exist in storageos node labels.
-	// If there's no update, or addition, do not update the storageos node.
+// updateLabels takes StorageOS node labels and k8s node labels and updates the
+// StorageOS node labels. If there's a change in the labels, it returns a bool
+// true.
+func updateLabels(stosNodeLabels, k8sNodeLabels map[string]string) bool {
 	changed := false
-	for k, v := range labels {
-		// If the label already exists, compare the new and old values.
-		if v2, ok := node.Labels[k]; ok {
-			if v2 != v {
+
+	for kKey, kVal := range k8sNodeLabels {
+		// Check if k8s label exists in storageos labels.
+		if sVal, exists := stosNodeLabels[kKey]; exists {
+			// If the label values don't match, update the storageos label
+			// value.
+			if sVal != kVal {
+				stosNodeLabels[kKey] = kVal
 				changed = true
-				// Set the new value.
-				node.Labels[k] = v2
 			}
 		} else {
-			// Add the new label.
-			node.Labels[k] = v
+			// Add new k8s label to storageos labels.
+			stosNodeLabels[kKey] = kVal
 			changed = true
 		}
 	}
 
-	// Return if there's no update or addition.
-	if !changed {
-		return nil
-	}
-
-	ctx, cancel := context.WithTimeout(context.TODO(), 2*time.Second)
-	defer cancel()
-
-	// Update StorageOS node
-	opts := storageostypes.NodeUpdateOptions{
-		ID:          node.ID,
-		Name:        node.Name,
-		Description: node.Description,
-		Labels:      node.Labels,
-		Cordon:      node.Cordon,
-		Drain:       node.Drain,
-		Context:     ctx,
-	}
-
-	_, err := r.stosClient.NodeUpdate(opts)
-	return err
+	return changed
 }
 
 // findCurrentCluster finds the running cluster.
@@ -244,12 +232,6 @@ func (r *ReconcileNode) setClientForCluster(cluster *storageosv1.StorageOSCluste
 		return err
 	}
 
-	// Create a versioned storageos client.
-	client, err := storageosapi.NewVersionedClient(strings.Join([]string{serviceInstance.Spec.ClusterIP, storageosapi.DefaultPort}, ":"), storageosapi.DefaultVersionStr)
-	if err != nil {
-		return err
-	}
-
 	// Obtain the storageos API secrets to be used in the client.
 	secretNamespacedName := types.NamespacedName{
 		Namespace: cluster.Spec.SecretRefNamespace,
@@ -261,15 +243,24 @@ func (r *ReconcileNode) setClientForCluster(cluster *storageosv1.StorageOSCluste
 		return err
 	}
 
-	client.SetUserAgent("cluster-operator")
-	client.SetAuth(string(secretInstance.Data["apiUsername"]), string(secretInstance.Data["apiPassword"]))
-
 	// Set the client and the current cluster attributes.
 	r.stosClient = &StorageOSClient{
-		Client:            client,
 		clusterName:       cluster.GetName(),
 		clusterGeneration: cluster.GetGeneration(),
 		clusterUID:        cluster.GetUID(),
+	}
+
+	// Initialize StorageOS client based on the version of StorageOS cluster.
+	if storageos.NodeV2Image(cluster.Spec.GetNodeContainerImage()) {
+		r.stosClient.client.Ctx, r.stosClient.client.V2, err = storageosclientv2.NewClientFromSecret(serviceInstance.Spec.ClusterIP, secretInstance)
+		if err != nil {
+			return fmt.Errorf("failed to create StorageOS v2 client: %v", err)
+		}
+	} else {
+		r.stosClient.client.V1, err = storageosclientv1.NewClientFromSecret(serviceInstance.Spec.ClusterIP, secretInstance)
+		if err != nil {
+			return fmt.Errorf("failed to create StorageOS v1 client: %v", err)
+		}
 	}
 
 	return nil
