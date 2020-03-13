@@ -57,6 +57,14 @@
   revision = "de5bf2ad457846296e2031421a34e2568e304e35"
 
 [[projects]]
+  digest = "1:2b23c176460b7b078aeffc44d97515e13d7aa5857c1c2768b3e3defc0397626e"
+  name = "github.com/antihax/optional"
+  packages = ["."]
+  pruneopts = "NT"
+  revision = "c3f0ba9c1a592b971d66b2787679af55b5c58f21"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:680b63a131506e668818d630d3ca36123ff290afa0afc9f4be21940adca3f27d"
   name = "github.com/appscode/jsonpatch"
   packages = ["."]
@@ -559,16 +567,17 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:a1c3ae74c9d266c0dd4c15f1771be89275492f3ac3bcd6a073068048c7421656"
+  digest = "1:0704631306befd9701eea92dd100a9e8ffb9488f2eb7f882617f77b694029c8a"
   name = "github.com/storageos/go-api"
   packages = [
     ".",
     "netutil",
     "serror",
     "types",
+    "v2",
   ]
   pruneopts = "NT"
-  revision = "9358f0990ff0bd94ce25cfa4dc942f1e2d99b42a"
+  revision = "c68d7a4607f7d8de43974979715dd1c8a6dbffcf"
 
 [[projects]]
   digest = "1:8bcb2616463bc981681c4b26f2aa817be8167682b76fb7884ec3fafdc9f82372"
@@ -1335,8 +1344,8 @@
     "github.com/operator-framework/operator-sdk/version",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/storageos/go-api",
-    "github.com/storageos/go-api/serror",
     "github.com/storageos/go-api/types",
+    "github.com/storageos/go-api/v2",
     "k8s.io/api/admission/v1beta1",
     "k8s.io/api/admissionregistration/v1beta1",
     "k8s.io/api/apps/v1",
@@ -1345,6 +1354,7 @@
     "k8s.io/api/extensions/v1beta1",
     "k8s.io/api/rbac/v1",
     "k8s.io/api/storage/v1",
+    "k8s.io/api/storage/v1beta1",
     "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1",
     "k8s.io/apimachinery/pkg/api/errors",
     "k8s.io/apimachinery/pkg/api/resource",

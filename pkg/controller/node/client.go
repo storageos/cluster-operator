@@ -1,13 +1,16 @@
 package node
 
 import (
-	storageosapi "github.com/storageos/go-api"
 	"k8s.io/apimachinery/pkg/types"
+
+	storageosclient "github.com/storageos/cluster-operator/internal/pkg/client/storageos"
 )
 
 // StorageOSClient stores storageos client related information.
 type StorageOSClient struct {
-	*storageosapi.Client
+	// client is the StorageOS API client.
+	client storageosclient.Client
+
 	// clusterName is the name of the current cluster.
 	clusterName string
 	// clusterGeneration is the StorageOSCluster resource's generation. This
