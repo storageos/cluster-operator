@@ -136,6 +136,12 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 			return immediateRetryResult, err
 		}
 
+		// Labels can be uninitialized in v1 when empty. Initialize labels
+		// before updating with new labels.
+		if node.Labels == nil {
+			node.Labels = map[string]string{}
+		}
+
 		if updateLabels(node.Labels, instance.Labels) {
 			if err := r.stosClient.client.UpdateNodeV1(node); err != nil {
 				log.Info("Failed to sync node labels", "error", err)
@@ -173,6 +179,11 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 // StorageOS node labels. If there's a change in the labels, it returns a bool
 // true.
 func updateLabels(stosNodeLabels, k8sNodeLabels map[string]string) bool {
+	// Initialize if nil to avoid panic when updating the elements.
+	if stosNodeLabels == nil {
+		stosNodeLabels = map[string]string{}
+	}
+
 	changed := false
 
 	for kKey, kVal := range k8sNodeLabels {
