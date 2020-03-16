@@ -236,6 +236,14 @@ func WaitForStatefulSet(t *testing.T, kubeclient kubernetes.Interface, namespace
 // NodeLabelSyncTest adds a new label to k8s node and checks if the label is
 // synced to the storageos node labels.
 func NodeLabelSyncTest(t *testing.T, kubeclient kubernetes.Interface) {
+	// Test labels that are added on k8s node.
+	testLabelKey := "foo10"
+	testLabelVal := "bar10"
+
+	// Script that queries storageos node info and checks if the labels are set.
+	nodeLabelCheckScript := "./test/port-forward.sh"
+	expectedScriptOutput := "0\n"
+
 	// Get the existing node to update its labels.
 	nodes, err := kubeclient.CoreV1().Nodes().List(metav1.ListOptions{})
 	if err != nil {
@@ -243,7 +251,7 @@ func NodeLabelSyncTest(t *testing.T, kubeclient kubernetes.Interface) {
 	}
 	node := nodes.Items[0]
 	labels := node.GetLabels()
-	labels["foo10"] = "bar10"
+	labels[testLabelKey] = testLabelVal
 	node.SetLabels(labels)
 	_, err = kubeclient.CoreV1().Nodes().Update(&node)
 	if err != nil {
@@ -251,34 +259,35 @@ func NodeLabelSyncTest(t *testing.T, kubeclient kubernetes.Interface) {
 		return
 	}
 
+	// Cleanup - remove the label from k8s node at the end.
+	defer func() {
+		// Get the latest version of node to update.
+		nodes, err = kubeclient.CoreV1().Nodes().List(metav1.ListOptions{})
+		if err != nil {
+			t.Errorf("failed to get nodes: %v", err)
+			return
+		}
+		node = nodes.Items[0]
+		labels = node.GetLabels()
+		delete(labels, testLabelKey)
+		node.SetLabels(labels)
+		_, err = kubeclient.CoreV1().Nodes().Update(&node)
+		if err != nil {
+			t.Errorf("failed to cleanup node labels: %v", err)
+			return
+		}
+	}()
+
 	// Wait for the node-controller to update storageos node.
 	time.Sleep(5 * time.Second)
 
-	out, err := exec.Command("./test/port-forward.sh").Output()
+	out, err := exec.Command(nodeLabelCheckScript).Output()
 	if err != nil {
 		t.Errorf("failed while executing script: %v", err)
 		return
 	}
-	if string(out) != "0\n" {
+	if string(out) != expectedScriptOutput {
 		t.Errorf("unexpected script output: %v", string(out))
-		return
-	}
-
-	// Cleanup - remove the label from k8s node.
-
-	// Get the latest version of node to update.
-	nodes, err = kubeclient.CoreV1().Nodes().List(metav1.ListOptions{})
-	if err != nil {
-		t.Errorf("failed to get nodes: %v", err)
-		return
-	}
-	node = nodes.Items[0]
-	labels = node.GetLabels()
-	delete(labels, "foo10")
-	node.SetLabels(labels)
-	_, err = kubeclient.CoreV1().Nodes().Update(&node)
-	if err != nil {
-		t.Errorf("failed to cleanup node labels: %v", err)
 		return
 	}
 }
