@@ -18,3 +18,17 @@ func AddTolerations(podSpec *corev1.PodSpec, tolerations []corev1.Toleration) er
 	}
 	return nil
 }
+
+// AddRequiredNodeAffinity adds required node affinity to the given pod spec.
+func AddRequiredNodeAffinity(podSpec *corev1.PodSpec, terms []corev1.NodeSelectorTerm) {
+	if len(terms) == 0 {
+		return
+	}
+	podSpec.Affinity = &corev1.Affinity{
+		NodeAffinity: &corev1.NodeAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+				NodeSelectorTerms: terms,
+			},
+		},
+	}
+}

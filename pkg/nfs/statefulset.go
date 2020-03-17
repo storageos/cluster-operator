@@ -35,8 +35,13 @@ func (d *Deployment) createStatefulSet(pvcVS *corev1.PersistentVolumeClaimVolume
 	}
 	spec.Template.Spec.Volumes = append(spec.Template.Spec.Volumes, vol)
 
-	// TODO: Add node affinity support for NFS server pods.
 	util.AddTolerations(&spec.Template.Spec, d.nfsServer.Spec.Tolerations)
+
+	// If the cluster was configured with node selectors to only run on certain
+	// nodes, use the same selectors to selct the nodes that the NFS pods can
+	// run on.  NFSServer does not currently allow setting node selectors or
+	// affinity directly.
+	util.AddRequiredNodeAffinity(&spec.Template.Spec, d.cluster.Spec.NodeSelectorTerms)
 
 	return d.k8sResourceManager.StatefulSet(d.nfsServer.Name, d.nfsServer.Namespace, nil, spec).Create()
 }
