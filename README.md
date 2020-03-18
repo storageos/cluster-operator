@@ -144,7 +144,7 @@ Parameter | Description | Default
 `disableTCMU` | Disable TCMU to allow co-existence with other storage systems but degrades performance | `false`
 `forceTCMU` | Forces TCMU to be enabled or causes StorageOS to abort startup | `false`
 `disableScheduler` | Disable StorageOS scheduler for data locality | `false`
-`nodeSelectorTerms` | Set node selector for storageos pod placement |
+`nodeSelectorTerms` | Set node selector for storageos pod placement, including NFS pods |
 `tolerations` | Set pod tolerations for storageos pod placement |
 `resources` | Set resource requirements for the containers |
 `k8sDistro` | The name of the Kubernetes distribution is use, e.g. `rancher` or `eks` |
