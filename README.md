@@ -113,11 +113,11 @@ Parameter | Description | Default
 `namespace` | Namespace where storageos cluster resources are created | `storageos`
 `images.nodeContainer` | StorageOS node container image | `storageos/node:1.5.3`
 `images.initContainer` | StorageOS init container image | `storageos/init:1.0.0`
-`images.csiNodeDriverRegistrarContainer` | CSI Node Driver Registrar Container image | `quay.io/k8scsi/csi-node-driver-registrar:v1.0.1`
-`images.csiClusterDriverRegistrarContainer` | CSI Cluster Driver Registrar Container image | `quay.io/k8scsi/csi-cluster-driver-registrar:v1.0.1`
-`images.csiExternalProvisionerContainer` | CSI External Provisioner Container image | `storageos/csi-provisioner:v1.0.1`
-`images.csiExternalAttacherContainer` | CSI External Attacher Container image | `quay.io/k8scsi/csi-attacher:v1.0.1`
-`ìmages.csiLivenessProbeContainer` | CSI Liveness Probe Container Image | `quay.io/k8scsi/livenessprobe:v1.0.1`
+`images.csiNodeDriverRegistrarContainer` | CSI Node Driver Registrar Container image | Varies depending on Kubernetes version
+`images.csiClusterDriverRegistrarContainer` | CSI Cluster Driver Registrar Container image |  Varies depending on Kubernetes version
+`images.csiExternalProvisionerContainer` | CSI External Provisioner Container image |  Varies depending on Kubernetes version
+`images.csiExternalAttacherContainer` | CSI External Attacher Container image |  Varies depending on Kubernetes version
+`ìmages.csiLivenessProbeContainer` | CSI Liveness Probe Container Image |  Varies depending on Kubernetes version
 `csi.enable` | Enable CSI setup | `false`
 `csi.enableProvisionCreds` | Enable CSI provision credentials | `false`
 `csi.enableControllerPublishCreds` | Enable CSI controller publish credentials | `false`
