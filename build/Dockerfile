@@ -21,8 +21,8 @@ FROM ${BASE_IMAGE}
 LABEL name="StorageOS Cluster Operator" \
     maintainer="support@storageos.com" \
     vendor="StorageOS" \
-    version="1.5.3" \
-    release="1" \
+    version="2.0.0-rc.1" \
+    release="2" \
     distribution-scope="public" \
     architecture="x86_64" \
     url="https://docs.storageos.com" \
