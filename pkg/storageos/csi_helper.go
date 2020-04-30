@@ -103,6 +103,7 @@ func (s Deployment) addCommonPodProperties(podSpec *corev1.PodSpec) error {
 // csiHelperContainers returns a list of containers that should be part of the
 // CSI helper pods.
 func (s Deployment) csiHelperContainers() ([]corev1.Container, error) {
+	privileged := true
 	containers := []corev1.Container{
 		{
 			Image:           s.stos.Spec.GetCSIExternalProvisionerImage(CSIV1Supported(s.k8sVersion), s.nodev2),
@@ -118,6 +119,9 @@ func (s Deployment) csiHelperContainers() ([]corev1.Container, error) {
 					Name:  addressEnvVar,
 					Value: "/csi/csi.sock",
 				},
+			},
+			SecurityContext: &corev1.SecurityContext{
+				Privileged: &privileged,
 			},
 			VolumeMounts: []corev1.VolumeMount{
 				{
@@ -139,6 +143,9 @@ func (s Deployment) csiHelperContainers() ([]corev1.Container, error) {
 					Name:  addressEnvVar,
 					Value: "/csi/csi.sock",
 				},
+			},
+			SecurityContext: &corev1.SecurityContext{
+				Privileged: &privileged,
 			},
 			VolumeMounts: []corev1.VolumeMount{
 				{
@@ -198,6 +205,9 @@ func (s Deployment) csiHelperContainers() ([]corev1.Container, error) {
 						},
 					},
 				},
+			},
+			SecurityContext: &corev1.SecurityContext{
+				Privileged: &privileged,
 			},
 			VolumeMounts: []corev1.VolumeMount{
 				{
