@@ -67,6 +67,7 @@ func (s *Deployment) addSharedDir(podSpec *corev1.PodSpec) {
 
 // addCSI adds the CSI env vars, volumes and containers to the provided podSpec.
 func (s *Deployment) addCSI(podSpec *corev1.PodSpec) {
+	privileged := true
 	hostpathDirOrCreate := corev1.HostPathDirectoryOrCreate
 	hostpathDir := corev1.HostPathDirectory
 	mountPropagationBidirectional := corev1.MountPropagationBidirectional
@@ -224,6 +225,9 @@ func (s *Deployment) addCSI(podSpec *corev1.PodSpec) {
 					},
 				},
 			},
+			SecurityContext: &corev1.SecurityContext{
+				Privileged: &privileged,
+			},
 			VolumeMounts: []corev1.VolumeMount{
 				{
 					Name:      "plugin-dir",
@@ -263,6 +267,9 @@ func (s *Deployment) addCSI(podSpec *corev1.PodSpec) {
 						Name:  addressEnvVar,
 						Value: "/csi/csi.sock",
 					},
+				},
+				SecurityContext: &corev1.SecurityContext{
+					Privileged: &privileged,
 				},
 				VolumeMounts: []corev1.VolumeMount{
 					{
