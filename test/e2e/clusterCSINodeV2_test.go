@@ -44,7 +44,7 @@ func TestClusterCSINodeV2(t *testing.T) {
 		},
 		K8sDistro: "openshift",
 		Images: storageos.ContainerImages{
-			NodeContainer: "rotsesgao/node:c2",
+			NodeContainer: "rotsesgao/node:v2",
 		},
 		KVBackend: storageos.StorageOSClusterKVBackend{
 			Address: "etcd-client.default.svc.cluster.local:2379",
