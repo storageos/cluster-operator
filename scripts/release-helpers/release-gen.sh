@@ -10,7 +10,7 @@ echo
 
 NEW_VERSION=$1
 # Remove the "v" prefix from the version.
-SEMVER=$(echo $NEW_VERSION | cut -c2-)
+SEMVER=$(echo $NEW_VERSION | sed 's/^v//')
 
 # Path to local yq binary.
 yq=build/yq

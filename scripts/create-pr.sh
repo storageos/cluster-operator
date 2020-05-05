@@ -38,15 +38,18 @@ git config --global user.name "$SIGN_OFF_NAME"
 git clone $TARGET_REPO $COMMUNITY_REPO_PATH
 
 echo "Creating new release dir in community repo for $VERSION"
-mkdir $COMMUNITY_REPO_PATH/$COMMUNITY_PKG_PATH/$VERSION
+# Remove the "v" prefix. The OLM release directories have semver name.
+SEMVER=$(echo $VERSION | sed 's/^v//')
+COMMUNITY_RELEASE_DIR=$COMMUNITY_REPO_PATH/$COMMUNITY_PKG_PATH/$SEMVER
+mkdir $COMMUNITY_RELEASE_DIR
 
 # Copy OLM manifest files.
 for i in "${metadatafiles[@]}"
 do
   echo "Copying $i"
   # Copy the metada files to target package in community repo.
-  # Example: cp deploy/olm/storageos/storageos.package.yaml /go/src/github.com/operator-framework/community-operators/upstream-community-operators/storageos/
-  cp $i $COMMUNITY_REPO_PATH/$COMMUNITY_PKG_PATH/$VERSION
+  # Example: cp deploy/olm/storageos/storageos.package.yaml /go/src/github.com/operator-framework/community-operators/upstream-community-operators/storageos/<semver>/
+  cp $i $COMMUNITY_RELEASE_DIR
 done
 
 # Copy OLM package file.
