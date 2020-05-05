@@ -36,7 +36,7 @@ var gvk = schema.GroupVersionKind{
 
 var testScheme = runtime.NewScheme()
 
-const defaultNS = "storageos"
+const defaultNS = "kube-system"
 
 // getFakeDiscoveryClient returns a discovery client with pre-defined resource
 // list.
