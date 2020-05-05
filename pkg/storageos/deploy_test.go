@@ -36,7 +36,7 @@ var gvk = schema.GroupVersionKind{
 
 var testScheme = runtime.NewScheme()
 
-const defaultNS = "storageos"
+const defaultNS = "kube-system"
 
 // getFakeDiscoveryClient returns a discovery client with pre-defined resource
 // list.
@@ -1278,7 +1278,7 @@ func TestDeployTLSEtcdCerts(t *testing.T) {
 	}
 	nsName := types.NamespacedName{
 		Name:      TLSEtcdSecretName,
-		Namespace: "storageos",
+		Namespace: "kube-system",
 	}
 	if err := c.Get(context.Background(), nsName, stosEtcdSecret); err != nil {
 		t.Fatalf("expected %q secret to exist, but not found", stosEtcdSecret)

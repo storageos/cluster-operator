@@ -17,7 +17,7 @@ import (
 func TestClusterInTreePlugin(t *testing.T) {
 	ctx := framework.NewTestCtx(t)
 	defer ctx.Cleanup()
-	resourceNS := "storageos"
+	resourceNS := "kube-system"
 
 	namespace, err := ctx.GetNamespace()
 	if err != nil {

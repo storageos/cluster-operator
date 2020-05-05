@@ -33,7 +33,10 @@ const (
 	// The cluster object is waiting for the finalizers to be executed.
 	ClusterPhaseTerminating ClusterPhase = "Terminating"
 
-	DefaultNamespace = "storageos"
+	// Use kube-system as the default namespace as so that our containers won't
+	// get evicted when there is resource contention.  Works with
+	// "system-node-critical" priority class.
+	DefaultNamespace = "kube-system"
 
 	DefaultStorageClassName = "fast"
 

@@ -6,7 +6,7 @@ metadata:
 spec:
   secretRefName: "storageos-api"
   secretRefNamespace: "default"
-  namespace: "storageos"
+  namespace: "kube-system"
   # k8sDistro: openshift
   # storageClassName: fast
   # tlsEtcdSecretRefName:

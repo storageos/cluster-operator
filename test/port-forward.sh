@@ -10,8 +10,8 @@
 # host runs k8s directly, 5705 will already be in use by the storageos running
 # on the host. In case of KinD, the host port remains free. In order to test
 # this on both the environment, the host port is changed.
-podname=$(kubectl -n storageos get pods -o=name | grep daemonset)
-kubectl -n storageos port-forward $podname 5709:5705 >> pf.log 2>&1 &
+podname=$(kubectl -n kube-system get pods -o=name | grep daemonset)
+kubectl -n kube-system port-forward $podname 5709:5705 >> pf.log 2>&1 &
 pid=$!
 
 sleep 7
