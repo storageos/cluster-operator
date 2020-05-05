@@ -278,25 +278,27 @@ main() {
         # Create and lint the bundle for openshift metadata scanner.
         make metadata-bundle-lint
 
-        source ./deploy/olm/olm.sh
-        olm_quick_install
+        # Disable OLM e2e tests for v2 until etcd is intalled in OLM.
 
-        # Wait for all the OLM resources to be created and ready.
-        sleep 20
+        # source ./deploy/olm/olm.sh
+        # olm_quick_install
 
-        install_storageos_operator
+        # # Wait for all the OLM resources to be created and ready.
+        # sleep 20
 
-        # Install storageos with default configurations.
-        install_storageos
-        uninstall_storageos
+        # install_storageos_operator
 
-        # Install storageos with CSI helpers as Deployment.
-        install_storageos_csi_deployment
+        # # Install storageos with default configurations.
+        # install_storageos
+        # uninstall_storageos
 
-        # Run scorecard tests on the olm-deployed operator.
-        make scorecard-test
+        # # Install storageos with CSI helpers as Deployment.
+        # install_storageos_csi_deployment
 
-        uninstall_storageos
+        # # Run scorecard tests on the olm-deployed operator.
+        # make scorecard-test
+
+        # uninstall_storageos
     else
 
         install_etcd
@@ -328,14 +330,14 @@ main() {
         # NOTE: Append this test command with `|| true` to debug by inspecting the
         # resource details. Also comment `defer ctx.Cleanup()` in the cluster to
         # avoid resouce cleanup.
-        operator-sdk test local ./test/e2e --go-test-flags "-v -tags csi" --namespace storageos-operator
-        operator-sdk-e2e-cleanup
+        # operator-sdk test local ./test/e2e --go-test-flags "-v -tags csi" --namespace storageos-operator
+        # operator-sdk-e2e-cleanup
 
-        operator-sdk test local ./test/e2e --go-test-flags "-v -tags csideployment" --namespace storageos-operator
-        operator-sdk-e2e-cleanup
+        # operator-sdk test local ./test/e2e --go-test-flags "-v -tags csideployment" --namespace storageos-operator
+        # operator-sdk-e2e-cleanup
 
-        operator-sdk test local ./test/e2e --go-test-flags "-v -tags intree" --namespace storageos-operator
-        operator-sdk-e2e-cleanup
+        # operator-sdk test local ./test/e2e --go-test-flags "-v -tags intree" --namespace storageos-operator
+        # operator-sdk-e2e-cleanup
 
         # NOTE: v2 deployment fails on openshift 3.11. Dataplane startup fails.
         # Need to debug more in the future.
