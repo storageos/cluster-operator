@@ -6,6 +6,15 @@ MACHINE = $(shell uname -m)
 BUILD_IMAGE = golang:1.13.5
 BASE_IMAGE = storageos/base-image:0.2.1
 
+# Set the new version before running the release target.
+NEW_VERSION = v2.0.0
+
+# Variables to be used when running the make targets in a container.
+CACHE_DIR = $(shell pwd)/.cache
+PROJECT = github.com/storageos/cluster-operator
+GOARCH ?= amd64
+GO_VERSION = 1.14.2
+
 # When this file name is modified, the new name must be added in .travis.yml
 # file as well for publishing the file at release.
 METADATA_FILE = storageos-olm-metadata.zip
@@ -118,3 +127,19 @@ generate-install-manifest: install-yq
 # using OLM first.
 scorecard-test:
 	bash test/scorecard-test.sh
+
+# This target matches any target ending in '-docker' eg. 'unittest-docker'. This
+# allows running makefile targets inside a container by appending '-docker' to
+# it.
+%-docker:
+	mkdir -p $(CACHE_DIR)/go $(CACHE_DIR)/cache
+	docker run -it --rm \
+		-v $(CACHE_DIR)/go:/go \
+		-v $(CACHE_DIR)/cache:/.cache/go-build \
+		-v $(shell pwd):/go/src/${PROJECT} \
+		-w /go/src/${PROJECT} \
+		-u $(shell id -u):$(shell id -g) \
+		-e GOARCH=$(GOARCH) \
+		--entrypoint "make" \
+		golang:$(GO_VERSION) \
+		"$(patsubst %-docker,%,$@)"

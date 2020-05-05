@@ -8,6 +8,7 @@ deploy/test
 storageos-operator.yaml
 cluster-operator.tar
 pf.log
+.cache
 
 # Created by https://www.gitignore.io/api/go,vim,emacs,visualstudiocode
 ### Emacs ###

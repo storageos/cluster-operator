@@ -10,6 +10,9 @@ echo
 
 NEW_VERSION=$1
 
+# Path to local yq binary.
+yq=build/yq
+
 if [ "$NEW_VERSION" == "" ]; then
     echo "NEW_VERSION not set."
     echo "Set NEW_VERSION and run again."
@@ -24,8 +27,8 @@ COMMUNITY_CHANGES_FILE=deploy/olm/community-changes.yaml
 RHEL_CHANGES_FILE=deploy/olm/rhel-changes.yaml
 
 # Get previous versions from community hub and rhel changes file.
-PREV_VERSION_COMMUNITY=$(yq r $COMMUNITY_CHANGES_FILE [spec.version])
-PREV_VERSION_RHEL=$(yq r $RHEL_CHANGES_FILE [spec.version])
+PREV_VERSION_COMMUNITY=$($yq r $COMMUNITY_CHANGES_FILE [spec.version])
+PREV_VERSION_RHEL=$($yq r $RHEL_CHANGES_FILE [spec.version])
 
 # Ensure that the pervious versions are the same before proceeding.
 if [ "$PREV_VERSION_COMMUNITY" != "$PREV_VERSION_RHEL" ]; then
@@ -53,7 +56,7 @@ echo "Updating $COMMUNITY_CHANGES_FILE..."
 # Community operator changes template.
 cat << EOF >$COMMUNITY_CHANGES_FILE
 $FILE_HEADER_NOTE
-metadata.name: storageosoperator.v$NEW_VERSION
+metadata.name: storageosoperator.$NEW_VERSION
 metadata.namespace: placeholder
 metadata.annotations.containerImage: storageos/cluster-operator:$NEW_VERSION
 spec.version: $NEW_VERSION
@@ -82,7 +85,7 @@ echo "Updating $RHEL_CHANGES_FILE..."
 # This provides more control over the values in the example.
 cat << EOF >$RHEL_CHANGES_FILE
 $FILE_HEADER_NOTE
-metadata.name: storageosoperator.v$NEW_VERSION
+metadata.name: storageosoperator.$NEW_VERSION
 metadata.namespace: placeholder
 metadata.annotations.containerImage: registry.connect.redhat.com/storageos/cluster-operator:$NEW_VERSION
 metadata.annotations.certified: "true"
@@ -177,7 +180,7 @@ echo "Updating $PACKAGE_CHANGES_FILE..."
 # OLM package file template.
 cat << EOF >$PACKAGE_CHANGES_FILE
 $FILE_HEADER_NOTE
-channels[0].currentCSV: storageosoperator.v$1
+channels[0].currentCSV: storageosoperator.$1
 EOF
 echo
 
@@ -200,7 +203,7 @@ bash scripts/metadata-checker/update-metadata-files.sh
 
 # Create versioned CSV files.
 echo "Creating versioned CSV files..."
-cp deploy/olm/storageos/storageos.clusterserviceversion.yaml deploy/olm/storageos/storageos.v$NEW_VERSION.clusterserviceversion.yaml
-cp deploy/olm/csv-rhel/storageos.clusterserviceversion.yaml deploy/olm/csv-rhel/storageos.v$NEW_VERSION.clusterserviceversion.yaml
+cp deploy/olm/storageos/storageos.clusterserviceversion.yaml deploy/olm/storageos/storageos.$NEW_VERSION.clusterserviceversion.yaml
+cp deploy/olm/csv-rhel/storageos.clusterserviceversion.yaml deploy/olm/csv-rhel/storageos.$NEW_VERSION.clusterserviceversion.yaml
 
 echo "Ready for new release."
