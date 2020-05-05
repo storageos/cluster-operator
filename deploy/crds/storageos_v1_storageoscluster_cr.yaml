@@ -38,7 +38,7 @@ spec:
   #   DriverRequiresAttachment: "true"
   #   deploymentStrategy: "deployment"
   # service:
-  #   name: "kube-system"
+  #   name: "storageos"
   #   type: "ClusterIP"
   #   externalPort: 5705
   #   internalPort: 5705
