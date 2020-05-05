@@ -328,14 +328,14 @@ main() {
         # NOTE: Append this test command with `|| true` to debug by inspecting the
         # resource details. Also comment `defer ctx.Cleanup()` in the cluster to
         # avoid resouce cleanup.
-        operator-sdk test local ./test/e2e --go-test-flags "-v -tags csi" --namespace storageos-operator
-        operator-sdk-e2e-cleanup
+        # operator-sdk test local ./test/e2e --go-test-flags "-v -tags csi" --namespace storageos-operator
+        # operator-sdk-e2e-cleanup
 
-        operator-sdk test local ./test/e2e --go-test-flags "-v -tags csideployment" --namespace storageos-operator
-        operator-sdk-e2e-cleanup
+        # operator-sdk test local ./test/e2e --go-test-flags "-v -tags csideployment" --namespace storageos-operator
+        # operator-sdk-e2e-cleanup
 
-        operator-sdk test local ./test/e2e --go-test-flags "-v -tags intree" --namespace storageos-operator
-        operator-sdk-e2e-cleanup
+        # operator-sdk test local ./test/e2e --go-test-flags "-v -tags intree" --namespace storageos-operator
+        # operator-sdk-e2e-cleanup
 
         # NOTE: v2 deployment fails on openshift 3.11. Dataplane startup fails.
         # Need to debug more in the future.

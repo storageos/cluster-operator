@@ -9,6 +9,8 @@ echo "Preparing for a new release"
 echo
 
 NEW_VERSION=$1
+# Remove the "v" prefix from the version.
+SEMVER=$(echo $NEW_VERSION | cut -c2-)
 
 # Path to local yq binary.
 yq=build/yq
@@ -59,7 +61,7 @@ $FILE_HEADER_NOTE
 metadata.name: storageosoperator.$NEW_VERSION
 metadata.namespace: placeholder
 metadata.annotations.containerImage: storageos/cluster-operator:$NEW_VERSION
-spec.version: $NEW_VERSION
+spec.version: $SEMVER
 spec.install.spec.deployments[0].spec.template.spec.containers[0].image: storageos/cluster-operator:$NEW_VERSION
 spec.install.spec.deployments[0].spec.template.spec.containers[0].env[0].value: ""
 spec.install.spec.deployments[0].spec.template.spec.containers[0].env[1].value: ""
@@ -152,7 +154,7 @@ metadata.annotations.alm-examples: |-
     }
   ]
 
-spec.version: $NEW_VERSION
+spec.version: $SEMVER
 spec.install.spec.deployments[0].spec.template.spec.containers[0].image: registry.connect.redhat.com/storageos/cluster-operator:$NEW_VERSION
 spec.install.spec.deployments[0].spec.template.spec.containers[0].env[0].value: ""
 spec.install.spec.deployments[0].spec.template.spec.containers[0].env[1].value: ""
