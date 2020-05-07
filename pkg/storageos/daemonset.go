@@ -33,6 +33,8 @@ const (
 	debugVal    = "xdebug"
 
 	// V1 Only
+	adminUsernameEnvVar                 = "ADMIN_USERNAME"
+	adminPasswordEnvVar                 = "ADMIN_PASSWORD"
 	csiRequireCredsCreateEnvVar         = "CSI_REQUIRE_CREDS_CREATE_VOL"
 	csiRequireCredsDeleteEnvVar         = "CSI_REQUIRE_CREDS_DELETE_VOL"
 	csiProvisionCredsUsernameEnvVar     = "CSI_PROVISION_CREDS_USERNAME"
@@ -45,6 +47,22 @@ const (
 	csiNodePubCredsUsernameEnvVar       = "CSI_NODE_PUB_CREDS_USERNAME"
 	csiNodePubCredsPasswordEnvVar       = "CSI_NODE_PUB_CREDS_PASSWORD"
 )
+
+// getNodeUsernameEnvVar returns the env var used to set the bootstrap username.
+func (s *Deployment) getNodeUsernameEnvVar() string {
+	if !s.nodev2 {
+		return adminUsernameEnvVar
+	}
+	return bootstrapUsernameEnvVar
+}
+
+// getNodePasswordEnvVar returns the env var used to set the bootstrap password.
+func (s *Deployment) getNodePasswordEnvVar() string {
+	if !s.nodev2 {
+		return adminPasswordEnvVar
+	}
+	return bootstrapPasswordEnvVar
+}
 
 func (s *Deployment) createDaemonSet() error {
 	ls := podLabelsForDaemonSet(s.stos.Name)
@@ -148,7 +166,7 @@ func (s *Deployment) createDaemonSet() error {
 								},
 							},
 							{
-								Name: bootstrapUsernameEnvVar,
+								Name: s.getNodeUsernameEnvVar(),
 								ValueFrom: &corev1.EnvVarSource{
 									SecretKeyRef: &corev1.SecretKeySelector{
 										LocalObjectReference: corev1.LocalObjectReference{
@@ -159,7 +177,7 @@ func (s *Deployment) createDaemonSet() error {
 								},
 							},
 							{
-								Name: bootstrapPasswordEnvVar,
+								Name: s.getNodePasswordEnvVar(),
 								ValueFrom: &corev1.EnvVarSource{
 									SecretKeyRef: &corev1.SecretKeySelector{
 										LocalObjectReference: corev1.LocalObjectReference{
