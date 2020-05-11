@@ -154,6 +154,8 @@ func TestCreateDaemonSet(t *testing.T) {
 		wantForceTCMU        bool
 		wantTLSEtcd          bool
 		wantK8sDistro        string
+		wantUserNameEnvVar   string
+		wantPasswordEnvVar   string
 	}{
 		{
 			name: "legacy-daemonset",
@@ -222,6 +224,26 @@ func TestCreateDaemonSet(t *testing.T) {
 				K8sDistro: "some-distro-name",
 			},
 			wantK8sDistro: "some-distro-name",
+		},
+		{
+			name: "v1 creds env vars",
+			spec: api.StorageOSClusterSpec{
+				Images: api.ContainerImages{
+					NodeContainer: "storageos/node:1.5.4",
+				},
+			},
+			wantUserNameEnvVar: adminUsernameEnvVar,
+			wantPasswordEnvVar: adminPasswordEnvVar,
+		},
+		{
+			name: "v2 creds env vars",
+			spec: api.StorageOSClusterSpec{
+				Images: api.ContainerImages{
+					NodeContainer: "storageos/node:v2.0.0",
+				},
+			},
+			wantUserNameEnvVar: bootstrapUsernameEnvVar,
+			wantPasswordEnvVar: bootstrapPasswordEnvVar,
 		},
 	}
 
@@ -304,6 +326,26 @@ func TestCreateDaemonSet(t *testing.T) {
 			}
 			if !volumeMountFound {
 				t.Error("TLS etcd certs volume mount not found in the node container")
+			}
+		}
+
+		// Check the username and password env vars only when wanted username
+		// and passwords are provided.
+		if tc.wantUserNameEnvVar != "" && tc.wantPasswordEnvVar != "" {
+			// First container is the node container.
+			nodeEnvs := createdDaemonset.Spec.Template.Spec.Containers[0].Env
+
+			// 2nd env var is the username.
+			usernameEnvVar := nodeEnvs[1].Name
+			// 3rd env var is the password.
+			passwordEnvVar := nodeEnvs[2].Name
+
+			if usernameEnvVar != tc.wantUserNameEnvVar {
+				t.Errorf("unexpected username env var name:\n\t(WNT) %q\n\t(GOT) %q", tc.wantUserNameEnvVar, usernameEnvVar)
+			}
+
+			if passwordEnvVar != tc.wantPasswordEnvVar {
+				t.Errorf("unexpected password env var name:\n\t(WNT) %q\n\t(GOT) %q", tc.wantPasswordEnvVar, passwordEnvVar)
 			}
 		}
 
