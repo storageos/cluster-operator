@@ -33,6 +33,13 @@ func (s *Deployment) createStorageClass() error {
 				parameters[csiV1NodePublishSecretNameKey] = csiNodePublishSecretName
 				parameters[csiV1NodePublishSecretNamespaceKey] = s.stos.Spec.GetResourceNS()
 			}
+			// Add expand parameters only if it's supported.
+			if CSIExternalResizerSupported(s.k8sVersion) {
+				if s.stos.Spec.CSI.EnableControllerExpandCreds {
+					parameters[csiV1ControllerExpandSecretNameKey] = csiControllerExpandSecretName
+					parameters[csiV1ControllerExpandSecretnamespaceKey] = s.stos.Spec.GetResourceNS()
+				}
+			}
 		} else {
 			parameters[fsType] = defaultFSType
 			if s.stos.Spec.CSI.EnableProvisionCreds {

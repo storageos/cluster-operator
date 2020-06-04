@@ -17,6 +17,9 @@ const (
 	CSIAttacherClusterRoleName    = "storageos:csi-attacher"
 	CSIAttacherClusterBindingName = "storageos:csi-attacher"
 
+	CSIResizerClusterRoleName    = "storageos:csi-resizer"
+	CSIResizerClusterBindingName = "storageos:csi-resizer"
+
 	CSIDriverRegistrarClusterRoleName       = "storageos:driver-registrar"
 	CSIDriverRegistrarClusterBindingName    = "storageos:driver-registrar"
 	CSIK8SDriverRegistrarClusterBindingName = "storageos:k8s-driver-registrar"
@@ -226,6 +229,32 @@ func (s *Deployment) createClusterRoleForAttacher() error {
 	return s.k8sResourceManager.ClusterRole(CSIAttacherClusterRoleName, nil, rules).Create()
 }
 
+func (s *Deployment) createClusterRoleForResizer() error {
+	rules := []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{""},
+			Resources: []string{"persistentvolumes"},
+			Verbs:     []string{"get", "list", "watch", "update", "patch"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"persistentvolumeclaims"},
+			Verbs:     []string{"get", "list", "watch"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"persistentvolumeclaims/status"},
+			Verbs:     []string{"update", "patch"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"events"},
+			Verbs:     []string{"list", "watch", "create", "update", "patch"},
+		},
+	}
+	return s.k8sResourceManager.ClusterRole(CSIResizerClusterRoleName, nil, rules).Create()
+}
+
 // createClusterRoleForScheduler creates a ClusterRole resource for scheduler
 // extender with all the permissions required by kube-scheduler.
 func (s *Deployment) createClusterRoleForScheduler() error {
@@ -386,6 +415,22 @@ func (s *Deployment) createClusterRoleBindingForAttacher() error {
 		APIGroup: "rbac.authorization.k8s.io",
 	}
 	return s.k8sResourceManager.ClusterRoleBinding(CSIAttacherClusterBindingName, nil, subjects, roleRef).Create()
+}
+
+func (s *Deployment) createClusterRoleBindingForResizer() error {
+	subjects := []rbacv1.Subject{
+		{
+			Kind:      "ServiceAccount",
+			Name:      s.getCSIHelperServiceAccountName(),
+			Namespace: s.stos.Spec.GetResourceNS(),
+		},
+	}
+	roleRef := &rbacv1.RoleRef{
+		Kind:     "ClusterRole",
+		Name:     CSIResizerClusterRoleName,
+		APIGroup: "rbac.authorization.k8s.io",
+	}
+	return s.k8sResourceManager.ClusterRoleBinding(CSIResizerClusterBindingName, nil, subjects, roleRef).Create()
 }
 
 // createClusterRoleForSCC creates cluster role with api group and resource

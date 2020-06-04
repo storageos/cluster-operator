@@ -117,11 +117,13 @@ Parameter | Description | Default
 `images.csiClusterDriverRegistrarContainer` | CSI Cluster Driver Registrar Container image |  Varies depending on Kubernetes version
 `images.csiExternalProvisionerContainer` | CSI External Provisioner Container image |  Varies depending on Kubernetes version
 `images.csiExternalAttacherContainer` | CSI External Attacher Container image |  Varies depending on Kubernetes version
+`images.csiExternalResizerContainer` | CSI External Resizer Container image |  Varies depending on Kubernetes version
 `ìmages.csiLivenessProbeContainer` | CSI Liveness Probe Container Image |  Varies depending on Kubernetes version
 `csi.enable` | Enable CSI setup | `false`
 `csi.enableProvisionCreds` | Enable CSI provision credentials | `false`
 `csi.enableControllerPublishCreds` | Enable CSI controller publish credentials | `false`
 `csi.enableNodePublishCreds` | Enable CSI node publish credentials | `false`
+`csi.enableControllerExpandCreds` | Enable CSI controller expand credentials | `false`
 `csi.deploymentStrategy` | CSI helper deployment strategy (`statefulset` or `deployment`) | `statefulset`
 `service.name` | Name of the Service used by the cluster | `storageos`
 `service.type` | Type of the Service used by the cluster | `ClusterIP`
@@ -417,5 +419,7 @@ data:
   csiControllerPublishPassword:
   csiNodePublishUsername:
   csiNodePublishPassword:
+  csiControllerExpandUsername:
+  csiControllerExpandPassword:
 ```
 

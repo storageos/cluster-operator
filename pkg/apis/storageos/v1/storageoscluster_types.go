@@ -342,6 +342,14 @@ func (s StorageOSClusterSpec) GetCSIExternalAttacherImage(csiv1 bool, attacherv2
 	return image.GetDefaultImage(image.CSIv0ExternalAttacherImageEnvVar, image.CSIv0ExternalAttacherContainerImage)
 }
 
+// GetCSIExternalResizerImage returns CSI external resizer container image.
+func (s StorageOSClusterSpec) GetCSIExternalResizerImage() string {
+	if s.Images.CSIExternalResizerContainer != "" {
+		return s.Images.CSIExternalResizerContainer
+	}
+	return image.GetDefaultImage(image.CSIv1ExternalResizerContainerImageEnvVar, image.CSIv1ExternalResizerContainerImage)
+}
+
 // GetCSILivenessProbeImage returns CSI liveness probe container image.
 func (s StorageOSClusterSpec) GetCSILivenessProbeImage() string {
 	if s.Images.CSILivenessProbeContainer != "" {
@@ -544,6 +552,7 @@ type ContainerImages struct {
 	CSIClusterDriverRegistrarContainer string `json:"csiClusterDriverRegistrarContainer,omitempty"`
 	CSIExternalProvisionerContainer    string `json:"csiExternalProvisionerContainer,omitempty"`
 	CSIExternalAttacherContainer       string `json:"csiExternalAttacherContainer,omitempty"`
+	CSIExternalResizerContainer        string `json:"csiExternalResizerContainer,omitempty"`
 	CSILivenessProbeContainer          string `json:"csiLivenessProbeContainer,omitempty"`
 	HyperkubeContainer                 string `json:"hyperkubeContainer,omitempty"`
 	KubeSchedulerContainer             string `json:"kubeSchedulerContainer,omitempty"`
@@ -558,6 +567,7 @@ type StorageOSClusterCSI struct {
 	EnableProvisionCreds         bool   `json:"enableProvisionCreds,omitempty"`
 	EnableControllerPublishCreds bool   `json:"enableControllerPublishCreds,omitempty"`
 	EnableNodePublishCreds       bool   `json:"enableNodePublishCreds,omitempty"`
+	EnableControllerExpandCreds  bool   `json:"enableControllerExpandCreds,omitempty"`
 	RegistrarSocketDir           string `json:"registrarSocketDir,omitempty"`
 	KubeletDir                   string `json:"kubeletDir,omitempty"`
 	PluginDir                    string `json:"pluginDir,omitempty"`

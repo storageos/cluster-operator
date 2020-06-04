@@ -87,11 +87,19 @@ func (s *Deployment) Delete() error {
 			return err
 		}
 
+		if err := s.k8sResourceManager.ClusterRoleBinding(CSIResizerClusterBindingName, nil, nil, nil).Delete(); err != nil {
+			return err
+		}
+
 		if err := s.k8sResourceManager.ClusterRole(CSIAttacherClusterRoleName, nil, nil).Delete(); err != nil {
 			return err
 		}
 
 		if err := s.k8sResourceManager.ClusterRole(CSIProvisionerClusterRoleName, nil, nil).Delete(); err != nil {
+			return err
+		}
+
+		if err := s.k8sResourceManager.ClusterRole(CSIResizerClusterRoleName, nil, nil).Delete(); err != nil {
 			return err
 		}
 

@@ -119,6 +119,21 @@ func (s *Deployment) createCSISecrets() error {
 		}
 	}
 
+	// Create Controller Expand Secret.
+	if s.stos.Spec.CSI.EnableControllerExpandCreds {
+		username, password, err := s.getCSICreds(csiControllerExpandUsernameKey, csiControllerExpandPasswordKey)
+		if err != nil {
+			return err
+		}
+		data := map[string][]byte{
+			credUsernameKey: username,
+			credPasswordKey: password,
+		}
+		if err := s.k8sResourceManager.Secret(csiControllerExpandSecretName, s.stos.Spec.GetResourceNS(), nil, corev1.SecretTypeOpaque, data).Create(); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
