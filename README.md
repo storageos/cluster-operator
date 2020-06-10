@@ -23,10 +23,10 @@ for more information.
 
 ## Setup/Development
 
-1. Build operator container image with `make image/cluster-operator`. Publish or
+1. Build operator container image with `make dev-image`. Publish or
   copy this container image to an existing k8s cluster to make it available
   for use within the cluster.
-2. Generate install manifest file with `make generate-install-manifest`. This
+2. Generate install manifest file with `make install-manifest`. This
 will generate `storageos-operator.yaml`.
 3. Install the operator `kubectl create -f storageos-operator.yaml`
 4. Install a `StorageOSCluster` by creating a custom resource
@@ -46,7 +46,7 @@ make local-run
 Build operator container image:
 
 ```bash
-make image/cluster-operator OPERATOR_IMAGE=storageos/cluster-operator:test
+make operator-image OPERATOR_IMAGE=storageos/cluster-operator:test
 ```
 
 This builds all the components and copies the binaries into the same container.

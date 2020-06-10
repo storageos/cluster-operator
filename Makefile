@@ -21,68 +21,151 @@ METADATA_FILE = storageos-olm-metadata.zip
 
 LDFLAGS += -X github.com/storageos/cluster-operator/pkg/controller/storageosupgrade.operatorImage=$(OPERATOR_IMAGE)
 
-all: lint unittest build/upgrader build/cluster-operator
+.DEFAULT_GOAL:=help
 
-build/upgrader:
+.PHONY: help
+help: ## Display this help.
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z0-9_-]+:.*?##/ { printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+	@echo ""
+	@echo "To run any of the above in docker, suffix the command with '-docker':"
+	@echo ""
+	@echo "  make operator-docker"
+	@echo ""
+
+##############################
+# Development                #
+##############################
+
+##@ Development
+
+.PHONY: all operator upgrader go-gen generate metadata-update local-run lint olm-lint metadata-bundle-lint clean
+
+all: lint unittest operator
+
+upgrader:
 	@echo "Building upgrader"
 	$(GO_ENV) $(GO_BUILD_CMD) \
 		-o ./build/_output/bin/upgrader \
 		./cmd/upgrader
 
-build/cluster-operator:
+operator: upgrader ## Build operator binaries.
 	@echo "Building cluster-operator"
 	$(GO_ENV) $(GO_BUILD_CMD) -ldflags "$(LDFLAGS)" \
 		-o ./build/_output/bin/cluster-operator \
 		./cmd/manager
 
 # Generate APIs, CRD specs and CRD clientset.
-generate:
+go-gen:
 	./build/operator-sdk generate k8s
 	./build/operator-sdk generate openapi
 	./vendor/k8s.io/code-generator/generate-groups.sh "deepcopy,client" \
 		github.com/storageos/cluster-operator/pkg/client \
 		github.com/storageos/cluster-operator/pkg/apis storageos:v1
 
-image/cluster-operator: operator-sdk
+generate: go-gen-docker ## Run all the code generators.
+
+metadata-update: yq ## Update all the OLM metadata files.
+	# Update all the metadata files in-place.
+	bash scripts/metadata-checker/update-metadata-files.sh
+
+# Run operator locally, from outside of the k8s cluster.
+local-run: upgrader ## Run the opereator locally, out of k8s.
+	OPERATOR_NAME=cluster-operator DISABLE_SCHEDULER_WEBHOOK=true \
+		      ./build/operator-sdk up local
+	# OPERATOR_NAME=cluster-operator operator-sdk up local --go-ldflags "$(LDFLAGS)"
+
+lint: ## Run lint.
+	golint -set_exit_status $(go list ./...)
+	go vet ./...
+
+# Lint the OLM metadata bundle.
+olm-lint: yq generate ## Lint the OLM related files.
+	# Generate metadata files and verify all the metadata files are up-to-date.
+	bash scripts/metadata-checker/metadata-diff-checker.sh
+	# Verify the OLM metada using operator-courier.
+	docker run -it --rm \
+		-v $(PWD)/deploy/olm/storageos/:/storageos \
+		-v $(PWD)/deploy/olm/csv-rhel/:/rhel \
+		python:3 bash -c "pip install operator-courier && operator-courier verify --ui_validate_io /storageos"
+
+# Create a metadata zip file and lint the bundle.
+metadata-bundle-lint: metadata-zip ## Generate a metadata-bundle and lint it.
+	docker run -it --rm -v $(PWD)/build/_output/:/metadata \
+		-w /home/test/ \
+		python:3 bash -c "pip install operator-courier && unzip /metadata/$(METADATA_FILE) -d out && operator-courier --verbose verify --ui_validate_io out/"
+
+clean: ## Clean all the generated artifacts.
+	rm -rf build/_output storageos-operator.yaml
+
+##############################
+# Images                     #
+##############################
+
+##@ Images
+
+.PHONY: operator-image dev-image
+
+operator-image: operator-sdk ## Build the operator image for distribution.
 	docker build \
 		--build-arg BUILD_IMAGE=$(BUILD_IMAGE) \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
 		--build-arg OPERATOR_IMAGE=$(OPERATOR_IMAGE) \
 		. -f build/Dockerfile -t $(OPERATOR_IMAGE)
 
-local-run: build/upgrader
-	OPERATOR_NAME=cluster-operator ./build/operator-sdk up local
-	# OPERATOR_NAME=cluster-operator operator-sdk up local --go-ldflags "$(LDFLAGS)"
+dev-image: operator-sdk operator-docker ## Build an image quickly for testing (for development).
+	docker build . -f build/dev/Dockerfile -t $(OPERATOR_IMAGE)
 
-clean:
-	rm -rf build/_output
+##############################
+# Third-party tools          #
+##############################
 
-lint:
-	golint -set_exit_status $(go list ./...)
-	go vet ./...
+##@ Third-party tools
 
-unittest:
-	go test -v -race `go list -v ./... | grep -v test/e2e | grep -v olm`
+.PHONY: operator-sdk yq
 
-operator-sdk:
+operator-sdk: ## Download operator-sdk.
 	# Download sdk only if it's not available.
 	@if [ ! -f build/operator-sdk ]; then \
 		curl -Lo build/operator-sdk https://github.com/operator-framework/operator-sdk/releases/download/$(SDK_VERSION)/operator-sdk-$(SDK_VERSION)-$(MACHINE)-linux-gnu && \
 		chmod +x build/operator-sdk; \
 	fi
 
-# Install operator on a host. Might fail on containers that don't have sudo.
-install-operator-sdk: operator-sdk
-	sudo cp build/operator-sdk /usr/local/bin/
-
-install-yq:
+yq: ## Install yq.
 	@if [ ! -f build/yq ]; then \
 		curl -Lo build/yq https://github.com/mikefarah/yq/releases/download/2.3.0/yq_linux_amd64 && \
 		chmod +x build/yq; \
 	fi
 
+##############################
+# Tests                      #
+##############################
+
+##@ Tests
+
+.PHONY: unittest scorecard-test
+
+unittest: ## Run all the unit tests.
+	go test -v -race `go list -v ./... | grep -v test/e2e | grep -v olm`
+
+# Runs the operator-sdk scorecard tests. Expects the operator to be installed
+# using OLM first.
+scorecard-test: ## Run Operator scorecard test.
+	bash test/scorecard-test.sh
+
+##############################
+# Release                    #
+##############################
+
+##@ Release
+
+.PHONY: release metadata-zip install-manifest
+
+# Prepare the repo for a new release.
+release: yq ## Prepare for a new release. Pass NEW_VERSION with the next release version number.
+	bash scripts/release-helpers/release-gen.sh $(NEW_VERSION)
+
 # Generate metadata bundle for openshift metadata scanner.
-metadata-zip:
+metadata-zip: ## Generate OLM metadata-zip bundle.
 	# Remove any existing metadata bundle.
 	rm -f build/_output/$(METADATA_FILE)
 	# Ensure the target path exists.
@@ -97,42 +180,23 @@ metadata-zip:
 		deploy/olm/storageos/storageosnfsserver.crd.yaml \
 		deploy/olm/csv-rhel/storageos.v*.clusterserviceversion.yaml
 
-metadata-update:
-	# Update all the metadata files in-place.
-	bash scripts/metadata-checker/update-metadata-files.sh
-
-# Lint the OLM metadata bundle.
-olm-lint: generate
-	# Generate metadata files and verify all the metadata files are up-to-date.
-	bash scripts/metadata-checker/metadata-diff-checker.sh
-	# Verify the OLM metada using operator-courier.
-	docker run -it --rm -v $(PWD)/deploy/olm/storageos/:/storageos \
-		python:3 bash -c "pip install operator-courier && operator-courier verify --ui_validate_io /storageos"
-
-# Create a metadata zip file and lint the bundle.
-metadata-bundle-lint: metadata-zip
-	docker run -it --rm -v $(PWD)/build/_output/:/metadata \
-		-w /home/test/ \
-		python:3 bash -c "pip install operator-courier && unzip /metadata/$(METADATA_FILE) -d out && operator-courier --verbose verify --ui_validate_io out/"
-
-# Prepare the repo for a new release.
-release:
-	bash scripts/release-helpers/release-gen.sh $(NEW_VERSION)
-
-# Create a single manifest for installing the operator.
-generate-install-manifest: install-yq
+# Generates a single manifest for installing the operator.
+install-manifest: yq ## Generate operator install manifest file.
 	bash scripts/create-manifest.sh $(OPERATOR_IMAGE)
 
-# Runs the operator-sdk scorecard tests. Expects the operator to be installed
-# using OLM first.
-scorecard-test:
-	bash test/scorecard-test.sh
+
 
 # This target matches any target ending in '-docker' eg. 'unittest-docker'. This
 # allows running makefile targets inside a container by appending '-docker' to
 # it.
 %-docker:
-	mkdir -p $(CACHE_DIR)/go $(CACHE_DIR)/cache
+	# k8s code-generator's generate-groups.sh script expects a boilerplate
+	# file to exist under the code-generator project in GOPATH. The
+	# generate-groups script is vendored. Create an empty boilerplate file
+	# at the expected location.
+	mkdir -p $(CACHE_DIR)/go $(CACHE_DIR)/cache $(CACHE_DIR)/go/src/k8s.io/code-generator/hack/
+	touch $(CACHE_DIR)/go/src/k8s.io/code-generator/hack/boilerplate.go.txt
+	# Run the make target in docker.
 	docker run -it --rm \
 		-v $(CACHE_DIR)/go:/go \
 		-v $(CACHE_DIR)/cache:/.cache/go-build \

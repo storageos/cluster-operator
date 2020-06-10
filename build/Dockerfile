@@ -1,9 +1,9 @@
-ARG BUILD_IMAGE=golang:1.13.5
+ARG BUILD_IMAGE=golang:1.14.2
 ARG BASE_IMAGE=storageos/base-image:0.2.1
 ARG OPERATOR_IMAGE=storageos/cluster-operator:test
 
 FROM ${BUILD_IMAGE} AS build
-# OPERATOR_IMAGE needs to be passed to build/cluster-operator for constructing
+# OPERATOR_IMAGE needs to be passed to operator make target for constructing
 # the ldflags.
 ARG OPERATOR_IMAGE
 WORKDIR /go/src/github.com/storageos/cluster-operator/
@@ -13,9 +13,8 @@ COPY . /go/src/github.com/storageos/cluster-operator/
 # client in the future.
 RUN git clone https://github.com/kubernetes/code-generator $GOPATH/src/k8s.io/code-generator/
 RUN make operator-sdk
-RUN make generate
-RUN make build/cluster-operator OPERATOR_IMAGE=$OPERATOR_IMAGE
-RUN make build/upgrader
+RUN make go-gen
+RUN make operator OPERATOR_IMAGE=$OPERATOR_IMAGE
 
 FROM ${BASE_IMAGE}
 LABEL name="StorageOS Cluster Operator" \

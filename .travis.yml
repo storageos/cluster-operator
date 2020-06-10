@@ -72,9 +72,9 @@ jobs:
         - "INSTALL_METHOD=none"
       name: Publish Container Image
       script:
-        - make image/cluster-operator
+        - make operator-image
         - make metadata-zip
-        - OPERATOR_IMAGE=storageos/cluster-operator:$TRAVIS_TAG make generate-install-manifest
+        - OPERATOR_IMAGE=storageos/cluster-operator:$TRAVIS_TAG make install-manifest
       before_deploy:
         - docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS"
       deploy:
