@@ -39,7 +39,9 @@ if [ "$PREV_VERSION_COMMUNITY" != "$PREV_VERSION_RHEL" ]; then
     exit 1
 fi
 
-PREV_VERSION=$PREV_VERSION_COMMUNITY
+# Add "v" prefix because the versions in OLM CSV spec.version don't contain "v"
+# prefix.
+PREV_VERSION=v$PREV_VERSION_COMMUNITY
 
 # Ensure that the new version is not the same as the previous version.
 if [ "$NEW_VERSION" == "$PREV_VERSION" ]; then
