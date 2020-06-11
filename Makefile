@@ -5,6 +5,11 @@ SDK_VERSION = v0.10.0
 MACHINE = $(shell uname -m)
 BUILD_IMAGE = golang:1.13.5
 BASE_IMAGE = storageos/base-image:0.2.1
+BUILD_DIR = "build"
+OPERATOR_SDK = $(BUILD_DIR)/operator-sdk
+YQ = $(BUILD_DIR)/yq
+GOLANGCI_LINT = $(BUILD_DIR)/golangci-lint
+OUTPUT_DIR = $(BUILD_DIR)/_output
 
 # Set the new version before running the release target.
 NEW_VERSION = v2.0.0
@@ -45,19 +50,19 @@ all: lint unittest operator
 upgrader:
 	@echo "Building upgrader"
 	$(GO_ENV) $(GO_BUILD_CMD) \
-		-o ./build/_output/bin/upgrader \
+		-o $(OUTPUT_DIR)/bin/upgrader \
 		./cmd/upgrader
 
 operator: upgrader ## Build operator binaries.
 	@echo "Building cluster-operator"
 	$(GO_ENV) $(GO_BUILD_CMD) -ldflags "$(LDFLAGS)" \
-		-o ./build/_output/bin/cluster-operator \
+		-o $(OUTPUT_DIR)/bin/cluster-operator \
 		./cmd/manager
 
 # Generate APIs, CRD specs and CRD clientset.
 go-gen:
-	./build/operator-sdk generate k8s
-	./build/operator-sdk generate openapi
+	$(OPERATOR_SDK) generate k8s
+	$(OPERATOR_SDK) generate openapi
 	./vendor/k8s.io/code-generator/generate-groups.sh "deepcopy,client" \
 		github.com/storageos/cluster-operator/pkg/client \
 		github.com/storageos/cluster-operator/pkg/apis storageos:v1
@@ -71,12 +76,11 @@ metadata-update: yq ## Update all the OLM metadata files.
 # Run operator locally, from outside of the k8s cluster.
 local-run: upgrader ## Run the opereator locally, out of k8s.
 	OPERATOR_NAME=cluster-operator DISABLE_SCHEDULER_WEBHOOK=true \
-		      ./build/operator-sdk up local
+		      $(OPERATOR_SDK) up local
 	# OPERATOR_NAME=cluster-operator operator-sdk up local --go-ldflags "$(LDFLAGS)"
 
-lint: ## Run lint.
-	golint -set_exit_status $(go list ./...)
-	go vet ./...
+lint: golangci-lint ## Lint the code.
+	$(GOLANGCI_LINT) run
 
 # Lint the OLM metadata bundle.
 olm-lint: yq generate ## Lint the OLM related files.
@@ -90,12 +94,12 @@ olm-lint: yq generate ## Lint the OLM related files.
 
 # Create a metadata zip file and lint the bundle.
 metadata-bundle-lint: metadata-zip ## Generate a metadata-bundle and lint it.
-	docker run -it --rm -v $(PWD)/build/_output/:/metadata \
+	docker run -it --rm -v $(PWD)/$(OUTPUT_DIR)/:/metadata \
 		-w /home/test/ \
 		python:3 bash -c "pip install operator-courier && unzip /metadata/$(METADATA_FILE) -d out && operator-courier --verbose verify --ui_validate_io out/"
 
 clean: ## Clean all the generated artifacts.
-	rm -rf build/_output storageos-operator.yaml
+	rm -rf $(OUTPUT_DIR) storageos-operator.yaml
 
 ##############################
 # Images                     #
@@ -125,15 +129,20 @@ dev-image: operator-sdk operator-docker ## Build an image quickly for testing (f
 
 operator-sdk: ## Download operator-sdk.
 	# Download sdk only if it's not available.
-	@if [ ! -f build/operator-sdk ]; then \
-		curl -Lo build/operator-sdk https://github.com/operator-framework/operator-sdk/releases/download/$(SDK_VERSION)/operator-sdk-$(SDK_VERSION)-$(MACHINE)-linux-gnu && \
-		chmod +x build/operator-sdk; \
+	@if [ ! -f $(OPERATOR_SDK) ]; then \
+		curl -Lo $(OPERATOR_SDK) https://github.com/operator-framework/operator-sdk/releases/download/$(SDK_VERSION)/operator-sdk-$(SDK_VERSION)-$(MACHINE)-linux-gnu && \
+		chmod +x $(OPERATOR_SDK); \
 	fi
 
 yq: ## Install yq.
-	@if [ ! -f build/yq ]; then \
-		curl -Lo build/yq https://github.com/mikefarah/yq/releases/download/2.3.0/yq_linux_amd64 && \
-		chmod +x build/yq; \
+	@if [ ! -f $(YQ) ]; then \
+		curl -Lo $(YQ) https://github.com/mikefarah/yq/releases/download/2.3.0/yq_linux_amd64 && \
+		chmod +x $(YQ); \
+	fi
+
+golangci-lint: ## Install golangci-lint
+	@if [ ! -f $(GOLANGCI_LINT) ]; then \
+		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(BUILD_DIR) v1.27.0; \
 	fi
 
 ##############################
@@ -167,12 +176,12 @@ release: yq ## Prepare for a new release. Pass NEW_VERSION with the next release
 # Generate metadata bundle for openshift metadata scanner.
 metadata-zip: ## Generate OLM metadata-zip bundle.
 	# Remove any existing metadata bundle.
-	rm -f build/_output/$(METADATA_FILE)
+	rm -f $(OUTPUT_DIR)/$(METADATA_FILE)
 	# Ensure the target path exists.
-	mkdir -p build/_output/
+	mkdir -p $(OUTPUT_DIR)
 	# -j strips the parent directories and adds the files at the root. This is
 	# a requirement for the openshift metadata scanner.
-	zip -j build/_output/$(METADATA_FILE) \
+	zip -j $(OUTPUT_DIR)/$(METADATA_FILE) \
 		deploy/olm/storageos/storageos.package.yaml \
 		deploy/olm/storageos/storageoscluster.crd.yaml \
 		deploy/olm/storageos/storageosjob.crd.yaml \
@@ -196,10 +205,13 @@ install-manifest: yq ## Generate operator install manifest file.
 	# at the expected location.
 	mkdir -p $(CACHE_DIR)/go $(CACHE_DIR)/cache $(CACHE_DIR)/go/src/k8s.io/code-generator/hack/
 	touch $(CACHE_DIR)/go/src/k8s.io/code-generator/hack/boilerplate.go.txt
+	# golangci-lint build cache.
+	mkdir -p $(CACHE_DIR)/golangci-lint
 	# Run the make target in docker.
 	docker run -it --rm \
 		-v $(CACHE_DIR)/go:/go \
 		-v $(CACHE_DIR)/cache:/.cache/go-build \
+		-v $(CACHE_DIR)/golangci-lint:/.cache/golangci-lint \
 		-v $(shell pwd):/go/src/${PROJECT} \
 		-w /go/src/${PROJECT} \
 		-u $(shell id -u):$(shell id -g) \

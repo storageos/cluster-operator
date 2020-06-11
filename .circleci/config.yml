@@ -13,5 +13,5 @@ jobs:
       - checkout
 
       # specify any bash command here prefixed with `run: `
-      - run: go get golang.org/x/lint/golint
+      - run: make lint
       - run: make all

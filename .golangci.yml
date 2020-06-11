@@ -1,0 +1,16 @@
+run:
+  skip-dirs:
+    - pkg/client
+    - internal/pkg/cert
+    - internal/pkg/crv01
+
+linters:
+  enable:
+    - gofmt
+    - goimports
+    - unconvert
+    - nakedret
+    - scopelint
+    - whitespace
+    # - gomnd
+    # - gocyclo
