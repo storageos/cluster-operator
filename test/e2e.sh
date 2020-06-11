@@ -6,6 +6,8 @@ readonly REPO_ROOT="${REPO_ROOT:-$(git rev-parse --show-toplevel)}"
 readonly K8S_LATEST="v1.17.0"
 readonly KIND_LINK="https://github.com/kubernetes-sigs/kind/releases/download/v0.6.1/kind-linux-amd64"
 
+OPERATOR_SDK="build/operator-sdk"
+
 enable_lio() {
     echo "Enable LIO"
     sudo apt -y update
@@ -140,7 +142,7 @@ run_openshift() {
 
 install_operatorsdk() {
     echo "Install operator-sdk"
-    make install-operator-sdk
+    make operator-sdk
     echo
 }
 
@@ -258,7 +260,7 @@ main() {
     # Build the operator container image.
     # This would build a container with tag storageos/cluster-operator:test,
     # which is used in the e2e test setup below.
-    make image/cluster-operator
+    make operator-image
 
     # Move the operator container inside Kind container so that the image is
     # available to the docker in docker environment.
@@ -342,7 +344,7 @@ main() {
         # NOTE: v2 deployment fails on openshift 3.11. Dataplane startup fails.
         # Need to debug more in the future.
         if [ "$1" = "kind" ]; then
-            operator-sdk test local ./test/e2e --go-test-flags "-v -tags v2" --namespace storageos-operator
+            "$OPERATOR_SDK" test local ./test/e2e --go-test-flags "-v -tags v2" --namespace storageos-operator
             operator-sdk-e2e-cleanup
         fi
 
