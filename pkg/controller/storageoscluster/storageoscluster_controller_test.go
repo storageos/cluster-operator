@@ -26,7 +26,6 @@ var gvk = schema.GroupVersionKind{
 }
 
 func TestGenerateJoinToken(t *testing.T) {
-
 	testcases := []struct {
 		name      string
 		nodes     []*corev1.Node
@@ -37,17 +36,17 @@ func TestGenerateJoinToken(t *testing.T) {
 		{
 			name: "three-node no selector",
 			nodes: []*corev1.Node{
-				&corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "fake-node1"},
+				{ObjectMeta: metav1.ObjectMeta{Name: "fake-node1"},
 					Status: corev1.NodeStatus{
 						Addresses: []corev1.NodeAddress{{Type: corev1.NodeInternalIP, Address: "0.0.0.0"}},
 					},
 				},
-				&corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "fake-node2"},
+				{ObjectMeta: metav1.ObjectMeta{Name: "fake-node2"},
 					Status: corev1.NodeStatus{
 						Addresses: []corev1.NodeAddress{{Type: corev1.NodeInternalIP, Address: "0.0.0.1"}},
 					},
 				},
-				&corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "fake-node3"},
+				{ObjectMeta: metav1.ObjectMeta{Name: "fake-node3"},
 					Status: corev1.NodeStatus{
 						Addresses: []corev1.NodeAddress{{Type: corev1.NodeInternalIP, Address: "0.0.0.2"}},
 					},
@@ -60,7 +59,7 @@ func TestGenerateJoinToken(t *testing.T) {
 		{
 			name: "three-node with node selector",
 			nodes: []*corev1.Node{
-				&corev1.Node{
+				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:   "fake-node1",
 						Labels: map[string]string{"foo": "baz"},
@@ -69,7 +68,7 @@ func TestGenerateJoinToken(t *testing.T) {
 						Addresses: []corev1.NodeAddress{{Type: corev1.NodeInternalIP, Address: "0.0.0.0"}},
 					},
 				},
-				&corev1.Node{
+				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:   "fake-node2",
 						Labels: map[string]string{"foo4": "baz4"},
@@ -78,7 +77,7 @@ func TestGenerateJoinToken(t *testing.T) {
 						Addresses: []corev1.NodeAddress{{Type: corev1.NodeInternalIP, Address: "0.0.0.1"}},
 					},
 				},
-				&corev1.Node{
+				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:   "fake-node3",
 						Labels: map[string]string{"foo0": "baz0", "foo": "baz"},
@@ -109,7 +108,7 @@ func TestGenerateJoinToken(t *testing.T) {
 			name: "unsupported node selector operator",
 			// Need at least one node to run the node selector operator block.
 			nodes: []*corev1.Node{
-				&corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "fake-node1"},
+				{ObjectMeta: metav1.ObjectMeta{Name: "fake-node1"},
 					Status: corev1.NodeStatus{
 						Addresses: []corev1.NodeAddress{{Type: corev1.NodeInternalIP, Address: "0.0.0.0"}},
 					},
@@ -134,14 +133,22 @@ func TestGenerateJoinToken(t *testing.T) {
 
 		// Create fake node objects.
 		for _, node := range tc.nodes {
-			controllerClient.Create(context.Background(), node)
+			if err := controllerClient.Create(context.Background(), node); err != nil {
+				t.Fatal(err)
+			}
 		}
 		testScheme := runtime.NewScheme()
 
 		// Register all the schemes.
-		kscheme.AddToScheme(testScheme)
-		apiextensionsv1beta1.AddToScheme(testScheme)
-		storageosapis.AddToScheme(testScheme)
+		if err := kscheme.AddToScheme(testScheme); err != nil {
+			t.Fatal(err)
+		}
+		if err := apiextensionsv1beta1.AddToScheme(testScheme); err != nil {
+			t.Fatal(err)
+		}
+		if err := storageosapis.AddToScheme(testScheme); err != nil {
+			t.Fatal(err)
+		}
 
 		// Create kubernetes client for event recorder.
 		kubeClient := clientgofake.NewSimpleClientset()

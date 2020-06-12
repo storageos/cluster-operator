@@ -14,8 +14,7 @@ import (
 )
 
 const (
-	appName         = "storageos"
-	statefulsetKind = "statefulset"
+	appName = "storageos"
 
 	serviceAccountPrefix = "storageos-nfs"
 
@@ -157,7 +156,6 @@ func (d *Deployment) createServiceAccountForNFSServer() error {
 }
 
 func (d *Deployment) createServiceMonitor() error {
-
 	metricsService, err := d.getMetricsService()
 	if err != nil {
 		return err

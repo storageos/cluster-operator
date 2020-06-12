@@ -21,11 +21,14 @@ import (
 // backed by StorageOS and a pod that uses the PVC.
 // NOTE: This test has a minimum k8s version requirement.
 func PodSchedulerAdmissionControllerTest(t *testing.T, ctx *framework.TestCtx) {
+	k8sVerMajor := 1
+	k8sVerMinor := 13
+	k8sVerPatch := 0
 	// Minimum version of k8s required to run this test.
 	minVersion := semver.Version{
-		Major: 1,
-		Minor: 13,
-		Patch: 0,
+		Major: uint64(k8sVerMajor),
+		Minor: uint64(k8sVerMinor),
+		Patch: uint64(k8sVerPatch),
 	}
 
 	// Check the k8s version before running this test. Admission controller

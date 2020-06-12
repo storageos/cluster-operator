@@ -135,6 +135,7 @@ func (k K8SOps) GetStatefulSetsUsingStorageClassProvisioner(provisionerName stri
 		}
 
 		for _, template := range s.Spec.VolumeClaimTemplates {
+			template := template
 			sc, err := k.GetStorageClassForPVC(&template)
 			if err == nil && sc.Provisioner == provisionerName {
 				scStatefulsets.Items = append(scStatefulsets.Items, s)
@@ -189,6 +190,7 @@ func (k K8SOps) ScaleDownApps() error {
 
 	var valZero int32
 	for _, d := range deps.Items {
+		d := d
 		k.logger.WithValues("Namespace", d.GetNamespace(), "Name", d.GetName()).Info("scaling down deployment")
 
 		t := func() (interface{}, bool, error) {
@@ -223,6 +225,7 @@ func (k K8SOps) ScaleDownApps() error {
 	}
 
 	for _, s := range ss.Items {
+		s := s
 		k.logger.WithValues("Namespace", s.GetNamespace(), "Name", s.GetName()).Info("scaling down statefulset")
 
 		t := func() (interface{}, bool, error) {
@@ -268,6 +271,7 @@ func (k K8SOps) ScaleUpApps() error {
 	}
 
 	for _, d := range deps.Items {
+		d := d
 		k.logger.WithValues("Namespace", d.Namespace, "Name", d.Name).Info("restoring app")
 
 		t := func() (interface{}, bool, error) {
@@ -314,6 +318,7 @@ func (k K8SOps) ScaleUpApps() error {
 	}
 
 	for _, s := range ss.Items {
+		s := s
 		k.logger.WithValues("Namespace", s.Namespace, "Name", s.Name).Info("restoring app")
 
 		t := func() (interface{}, bool, error) {
@@ -357,7 +362,6 @@ func (k K8SOps) ScaleUpApps() error {
 		if _, err := task.DoRetryWithTimeout(t, statefulSetUpdateTimeout, defaultRetryInterval, k.logger); err != nil {
 			return err
 		}
-
 	}
 
 	return nil
@@ -433,7 +437,7 @@ func (k K8SOps) UpgradeDaemonSet(newImage string) error {
 			return nil, true, err
 		}
 
-		expectedGeneration, _ := expectedGenerations[ds.UID]
+		expectedGeneration := expectedGenerations[ds.UID]
 		if updatedDS.Status.ObservedGeneration != expectedGeneration {
 			return nil, true, fmt.Errorf("daemonset: [%s] %s still running previous generation: %d. Expected generation %d", ds.GetNamespace(), ds.GetName(), updatedDS.Status.ObservedGeneration, expectedGeneration)
 		}

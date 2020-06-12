@@ -53,9 +53,15 @@ func DeployNFSServer(t *testing.T, ctx *framework.TestCtx, nfsServer *storageos.
 		return err
 	}
 
+	k8sVerMajor := 1
+	k8sVerMinor := 13
+	k8sVerPatch := 0
+
 	// Minimum version for running the complete test.
 	minVersion := semver.Version{
-		Major: 1, Minor: 13, Patch: 0,
+		Major: uint64(k8sVerMajor),
+		Minor: uint64(k8sVerMinor),
+		Patch: uint64(k8sVerPatch),
 	}
 
 	featureSupported, err := featureSupportAvailable(minVersion)
@@ -93,7 +99,7 @@ func DeployNFSServer(t *testing.T, ctx *framework.TestCtx, nfsServer *storageos.
 			Name:      nfsServer.Name,
 			Namespace: nfsServer.Namespace,
 		}
-		if f.Client.Get(goctx.TODO(), namespacedName, statefulset); err != nil {
+		if err := f.Client.Get(goctx.TODO(), namespacedName, statefulset); err != nil {
 			return err
 		}
 	}

@@ -55,7 +55,6 @@ func (s *Deployment) updateStorageOSStatus(status *storageosv1.StorageOSClusterS
 }
 
 func (s *Deployment) getStorageOSStatus() (*storageosv1.StorageOSClusterStatus, error) {
-
 	// Create an empty array because it's used to create cluster status. An
 	// uninitialized array results in error at cluster status validation.
 	// error: status.nodes in body must be of type array: "null"
@@ -108,7 +107,6 @@ func (s *Deployment) getStorageOSV2Status(nodeIPs []string) (*storageosv1.Storag
 // getStorageOSV1Status queries health of all the nodes in the join token and
 // returns the cluster status.
 func (s *Deployment) getStorageOSV1Status(nodeIPs []string) (*storageosv1.StorageOSClusterStatus, error) {
-
 	var readyNodes int
 
 	totalNodes := len(nodeIPs)
@@ -142,11 +140,8 @@ func (s *Deployment) getStorageOSV1Status(nodeIPs []string) (*storageosv1.Storag
 }
 
 func isHealthy(health *storageosv1.NodeHealth) bool {
-	if health.DirectfsInitiator+health.Director+health.KV+health.KVWrite+
-		health.Nats+health.Presentation+health.Rdb == strings.Repeat("alive", 7) {
-		return true
-	}
-	return false
+	return health.DirectfsInitiator+health.Director+health.KV+health.KVWrite+
+		health.Nats+health.Presentation+health.Rdb == strings.Repeat("alive", 7)
 }
 
 func isListening(host string, port string, timeout time.Duration) bool {

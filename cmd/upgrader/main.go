@@ -13,7 +13,6 @@ import (
 var log = logf.Log.WithName("storageos.upgrader")
 
 func main() {
-
 	cfg, err := restclient.InClusterConfig()
 	if err != nil {
 		fatal(err)

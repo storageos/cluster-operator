@@ -14,7 +14,6 @@ const (
 )
 
 func (d *Deployment) createStatefulSet(pvcVS *corev1.PersistentVolumeClaimVolumeSource, nfsPort int, httpPort int) error {
-
 	replicas := int32(1)
 
 	spec := &appsv1.StatefulSetSpec{
@@ -35,7 +34,9 @@ func (d *Deployment) createStatefulSet(pvcVS *corev1.PersistentVolumeClaimVolume
 	}
 	spec.Template.Spec.Volumes = append(spec.Template.Spec.Volumes, vol)
 
-	util.AddTolerations(&spec.Template.Spec, d.nfsServer.Spec.Tolerations)
+	if err := util.AddTolerations(&spec.Template.Spec, d.nfsServer.Spec.Tolerations); err != nil {
+		return err
+	}
 
 	// If the cluster was configured with node selectors to only run on certain
 	// nodes, use the same selectors to selct the nodes that the NFS pods can

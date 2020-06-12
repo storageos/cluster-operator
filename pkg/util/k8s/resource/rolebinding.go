@@ -28,7 +28,6 @@ func NewRoleBinding(
 	labels map[string]string,
 	subjects []rbacv1.Subject,
 	roleRef *rbacv1.RoleRef) *RoleBinding {
-
 	return &RoleBinding{
 		NamespacedName: types.NamespacedName{
 			Name:      name,

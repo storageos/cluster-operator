@@ -24,7 +24,6 @@ func NewServiceAccount(
 	c client.Client,
 	name, namespace string,
 	labels map[string]string) *ServiceAccount {
-
 	return &ServiceAccount{
 		NamespacedName: types.NamespacedName{
 			Name:      name,

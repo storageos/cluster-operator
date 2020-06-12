@@ -13,7 +13,7 @@ func (d *Deployment) createPVC(size *resource.Quantity) error {
 		StorageClassName: &scName,
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
-				corev1.ResourceName(corev1.ResourceStorage): *size,
+				corev1.ResourceStorage: *size,
 			},
 		},
 	}

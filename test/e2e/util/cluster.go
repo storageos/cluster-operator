@@ -345,9 +345,15 @@ func featureSupportAvailable(minVersion semver.Version) (bool, error) {
 // CSIDriverResourceTest checks if the CSIDriver resource is created. In k8s
 // 1.14+, CSIDriver is created as part of the cluster deployment.
 func CSIDriverResourceTest(t *testing.T, driverName string) {
+	k8sVerMajor := 1
+	k8sVerMinor := 14
+	k8sVerPatch := 0
+
 	// Minimum version of k8s required to run this test.
 	minVersion := semver.Version{
-		Major: 1, Minor: 14, Patch: 0,
+		Major: uint64(k8sVerMajor),
+		Minor: uint64(k8sVerMinor),
+		Patch: uint64(k8sVerPatch),
 	}
 
 	// Check the k8s version before running this test. CSIDriver built-in

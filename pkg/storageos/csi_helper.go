@@ -53,7 +53,9 @@ func (s Deployment) createCSIHelperStatefulSet(replicas int32) error {
 		},
 	}
 
-	s.addCommonPodProperties(&spec.Template.Spec)
+	if err := s.addCommonPodProperties(&spec.Template.Spec); err != nil {
+		return err
+	}
 
 	return s.k8sResourceManager.StatefulSet(statefulsetName, s.stos.Spec.GetResourceNS(), nil, spec).Create()
 }
@@ -82,7 +84,9 @@ func (s Deployment) createCSIHelperDeployment(replicas int32) error {
 		},
 	}
 
-	s.addCommonPodProperties(&spec.Template.Spec)
+	if err := s.addCommonPodProperties(&spec.Template.Spec); err != nil {
+		return err
+	}
 
 	return s.k8sResourceManager.Deployment(csiHelperName, s.stos.Spec.GetResourceNS(), nil, spec).Create()
 }

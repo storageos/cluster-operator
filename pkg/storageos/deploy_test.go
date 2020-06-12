@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	glog "log"
 	"os"
 	"reflect"
 	"testing"
@@ -83,15 +84,24 @@ func setupFakeDeploymentWithClientAndCluster(c client.Client, stosCluster *api.S
 	return deploy, nil
 }
 
-func testSetup() {
+func testSetup() error {
 	// Register all the schemes.
-	kscheme.AddToScheme(testScheme)
-	apiextensionsv1beta1.AddToScheme(testScheme)
-	storageosapis.AddToScheme(testScheme)
+	if err := kscheme.AddToScheme(testScheme); err != nil {
+		return err
+	}
+	if err := apiextensionsv1beta1.AddToScheme(testScheme); err != nil {
+		return err
+	}
+	if err := storageosapis.AddToScheme(testScheme); err != nil {
+		return err
+	}
+	return nil
 }
 
 func TestMain(m *testing.M) {
-	testSetup()
+	if err := testSetup(); err != nil {
+		glog.Println("failed to setup test:", err)
+	}
 	os.Exit(m.Run())
 }
 
@@ -350,7 +360,9 @@ func TestCreateDaemonSet(t *testing.T) {
 		}
 
 		stosCluster.Spec = api.StorageOSClusterSpec{}
-		c.Delete(context.Background(), createdDaemonset)
+		if err := c.Delete(context.Background(), createdDaemonset); err != nil {
+			t.Error(err)
+		}
 		if err := c.Get(context.Background(), nsName, createdDaemonset); err == nil {
 			t.Fatal("failed to delete the created object", err)
 		}
@@ -407,6 +419,7 @@ func TestCreateCSIHelper(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			c := fake.NewFakeClientWithScheme(testScheme)
 			deploy, err := setupFakeDeploymentWithClientAndCluster(c, stosCluster)
@@ -512,6 +525,7 @@ func TestDeployLegacy(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			c := fake.NewFakeClientWithScheme(testScheme)
 			if err := c.Create(context.Background(), stosCluster); err != nil {
@@ -616,6 +630,7 @@ func TestDeployCSI(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			c := fake.NewFakeClientWithScheme(testScheme)
 			if err := c.Create(context.Background(), stosCluster); err != nil {
@@ -865,6 +880,7 @@ func TestDeployNodeAffinity(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			stosCluster.Spec.CSI.DeploymentStrategy = tc.csiDeploymentStrategy
 
@@ -983,6 +999,7 @@ func TestDeployTolerations(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			stosCluster := &api.StorageOSCluster{
 				TypeMeta: metav1.TypeMeta{
@@ -1049,7 +1066,6 @@ func TestDeployTolerations(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestDeployNodeResources(t *testing.T) {
@@ -1157,6 +1173,7 @@ func TestDelete(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			stosCluster.Spec = tc.spec
 
@@ -1370,6 +1387,7 @@ func TestDeployPodPriorityClass(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			stosCluster := &api.StorageOSCluster{
 				TypeMeta: metav1.TypeMeta{
@@ -1461,7 +1479,6 @@ func TestDeployPodPriorityClass(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestDeploySchedulerExtender(t *testing.T) {
@@ -1566,10 +1583,10 @@ func TestGetNodeIPs(t *testing.T) {
 		{
 			name: "single node single internal ip",
 			nodes: []corev1.Node{
-				corev1.Node{
+				{
 					Status: corev1.NodeStatus{
 						Addresses: []corev1.NodeAddress{
-							corev1.NodeAddress{
+							{
 								Type:    corev1.NodeInternalIP,
 								Address: "1.1.1.1",
 							},
@@ -1582,20 +1599,20 @@ func TestGetNodeIPs(t *testing.T) {
 		{
 			name: "multiple node single internal ip",
 			nodes: []corev1.Node{
-				corev1.Node{
+				{
 					Status: corev1.NodeStatus{
 						Addresses: []corev1.NodeAddress{
-							corev1.NodeAddress{
+							{
 								Type:    corev1.NodeInternalIP,
 								Address: "1.1.1.1",
 							},
 						},
 					},
 				},
-				corev1.Node{
+				{
 					Status: corev1.NodeStatus{
 						Addresses: []corev1.NodeAddress{
-							corev1.NodeAddress{
+							{
 								Type:    corev1.NodeInternalIP,
 								Address: "2.2.2.2",
 							},
@@ -1608,7 +1625,7 @@ func TestGetNodeIPs(t *testing.T) {
 		{
 			name: "single node no address",
 			nodes: []corev1.Node{
-				corev1.Node{
+				{
 					Status: corev1.NodeStatus{
 						Addresses: []corev1.NodeAddress{},
 					},
@@ -1619,18 +1636,18 @@ func TestGetNodeIPs(t *testing.T) {
 		{
 			name: "single node multiple addresses",
 			nodes: []corev1.Node{
-				corev1.Node{
+				{
 					Status: corev1.NodeStatus{
 						Addresses: []corev1.NodeAddress{
-							corev1.NodeAddress{
+							{
 								Type:    corev1.NodeHostName,
 								Address: "hostA",
 							},
-							corev1.NodeAddress{
+							{
 								Type:    corev1.NodeInternalIP,
 								Address: "1.1.1.1",
 							},
-							corev1.NodeAddress{
+							{
 								Type:    corev1.NodeExternalIP,
 								Address: "2.2.2.2",
 							},
@@ -1643,14 +1660,14 @@ func TestGetNodeIPs(t *testing.T) {
 		{
 			name: "single node no internal ip",
 			nodes: []corev1.Node{
-				corev1.Node{
+				{
 					Status: corev1.NodeStatus{
 						Addresses: []corev1.NodeAddress{
-							corev1.NodeAddress{
+							{
 								Type:    corev1.NodeHostName,
 								Address: "hostA",
 							},
-							corev1.NodeAddress{
+							{
 								Type:    corev1.NodeExternalIP,
 								Address: "2.2.2.2",
 							},
@@ -1662,6 +1679,7 @@ func TestGetNodeIPs(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			if got := GetNodeIPs(tt.nodes); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetNodeIPs() = %v, want %v", got, tt.want)
@@ -1878,7 +1896,6 @@ func TestContainerImageSelection(t *testing.T) {
 }
 
 func Test_NodeV2Image(t *testing.T) {
-
 	t.Parallel()
 
 	tests := []struct {

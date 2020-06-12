@@ -27,9 +27,15 @@ func TestMutatePodFn(t *testing.T) {
 
 	// Create a new scheme and add all the types from different clientsets.
 	scheme := runtime.NewScheme()
-	kscheme.AddToScheme(scheme)
-	apiextensionsv1beta1.AddToScheme(scheme)
-	storageosapis.AddToScheme(scheme)
+	if err := kscheme.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	if err := apiextensionsv1beta1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	if err := storageosapis.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
 
 	// StorageOS StorageClass.
 	stosSC := &storagev1.StorageClass{
@@ -140,6 +146,7 @@ func TestMutatePodFn(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			// StorageOS Cluster with scheduler configured.
 			stosCluster := &storageosv1.StorageOSCluster{

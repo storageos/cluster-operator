@@ -67,7 +67,6 @@ var (
 )
 
 func main() {
-
 	logf.SetLogger(zap.Logger(true))
 
 	log.WithValues(

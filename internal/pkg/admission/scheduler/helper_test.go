@@ -14,7 +14,6 @@ import (
 )
 
 func TestPodSchedulerSetter_IsManagedVolume(t *testing.T) {
-
 	// Test values only.
 	storageosSchedulerName := "storageos-scheduler"
 	storageosCSIProvisioner := "storageos"
@@ -23,9 +22,15 @@ func TestPodSchedulerSetter_IsManagedVolume(t *testing.T) {
 
 	// Create a new scheme and add all the types from different clientsets.
 	scheme := runtime.NewScheme()
-	kscheme.AddToScheme(scheme)
-	apiextensionsv1beta1.AddToScheme(scheme)
-	storageosapis.AddToScheme(scheme)
+	if err := kscheme.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	if err := apiextensionsv1beta1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	if err := storageosapis.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
 
 	// StorageOS StorageClass.
 	stosSC := &storagev1.StorageClass{
@@ -98,8 +103,8 @@ func TestPodSchedulerSetter_IsManagedVolume(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-
 			// Create all the above resources and get a k8s client.
 			client := fake.NewFakeClientWithScheme(scheme, stosSC, stosNativeSC, fooSC, tt.pvc)
 

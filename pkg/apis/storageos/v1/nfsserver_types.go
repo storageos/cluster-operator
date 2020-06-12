@@ -81,7 +81,7 @@ func (s NFSServerSpec) GetContainerImage(clusterNFSImage string) string {
 // GetRequestedCapacity returns the requested capacity for the NFS volume.
 func (s NFSServerSpec) GetRequestedCapacity() resource.Quantity {
 	if s.Resources.Requests != nil {
-		if capacity, exists := s.Resources.Requests[corev1.ResourceName(corev1.ResourceStorage)]; exists {
+		if capacity, exists := s.Resources.Requests[corev1.ResourceStorage]; exists {
 			return capacity
 		}
 	}

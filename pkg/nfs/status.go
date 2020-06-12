@@ -19,7 +19,6 @@ const (
 )
 
 func (s *Deployment) updateStatus(status *storageosv1.NFSServerStatus) error {
-
 	if reflect.DeepEqual(s.nfsServer.Status, *status) {
 		return nil
 	}
@@ -41,7 +40,6 @@ func (s *Deployment) updateStatus(status *storageosv1.NFSServerStatus) error {
 
 // getStatus determines the status of the NFS Server deployment.
 func (s *Deployment) getStatus() (*storageosv1.NFSServerStatus, error) {
-
 	status := &storageosv1.NFSServerStatus{
 		Phase:        storageosv1.PhaseUnknown,
 		RemoteTarget: "",

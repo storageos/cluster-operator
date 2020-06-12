@@ -26,7 +26,6 @@ func NewCSIDriver(
 	name string,
 	labels map[string]string,
 	spec *storagev1beta1.CSIDriverSpec) *CSIDriver {
-
 	return &CSIDriver{
 		NamespacedName: types.NamespacedName{
 			Name: name,

@@ -5,7 +5,6 @@ import (
 )
 
 func TestGetBaseK8SVersion(t *testing.T) {
-
 	testcases := []struct {
 		name        string
 		version     string
@@ -40,6 +39,7 @@ func TestGetBaseK8SVersion(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			k := K8SOps{}
 			version, err := k.getBaseK8SVersion(tc.version)

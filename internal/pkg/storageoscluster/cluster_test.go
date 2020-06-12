@@ -19,7 +19,6 @@ func getTestCluster(
 	name string, namespace string,
 	spec storageosv1.StorageOSClusterSpec,
 	status storageosv1.StorageOSClusterStatus) *storageosv1.StorageOSCluster {
-
 	return &storageosv1.StorageOSCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -36,8 +35,12 @@ func TestGetCurrentStorageOSCluster(t *testing.T) {
 
 	// Create a new scheme and add the required schemes to it.
 	scheme := runtime.NewScheme()
-	kscheme.AddToScheme(scheme)
-	storageosapis.AddToScheme(scheme)
+	if err := kscheme.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	if err := storageosapis.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
 
 	testcases := []struct {
 		name            string

@@ -26,7 +26,6 @@ func NewRole(
 	name, namespace string,
 	labels map[string]string,
 	rules []rbacv1.PolicyRule) *Role {
-
 	return &Role{
 		NamespacedName: types.NamespacedName{
 			Name:      name,

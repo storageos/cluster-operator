@@ -28,7 +28,6 @@ func NewIngress(
 	labels map[string]string,
 	annotations map[string]string,
 	spec *extensionsv1beta1.IngressSpec) *Ingress {
-
 	return &Ingress{
 		NamespacedName: types.NamespacedName{
 			Name:      name,

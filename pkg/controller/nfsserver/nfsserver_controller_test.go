@@ -20,7 +20,6 @@ func getTestCluster(
 	name string, namespace string,
 	spec storageosv1.StorageOSClusterSpec,
 	status storageosv1.StorageOSClusterStatus) *storageosv1.StorageOSCluster {
-
 	return &storageosv1.StorageOSCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -36,7 +35,6 @@ func getTestNFSServer(
 	name string, namespace string,
 	spec storageosv1.NFSServerSpec,
 	status storageosv1.NFSServerStatus) *storageosv1.NFSServer {
-
 	return &storageosv1.NFSServer{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -125,7 +123,9 @@ func TestUpdateSpec(t *testing.T) {
 			// Create a new scheme and add StorageOS APIs to it. Pass this to the
 			// k8s client so that it can create StorageOS resources.
 			testScheme := runtime.NewScheme()
-			storageosapis.AddToScheme(testScheme)
+			if err := storageosapis.AddToScheme(testScheme); err != nil {
+				t.Fatal(err)
+			}
 
 			client := fake.NewFakeClientWithScheme(testScheme, tc.cluster, tc.nfsServer)
 

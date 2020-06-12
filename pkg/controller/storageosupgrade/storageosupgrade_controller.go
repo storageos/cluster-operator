@@ -123,6 +123,7 @@ func (r *ReconcileStorageOSUpgrade) findCurrentCluster() (*storageosv1.StorageOS
 
 	var currentCluster *storageosv1.StorageOSCluster
 	for _, cluster := range clusterList.Items {
+		cluster := cluster
 		// The cluster with Phase "Running" is the only active cluster.
 		if cluster.Status.Phase == storageosv1.ClusterPhaseRunning {
 			currentCluster = &cluster
@@ -214,7 +215,6 @@ func (r *ReconcileStorageOSUpgrade) requestFromCurrentUpgrade(request reconcile.
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileStorageOSUpgrade) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-
 	log := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	// log.Info("Reconciling Upgrade")
 
@@ -232,7 +232,9 @@ func (r *ReconcileStorageOSUpgrade) Reconcile(request reconcile.Request) (reconc
 		if errors.IsNotFound(err) {
 			// Upgrade instance not found. Reset the current cluster.
 			// In this order: resume cluster, reset cluster, reset upgrade.
-			r.resumeCluster(request)
+			if err := r.resumeCluster(request); err != nil {
+				return immediateRetryResult, err
+			}
 			r.resetImagePuller(request)
 			r.resetCurrentCluster(request)
 			r.ResetCurrentUpgrade(request)
