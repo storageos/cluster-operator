@@ -29,7 +29,6 @@ func NewService(
 	labels map[string]string,
 	annotations map[string]string,
 	spec *corev1.ServiceSpec) *Service {
-
 	return &Service{
 		NamespacedName: types.NamespacedName{
 			Name:      name,

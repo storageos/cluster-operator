@@ -33,6 +33,8 @@ var (
 	ErrCurrentClusterNotFound = errors.New("current cluster not found")
 )
 
+const reconcilePeriodSeconds = 5
+
 // Add creates a new Node Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
@@ -72,11 +74,10 @@ type ReconcileNode struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-
 	log := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	// log.Info("Reconciling Node")
 
-	reconcilePeriod := 5 * time.Second
+	reconcilePeriod := reconcilePeriodSeconds * time.Second
 	reconcileResult := reconcile.Result{RequeueAfter: reconcilePeriod}
 
 	// Return this for a immediate retry of the reconciliation loop with the
@@ -116,7 +117,6 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 		r.stosClient.clusterName != cluster.GetName() ||
 		r.stosClient.clusterGeneration != cluster.GetGeneration() ||
 		r.stosClient.clusterUID != cluster.GetUID() {
-
 		if err := r.setClientForCluster(cluster); err != nil {
 			log.Info("Failed to configure api client", "error", err)
 			return reconcileResult, err
@@ -215,6 +215,7 @@ func (r *ReconcileNode) findCurrentCluster() (*storageosv1.StorageOSCluster, err
 
 	var currentCluster *storageosv1.StorageOSCluster
 	for _, cluster := range clusterList.Items {
+		cluster := cluster
 		// The cluster with Phase "Running" is the only active cluster.
 		if cluster.Status.Phase == storageosv1.ClusterPhaseRunning {
 			currentCluster = &cluster

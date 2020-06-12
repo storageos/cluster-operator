@@ -19,7 +19,7 @@ func (s *Deployment) createIngress() error {
 
 	if s.stos.Spec.Ingress.TLS {
 		spec.TLS = []v1beta1.IngressTLS{
-			v1beta1.IngressTLS{
+			{
 				Hosts:      []string{s.stos.Spec.Ingress.Hostname},
 				SecretName: tlsSecretName,
 			},

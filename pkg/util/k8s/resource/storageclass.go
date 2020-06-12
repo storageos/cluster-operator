@@ -28,7 +28,6 @@ func NewStorageClass(
 	labels map[string]string,
 	provisioner string,
 	params map[string]string) *StorageClass {
-
 	return &StorageClass{
 		NamespacedName: types.NamespacedName{
 			Name: name,

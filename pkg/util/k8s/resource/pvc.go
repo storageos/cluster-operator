@@ -26,7 +26,6 @@ func NewPVC(
 	name, namespace string,
 	labels map[string]string,
 	spec *corev1.PersistentVolumeClaimSpec) *PVC {
-
 	return &PVC{
 		NamespacedName: types.NamespacedName{
 			Name:      name,

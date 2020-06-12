@@ -45,6 +45,7 @@ func TestUpdateLabels(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			ret := updateLabels(tt.arg1, tt.arg2)
 			if tt.ret != ret {

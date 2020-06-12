@@ -29,7 +29,6 @@ func NewClusterRoleBinding(
 	labels map[string]string,
 	subjects []rbacv1.Subject,
 	roleRef *rbacv1.RoleRef) *ClusterRoleBinding {
-
 	return &ClusterRoleBinding{
 		NamespacedName: types.NamespacedName{
 			Name: name,

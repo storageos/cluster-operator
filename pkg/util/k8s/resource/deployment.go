@@ -26,7 +26,6 @@ func NewDeployment(
 	name, namespace string,
 	labels map[string]string,
 	spec *appsv1.DeploymentSpec) *Deployment {
-
 	return &Deployment{
 		NamespacedName: types.NamespacedName{
 			Name:      name,

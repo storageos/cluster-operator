@@ -22,7 +22,6 @@ const (
 )
 
 func createConfig(instance *storageosv1.NFSServer) (string, error) {
-
 	// id needs to be unique for each export on the server node.
 	id := 57
 

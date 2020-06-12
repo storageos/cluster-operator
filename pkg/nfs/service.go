@@ -10,7 +10,6 @@ import (
 )
 
 func (d *Deployment) ensureService(nfsPort int) error {
-
 	// If no error in getting the service, service already exists, do nothing.
 	if _, err := d.getServerService(); err == nil {
 		return nil
@@ -46,7 +45,7 @@ func (d *Deployment) createService(name string, portName string, port int, label
 			{
 				Name:       portName,
 				Port:       int32(port),
-				TargetPort: intstr.FromInt(int(port)),
+				TargetPort: intstr.FromInt(port),
 			},
 		},
 	}

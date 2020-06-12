@@ -26,7 +26,6 @@ func NewStatefulSet(
 	name, namespace string,
 	labels map[string]string,
 	spec *appsv1.StatefulSetSpec) *StatefulSet {
-
 	return &StatefulSet{
 		NamespacedName: types.NamespacedName{
 			Name:      name,

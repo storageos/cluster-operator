@@ -29,7 +29,6 @@ func NewDeployment(
 	labels map[string]string,
 	recorder record.EventRecorder,
 	scheme *runtime.Scheme) *Deployment {
-
 	return &Deployment{
 		client:             client,
 		kConfig:            kConfig,

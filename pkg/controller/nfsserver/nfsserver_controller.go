@@ -36,6 +36,8 @@ var log = logf.Log.WithName("controller_nfsserver")
 const (
 	finalizer    = "finalizer.nfsserver.storageos.com"
 	appComponent = "nfs-server"
+
+	reconcilePeriodSeconds = 15
 )
 
 // Add creates a new NFSServer Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -122,7 +124,7 @@ func (r *ReconcileNFSServer) Reconcile(request reconcile.Request) (reconcile.Res
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	// reqLogger.Info("Reconciling NFSServer")
 
-	reconcilePeriod := 15 * time.Second
+	reconcilePeriod := reconcilePeriodSeconds * time.Second
 	reconcileResult := reconcile.Result{RequeueAfter: reconcilePeriod}
 
 	// Fetch the NFSServer instance
@@ -151,7 +153,6 @@ func (r *ReconcileNFSServer) reconcile(instance *storageosv1.NFSServer) error {
 	// Add our finalizer immediately so we can cleanup a partial deployment.  If
 	// this is not set, the CR can simply be deleted.
 	if len(instance.GetFinalizers()) == 0 {
-
 		// Add our finalizer so that we control deletion.
 		if err := r.addFinalizer(instance); err != nil {
 			return err
@@ -234,7 +235,6 @@ func (r *ReconcileNFSServer) reconcile(instance *storageosv1.NFSServer) error {
 }
 
 func (r *ReconcileNFSServer) addFinalizer(instance *storageosv1.NFSServer) error {
-
 	instance.SetFinalizers(append(instance.GetFinalizers(), finalizer))
 
 	// Update CR
@@ -275,22 +275,4 @@ func (r *ReconcileNFSServer) updateSpec(instance *storageosv1.NFSServer, cluster
 		return true, nil
 	}
 	return false, nil
-}
-
-func contains(list []string, s string) bool {
-	for _, v := range list {
-		if v == s {
-			return true
-		}
-	}
-	return false
-}
-
-func remove(list []string, s string) []string {
-	for i, v := range list {
-		if v == s {
-			list = append(list[:i], list[i+1:]...)
-		}
-	}
-	return list
 }

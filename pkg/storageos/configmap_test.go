@@ -9,7 +9,6 @@ import (
 )
 
 func Test_configFromSpec(t *testing.T) {
-
 	v1DefaultSpec := storageosv1.StorageOSClusterSpec{}
 	v1DefaultConfig := map[string]string{
 		joinEnvVar:                 "",
@@ -398,6 +397,7 @@ func Test_configFromSpec(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			// Set wanted env vars.
 			// Don't parallelize tests as they will conflict.

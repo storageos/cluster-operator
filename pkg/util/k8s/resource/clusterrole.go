@@ -26,7 +26,6 @@ func NewClusterRole(
 	name string,
 	labels map[string]string,
 	rules []rbacv1.PolicyRule) *ClusterRole {
-
 	return &ClusterRole{
 		NamespacedName: types.NamespacedName{
 			Name: name,

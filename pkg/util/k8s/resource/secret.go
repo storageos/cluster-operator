@@ -28,7 +28,6 @@ func NewSecret(
 	labels map[string]string,
 	secType corev1.SecretType,
 	data map[string][]byte) *Secret {
-
 	return &Secret{
 		NamespacedName: types.NamespacedName{
 			Name:      name,

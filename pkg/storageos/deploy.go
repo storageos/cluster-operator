@@ -10,8 +10,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-
-	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 )
 
 const (
@@ -43,8 +41,8 @@ const (
 	configmapName   = "storageos-node-config"
 	csiHelperName   = "storageos-csi-helper"
 
-	tlsSecretType       = "kubernetes.io/tls"
-	storageosSecretType = "kubernetes.io/storageos"
+	// tlsSecretType       = "kubernetes.io/tls"
+	// storageosSecretType = "kubernetes.io/storageos"
 
 	defaultFSType                            = "ext4"
 	secretNamespaceKey                       = "adminSecretNamespace"
@@ -93,6 +91,11 @@ const (
 	// podTolerationSeconds is the time for which a pod tolerates an unfavorable
 	// node condition.
 	podTolerationSeconds = 30
+
+	// Container probe configurations.
+	initialDelaySeconds = 65
+	timeoutSeconds      = 10
+	failureThreshold    = 5
 )
 
 var log = logf.Log.WithName("storageos.cluster")
@@ -297,9 +300,9 @@ func (s *Deployment) addNodeContainerResources(nodeContainer *corev1.Container) 
 // to be conditional on the node container version.
 func (s *Deployment) addNodeContainerProbes(nodeContainer *corev1.Container) {
 	nodeContainer.LivenessProbe = &corev1.Probe{
-		InitialDelaySeconds: int32(65),
-		TimeoutSeconds:      int32(10),
-		FailureThreshold:    int32(5),
+		InitialDelaySeconds: int32(initialDelaySeconds),
+		TimeoutSeconds:      int32(timeoutSeconds),
+		FailureThreshold:    int32(failureThreshold),
 		Handler: corev1.Handler{
 			HTTPGet: &corev1.HTTPGetAction{
 				Path: "/v1/health",
@@ -308,9 +311,9 @@ func (s *Deployment) addNodeContainerProbes(nodeContainer *corev1.Container) {
 		},
 	}
 	nodeContainer.ReadinessProbe = &corev1.Probe{
-		InitialDelaySeconds: int32(65),
-		TimeoutSeconds:      int32(10),
-		FailureThreshold:    int32(5),
+		InitialDelaySeconds: int32(initialDelaySeconds),
+		TimeoutSeconds:      int32(timeoutSeconds),
+		FailureThreshold:    int32(failureThreshold),
 		Handler: corev1.Handler{
 			HTTPGet: &corev1.HTTPGetAction{
 				Path: "/v1/health",
@@ -345,9 +348,9 @@ func CSIExternalResizerSupported(version string) bool {
 
 // NodeV2Image returns true if the image tag starts with "2." "v2", or "c2".
 func NodeV2Image(image string) bool {
-
 	parts := strings.Split(image, ":")
-	if len(parts) < 2 {
+	partsInTaggedImage := 2
+	if len(parts) < partsInTaggedImage {
 		return false
 	}
 
@@ -404,29 +407,29 @@ func getCSICredsEnvVar(envVarName, secretName, key string) corev1.EnvVar {
 	}
 }
 
-func addOwnerRefToObject(obj metav1.Object, ownerRef metav1.OwnerReference) {
-	obj.SetOwnerReferences(append(obj.GetOwnerReferences(), ownerRef))
-}
+// func addOwnerRefToObject(obj metav1.Object, ownerRef metav1.OwnerReference) {
+//     obj.SetOwnerReferences(append(obj.GetOwnerReferences(), ownerRef))
+// }
 
-func asOwner(m *storageosv1.StorageOSCluster) metav1.OwnerReference {
-	trueVar := true
-	return metav1.OwnerReference{
-		APIVersion: m.APIVersion,
-		Kind:       m.Kind,
-		Name:       m.Name,
-		UID:        m.UID,
-		Controller: &trueVar,
-	}
-}
+// func asOwner(m *storageosv1.StorageOSCluster) metav1.OwnerReference {
+//     trueVar := true
+//     return metav1.OwnerReference{
+//         APIVersion: m.APIVersion,
+//         Kind:       m.Kind,
+//         Name:       m.Name,
+//         UID:        m.UID,
+//         Controller: &trueVar,
+//     }
+// }
 
-func podList() *corev1.PodList {
-	return &corev1.PodList{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Pod",
-			APIVersion: "v1",
-		},
-	}
-}
+// func podList() *corev1.PodList {
+//     return &corev1.PodList{
+//         TypeMeta: metav1.TypeMeta{
+//             Kind:       "Pod",
+//             APIVersion: "v1",
+//         },
+//     }
+// }
 
 // NodeList returns an empty NodeList object.
 func NodeList() *corev1.NodeList {
@@ -438,13 +441,13 @@ func NodeList() *corev1.NodeList {
 	}
 }
 
-func getPodNames(pods []corev1.Pod) []string {
-	var podNames []string
-	for _, pod := range pods {
-		podNames = append(podNames, pod.Name)
-	}
-	return podNames
-}
+// func getPodNames(pods []corev1.Pod) []string {
+//     var podNames []string
+//     for _, pod := range pods {
+//         podNames = append(podNames, pod.Name)
+//     }
+//     return podNames
+// }
 
 // GetNodeIPs returns a slice of IPs, given a slice of nodes.
 func GetNodeIPs(nodes []corev1.Node) []string {

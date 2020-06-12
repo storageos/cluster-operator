@@ -1,10 +1,13 @@
 package storageos
 
 import (
+	"os"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	stosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	"github.com/storageos/cluster-operator/pkg/util/k8s"
 )
 
@@ -46,6 +49,9 @@ const (
 	csiRequireCredsNodePubEnvVar        = "CSI_REQUIRE_CREDS_NODE_PUB_VOL"
 	csiNodePubCredsUsernameEnvVar       = "CSI_NODE_PUB_CREDS_USERNAME"
 	csiNodePubCredsPasswordEnvVar       = "CSI_NODE_PUB_CREDS_PASSWORD"
+
+	// Configmap file mode.
+	cmFileMode os.FileMode = 0600
 )
 
 // getNodeUsernameEnvVar returns the env var used to set the bootstrap username.
@@ -70,7 +76,7 @@ func (s *Deployment) createDaemonSet() error {
 	mountPropagationBidirectional := corev1.MountPropagationBidirectional
 	allowPrivilegeEscalation := true
 	configMapOptional := false
-	configMapFileMode := int32(0600)
+	configMapFileMode := int32(cmFileMode)
 
 	spec := &appsv1.DaemonSetSpec{
 		Selector: &metav1.LabelSelector{
@@ -90,7 +96,7 @@ func (s *Deployment) createDaemonSet() error {
 						Name:  "storageos-init",
 						Image: s.stos.Spec.GetInitContainerImage(),
 						EnvFrom: []corev1.EnvFromSource{
-							corev1.EnvFromSource{
+							{
 								ConfigMapRef: &corev1.ConfigMapEnvSource{
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: configmapName,
@@ -143,11 +149,11 @@ func (s *Deployment) createDaemonSet() error {
 						Name:  "storageos",
 						Args:  []string{"server"},
 						Ports: []corev1.ContainerPort{{
-							ContainerPort: 5705,
+							ContainerPort: stosv1.DefaultServiceInternalPort,
 							Name:          "api",
 						}},
 						EnvFrom: []corev1.EnvFromSource{
-							corev1.EnvFromSource{
+							{
 								ConfigMapRef: &corev1.ConfigMapEnvSource{
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: configmapName,

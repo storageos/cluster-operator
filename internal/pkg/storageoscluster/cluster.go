@@ -31,6 +31,7 @@ func GetCurrentStorageOSCluster(kclient client.Client) (*storageosv1.StorageOSCl
 
 	// If there are multiple clusters, consider the status of the cluster.
 	for _, cluster := range clusterList.Items {
+		cluster := cluster
 		// Only one cluster can be in running phase at a time.
 		if cluster.Status.Phase == storageosv1.ClusterPhaseRunning {
 			currentCluster = &cluster

@@ -26,7 +26,6 @@ func NewDaemonSet(
 	name, namespace string,
 	labels map[string]string,
 	spec *appsv1.DaemonSetSpec) *DaemonSet {
-
 	return &DaemonSet{
 		NamespacedName: types.NamespacedName{
 			Name:      name,

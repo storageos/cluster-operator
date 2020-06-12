@@ -30,13 +30,13 @@ const (
 	v2EtcdTLSClientCAEnvVar   = "ETCD_TLS_CLIENT_CA"
 
 	// TODO: ETCD authentication information
-	etcdUsernameEnvVar = "ETCD_USERNAME"
-	etcdPasswordEnvVar = "ETCD_PASSWORD"
+	// etcdUsernameEnvVar = "ETCD_USERNAME"
+	// etcdPasswordEnvVar = "ETCD_PASSWORD"
 
 	// TODO: ETCD namespace in which to operate. All keys in ETCD will be prefixed by
 	// this value, allowing for multiple clusters to operate on the same ETCD
 	// instance.
-	etcdNamespaceEnvVar = "ETCD_NAMESPACE"
+	// etcdNamespaceEnvVar = "ETCD_NAMESPACE"
 
 	// Feature flags (enabled by default)
 	disableFencingEnvVar = "DISABLE_FENCING"
@@ -64,7 +64,7 @@ const (
 	k8sSchedulerExtenderEnvVar = "K8S_ENABLE_SCHEDULER_EXTENDER"
 
 	// TODO: Path to kubernetes config file.
-	kubconfigPathEnvVar = "KUBECONFIG"
+	// kubconfigPathEnvVar = "KUBECONFIG"
 
 	// CSI API listen socket location.  CSI is disabled if not set.
 	csiEndpointEnvVar = "CSI_ENDPOINT"
@@ -78,9 +78,9 @@ const (
 	// TODO: add to StorageOSCluster CR and optionally create Certificate CR?
 	// https://cert-manager.io/docs/usage/certificate/ Since secrets will be
 	// used, probably needs to be implemented in DaemonSet.
-	apiTLSCAEnvVar   = "API_TLS_CA"
-	apiTLSKeyEnvVar  = "API_TLS_KEY"
-	apiTLSCertEnvVar = "API_TLS_CERT"
+	// apiTLSCAEnvVar   = "API_TLS_CA"
+	// apiTLSKeyEnvVar  = "API_TLS_KEY"
+	// apiTLSCertEnvVar = "API_TLS_CERT"
 
 	// TODO: add to StorageOSCluster CR
 	// Health checking duration values
@@ -88,12 +88,12 @@ const (
 	// A duration string is a possibly signed sequence of decimal numbers, each
 	// with optional fraction and a unit suffix, such as "300ms", "-1.5h" or
 	// "2h45m". Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
-	healthProbeIntervalEnvVar = "HEALTH_PROBE_INTERVAL"
-	healthProbeTimeoutEnvVar  = "HEALTH_PROBE_TIMEOUT"
-	healthGracePeriodEnvVar   = "HEALTH_GRACE_PERIOD"
+	// healthProbeIntervalEnvVar = "HEALTH_PROBE_INTERVAL"
+	// healthProbeTimeoutEnvVar  = "HEALTH_PROBE_TIMEOUT"
+	// healthGracePeriodEnvVar   = "HEALTH_GRACE_PERIOD"
 
 	// Node capacity update interval.
-	nodeCapacityUpdateIntervalEnvVar = "NODE_CAPACITY_INTERVAL"
+	// nodeCapacityUpdateIntervalEnvVar = "NODE_CAPACITY_INTERVAL"
 
 	// TODO: General dial timeout settings (RPC, etcd...)
 	//
@@ -102,7 +102,7 @@ const (
 	// "2h45m". Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 	//
 	// defaults to 5s.
-	dialTimeoutEnvVar = "DIAL_TIMEOUT"
+	// dialTimeoutEnvVar = "DIAL_TIMEOUT"
 
 	// Logging level: debug, info, warn or error.
 	logLevelEnvVar = "LOG_LEVEL"
@@ -129,7 +129,6 @@ const (
 
 // createService creates a ConfigMap to store the node container configuration.
 func (s *Deployment) createConfigMap() error {
-
 	config := configFromSpec(s.stos.Spec, CSIV1Supported(s.k8sVersion), s.nodev2)
 
 	labels := make(map[string]string)
@@ -292,7 +291,6 @@ func v2ConfigFromSpec(spec storageosv1.StorageOSClusterSpec) map[string]string {
 // addEtcdTLSConfig adds the config entries for TLS config.  The ENV var names
 // are different between V1 & V2.
 func addEtcdTLSConfig(config map[string]string, v2 bool) map[string]string {
-
 	caCert := v1EtcdTLSClientCAEnvVar
 	clientKey := v1EtcdTLSClientKeyEnvVar
 	clientCert := v1EtcdTLSClientCertEnvVar
