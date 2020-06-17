@@ -273,7 +273,7 @@ main() {
         docker exec $x bash -c "ctr -n k8s.io images import --base-name docker.io/storageos/cluster-operator:test /cluster-operator.tar"
     fi
 
-    if [ "$2" = "olm" ]; then
+    # if [ "$2" = "olm" ]; then
         # Lint the OLM CSV bundle.
         # NOTE: This is disabled for now because the operator-courier check
         # fails with error:
@@ -309,7 +309,7 @@ main() {
         # make scorecard-test
 
         # uninstall_storageos
-    else
+    # else
 
         install_etcd
 
@@ -361,7 +361,7 @@ main() {
 
         # echo "**** Resource details for storageos namespace ****"
         # print_pod_details_and_logs storageos
-    fi
+    # fi
 
     echo "Done Testing!"
 }

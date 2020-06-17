@@ -37,20 +37,20 @@ install: true
 
 jobs:
   include:
-    - go: "1.14"
-      sudo: required
-      env:
-        - "TEST_CLUSTER=kind"
-        - "INSTALL_METHOD=olm"
-      name: OLM on KinD (k8s-1.17)
-      script: ./test/e2e.sh $TEST_CLUSTER $INSTALL_METHOD
-    - go: "1.14"
-      sudo: required
-      env:
-        - "TEST_CLUSTER=openshift"
-        - "INSTALL_METHOD=olm"
-      name: OLM on OpenShift (k8s-1.11)
-      script: ./test/e2e.sh $TEST_CLUSTER $INSTALL_METHOD
+    # - go: "1.14"
+    #   sudo: required
+    #   env:
+    #     - "TEST_CLUSTER=kind"
+    #     - "INSTALL_METHOD=olm"
+    #   name: OLM on KinD (k8s-1.17)
+    #   script: ./test/e2e.sh $TEST_CLUSTER $INSTALL_METHOD
+    # - go: "1.14"
+    #   sudo: required
+    #   env:
+    #     - "TEST_CLUSTER=openshift"
+    #     - "INSTALL_METHOD=olm"
+    #   name: OLM on OpenShift (k8s-1.11)
+    #   script: ./test/e2e.sh $TEST_CLUSTER $INSTALL_METHOD
     - &base-test
       go: "1.14"
       sudo: required
