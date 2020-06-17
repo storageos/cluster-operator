@@ -60,7 +60,7 @@ check_diff $targetfile $csvfile
 # Check storageoscluster CRD files.
 clusterfile=$TMP_DIR/storageoscluster.crd.yaml
 targetfiles=(
-    deploy/crds/storageos_v1_storageoscluster_crd.yaml
+    deploy/crds/storageos.com_storageosclusters_crd.yaml
     deploy/olm/storageos/storageoscluster.crd.yaml
 )
 # Generate a storageoscluster CRD file.
@@ -75,7 +75,7 @@ done
 # Check job CRD files.
 jobfile=$TMP_DIR/job.crd.yaml
 targetfiles=(
-    deploy/crds/storageos_v1_job_crd.yaml
+    deploy/crds/storageos.com_jobs_crd.yaml
     deploy/olm/storageos/storageosjob.crd.yaml
 )
 $yq r $OLM_CONFIGMAP_FILE \
@@ -88,7 +88,7 @@ done
 # Check upgrade CRD files.
 upgradefile=$TMP_DIR/storageosupgrade.crd.yaml
 targetfiles=(
-    deploy/crds/storageos_v1_storageosupgrade_crd.yaml
+    deploy/crds/storageos.com_storageosupgrades_crd.yaml
     deploy/olm/storageos/storageosupgrade.crd.yaml
 )
 $yq r $OLM_CONFIGMAP_FILE \
@@ -101,7 +101,7 @@ done
 # Check nfsserver CRD file.
 nfsfile=$TMP_DIR/nfsserver.crd.yaml
 targetfiles=(
-    deploy/crds/storageos_v1_nfsserver_crd.yaml
+    deploy/crds/storageos.com_nfsservers_crd.yaml
     deploy/olm/storageos/storageosnfsserver.crd.yaml
 )
 $yq r $OLM_CONFIGMAP_FILE \

@@ -344,7 +344,7 @@ main() {
         # NOTE: v2 deployment fails on openshift 3.11. Dataplane startup fails.
         # Need to debug more in the future.
         if [ "$1" = "kind" ]; then
-            "$OPERATOR_SDK" test local ./test/e2e --go-test-flags "-v -tags v2" --namespace storageos-operator
+            "$OPERATOR_SDK" test local ./test/e2e --go-test-flags "-v -tags v2" --operator-namespace storageos-operator
             operator-sdk-e2e-cleanup
         fi
 

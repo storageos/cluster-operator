@@ -10,10 +10,10 @@ OPERATOR_IMAGE="${1:-test}"
 
 # List of manifests files to combine to form a single operator manifest file.
 declare -a manifestfiles=(
-    "deploy/crds/storageos_v1_storageoscluster_crd.yaml"
-    "deploy/crds/storageos_v1_storageosupgrade_crd.yaml"
-    "deploy/crds/storageos_v1_job_crd.yaml"
-    "deploy/crds/storageos_v1_nfsserver_crd.yaml"
+    "deploy/crds/storageos.com_storageosclusters_crd.yaml"
+    "deploy/crds/storageos.com_storageosupgrades_crd.yaml"
+    "deploy/crds/storageos.com_jobs_crd.yaml"
+    "deploy/crds/storageos.com_nfsservers_crd.yaml"
     "deploy/namespace.yaml"
     "deploy/role.yaml"
     "deploy/service_account.yaml"

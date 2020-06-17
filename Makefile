@@ -1,9 +1,9 @@
 OPERATOR_IMAGE ?= storageos/cluster-operator:test
 GO_BUILD_CMD = go build -v
 GO_ENV = GOOS=linux CGO_ENABLED=0
-SDK_VERSION = v0.10.0
+SDK_VERSION = v0.18.1
 MACHINE = $(shell uname -m)
-BUILD_IMAGE = golang:1.13.5
+BUILD_IMAGE = golang:1.14.2
 BASE_IMAGE = storageos/base-image:0.2.1
 BUILD_DIR = "build"
 OPERATOR_SDK = $(BUILD_DIR)/operator-sdk
@@ -19,6 +19,15 @@ CACHE_DIR = $(shell pwd)/.cache
 PROJECT = github.com/storageos/cluster-operator
 GOARCH ?= amd64
 GO_VERSION = 1.14.2
+
+# Since go modules don't allow non-go files to be vendored, the code generator
+# scripts needed for updating the generated codes are downloaded in the cache
+# dir.
+K8S_CODE_GEN_DIR = k8s.io/code-generator
+CACHE_K8S_CODE_GEN_DIR = $(CACHE_DIR)/go/src/$(K8S_CODE_GEN_DIR)
+K8S_GEN_GROUPS_SCRIPT = $(K8S_CODE_GEN_DIR)/generate-groups.sh
+CACHE_K8S_GEN_GROUPS_SCRIPT = $(CACHE_DIR)/go/src/$(K8S_GEN_GROUPS_SCRIPT)
+CACHE_K8S_DIR = $(CACHE_DIR)/go/src/k8s.io
 
 # When this file name is modified, the new name must be added in .travis.yml
 # file as well for publishing the file at release.
@@ -59,11 +68,33 @@ operator: upgrader ## Build operator binaries.
 		-o $(OUTPUT_DIR)/bin/cluster-operator \
 		./cmd/manager
 
+k8s-code-gen:
+	echo "checking code-gen in cache"
+	@if [ ! -f $(CACHE_K8S_GEN_GROUPS_SCRIPT) ]; then \
+		echo "k8s code-gen generate-groups.sh not found, downloading the code-gen repo..." && \
+		rm -rf $(CACHE_K8S_CODE_GEN_DIR) && \
+		mkdir -p $(CACHE_K8S_DIR) && \
+		git clone --depth=1 https://github.com/kubernetes/code-generator $(CACHE_K8S_CODE_GEN_DIR); \
+	fi
+
 # Generate APIs, CRD specs and CRD clientset.
-go-gen:
-	$(OPERATOR_SDK) generate k8s
-	$(OPERATOR_SDK) generate openapi
-	./vendor/k8s.io/code-generator/generate-groups.sh "deepcopy,client" \
+go-gen: operator-sdk k8s-code-gen
+	# generate k8s requires GOROOT to be set.
+	GOROOT=$(GOPATH) GO111MODULE=on $(OPERATOR_SDK) generate k8s
+	GO111MODULE=on $(OPERATOR_SDK) generate crds
+	# TODO: Install kube-openapi and generate OpenAPI. Operator-sdk no
+	# longer provides subcommand to generate OpenAPI. Install
+	# k8s.io/kube-openapi
+	# Generate OpenAPI.
+	# openapi-gen --logtostderr=true \
+        #           -i ./pkg/apis/storageos/v1 \
+        #           -o "" \
+        #           -O zz_generated.openapi \
+        #           -p ./pkg/apis/storageos/v1 \
+        #           -h $(CACHE_DIR)/go/src/k8s.io/code-generator/hack/boilerplate.go.txt \
+        #           -r "-"
+	# Generate storageos operator resource client.
+	$(CACHE_K8S_GEN_GROUPS_SCRIPT) "deepcopy,client" \
 		github.com/storageos/cluster-operator/pkg/client \
 		github.com/storageos/cluster-operator/pkg/apis storageos:v1
 
@@ -98,6 +129,10 @@ metadata-bundle-lint: metadata-zip ## Generate a metadata-bundle and lint it.
 		-w /home/test/ \
 		python:3 bash -c "pip install operator-courier && unzip /metadata/$(METADATA_FILE) -d out && operator-courier --verbose verify --ui_validate_io out/"
 
+tidy: ## Prune, add and vendor go dependencies.
+	go mod tidy -v
+	go mod vendor -v
+
 clean: ## Clean all the generated artifacts.
 	rm -rf $(OUTPUT_DIR) storageos-operator.yaml
 
@@ -125,7 +160,7 @@ dev-image: operator-sdk operator-docker ## Build an image quickly for testing (f
 
 ##@ Third-party tools
 
-.PHONY: operator-sdk yq
+.PHONY: operator-sdk yq golangci-lint
 
 operator-sdk: ## Download operator-sdk.
 	# Download sdk only if it's not available.
