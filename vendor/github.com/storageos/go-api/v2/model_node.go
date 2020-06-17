@@ -18,7 +18,8 @@ type Node struct {
 	Id string `json:"id,omitempty"`
 	// The hostname of the node. This value is set by the node each time it joins the StorageOS cluster. 
 	Name string `json:"name,omitempty"`
-	Health Health `json:"health,omitempty"`
+	Health NodeHealth `json:"health,omitempty"`
+	Capacity CapacityStats `json:"capacity,omitempty"`
 	// Endpoint at which we operate our dataplane's dfs service. (used for IO operations) This value is set on startup by the corresponding environment variable (IO_ADVERTISE_ADDRESS) 
 	IoEndpoint string `json:"ioEndpoint,omitempty"`
 	// Endpoint at which we operate our dataplane's supervisor service (used for sync). This value is set on startup by the corresponding environment variable (SUPERVISOR_ADVERTISE_ADDRESS) 

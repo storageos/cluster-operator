@@ -23,9 +23,8 @@ type Volume struct {
 	// A set of arbitrary key value labels to apply to the entity. 
 	Labels map[string]string `json:"labels,omitempty"`
 	FsType FsType `json:"fsType,omitempty"`
-	Inode uint32 `json:"inode,omitempty"`
-	Master DeploymentInfo `json:"master,omitempty"`
-	Replicas *[]DeploymentInfo `json:"replicas,omitempty"`
+	Master MasterDeploymentInfo `json:"master,omitempty"`
+	Replicas *[]ReplicaDeploymentInfo `json:"replicas,omitempty"`
 	// A volume's size in bytes 
 	SizeBytes uint64 `json:"sizeBytes,omitempty"`
 	// The time the entity was created. This timestamp is set by the node that created the entity, and may not be correct if the node's local clock was skewed. This value is for the user's informative purposes only, and correctness is not required. String format is RFC3339. 

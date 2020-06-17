@@ -11,8 +11,6 @@
 package api
 // UpdateClusterData struct for UpdateClusterData
 type UpdateClusterData struct {
-	// A StorageOS product licence key, used to register a cluster. The format of this type is opaque and may change. If this field is empty we assume that the called does not want to update the cluster's licence, and do not perform any operation. 
-	LicenceKey string `json:"licenceKey,omitempty"`
 	// Disables collection of telemetry data across the cluster. 
 	DisableTelemetry bool `json:"disableTelemetry,omitempty"`
 	// Disables collection of reports for any fatal crashes across the cluster. 

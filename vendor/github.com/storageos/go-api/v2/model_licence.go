@@ -20,8 +20,12 @@ type Licence struct {
 	ExpiresAt time.Time `json:"expiresAt,omitempty"`
 	// The allowed provisioning capacity in bytes This value if for the cluster, if provisioning a volume brings the cluster's total provisioned capacity above it the request will fail 
 	ClusterCapacityBytes uint64 `json:"clusterCapacityBytes,omitempty"`
+	// Sum of the size of all volumes in the cluster 
+	UsedBytes uint64 `json:"usedBytes,omitempty"`
 	// Denotes which category the licence belongs to 
 	Kind string `json:"kind,omitempty"`
 	// A user friendly reference to the customer 
 	CustomerName string `json:"customerName,omitempty"`
+	// An opaque representation of an entity version at the time it was obtained from the API. All operations that mutate the entity must include this version field in the request unchanged. The format of this type is undefined and may change but the defined properties will not change. 
+	Version string `json:"version,omitempty"`
 }

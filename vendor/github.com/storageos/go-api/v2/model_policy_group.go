@@ -20,7 +20,7 @@ type PolicyGroup struct {
 	// The list of user IDs which this policy group governs.
 	Users []PolicyGroupUsers `json:"users,omitempty"`
 	// A set of authorisation policies to apply to the policy group.
-	Specs *[]PoliciesSpecs `json:"specs,omitempty"`
+	Specs *[]PoliciesIdSpecs `json:"specs,omitempty"`
 	// The time the entity was created. This timestamp is set by the node that created the entity, and may not be correct if the node's local clock was skewed. This value is for the user's informative purposes only, and correctness is not required. String format is RFC3339. 
 	CreatedAt time.Time `json:"createdAt,omitempty"`
 	// The time the entity was last updated. This timestamp is set by the node that last updated the entity, and may not be correct if the node's local clock was skewed. This value is for the user's informative purposes only, and correctness is not required. String format is RFC3339. 
