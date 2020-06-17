@@ -3,7 +3,7 @@ sudo: required
 language: go
 
 go:
-  - "1.13.5"
+  - "1.14.2"
 
 env:
   global:
@@ -37,14 +37,14 @@ install: true
 
 jobs:
   include:
-    - go: "1.12"
+    - go: "1.14"
       sudo: required
       env:
         - "TEST_CLUSTER=kind"
         - "INSTALL_METHOD=olm"
       name: OLM on KinD (k8s-1.17)
       script: ./test/e2e.sh $TEST_CLUSTER $INSTALL_METHOD
-    - go: "1.12"
+    - go: "1.14"
       sudo: required
       env:
         - "TEST_CLUSTER=openshift"
@@ -52,7 +52,7 @@ jobs:
       name: OLM on OpenShift (k8s-1.11)
       script: ./test/e2e.sh $TEST_CLUSTER $INSTALL_METHOD
     - &base-test
-      go: "1.12"
+      go: "1.14"
       sudo: required
       env:
         - "TEST_CLUSTER=openshift"
@@ -65,7 +65,7 @@ jobs:
         - "INSTALL_METHOD=none"
       name: KinD (k8s-1.17)
     - stage: deploy
-      go: "1.12"
+      go: "1.14"
       sudo: required
       env:
         - "TEST_CLUSTER=kind"
