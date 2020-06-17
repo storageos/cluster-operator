@@ -1,6 +1,7 @@
 package k8sutil
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -89,7 +90,7 @@ func (k K8SOps) EventRecorder() record.EventRecorder {
 // GetDeploymentsUsingStorageClassProvisioner returns a DeploymentList that use a given
 // StorageClass name in the PVC.
 func (k K8SOps) GetDeploymentsUsingStorageClassProvisioner(provisionerName string) (*appsv1.DeploymentList, error) {
-	deployments, err := k.client.AppsV1().Deployments("").List(metav1.ListOptions{})
+	deployments, err := k.client.AppsV1().Deployments("").List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +102,7 @@ func (k K8SOps) GetDeploymentsUsingStorageClassProvisioner(provisionerName strin
 				continue
 			}
 
-			pvc, err := k.client.CoreV1().PersistentVolumeClaims(dep.GetNamespace()).Get(v.PersistentVolumeClaim.ClaimName, metav1.GetOptions{})
+			pvc, err := k.client.CoreV1().PersistentVolumeClaims(dep.GetNamespace()).Get(context.TODO(), v.PersistentVolumeClaim.ClaimName, metav1.GetOptions{})
 			if err != nil {
 				if errors.IsNotFound(err) {
 					continue
@@ -123,7 +124,7 @@ func (k K8SOps) GetDeploymentsUsingStorageClassProvisioner(provisionerName strin
 // GetStatefulSetsUsingStorageClassProvisioner returns StatefulSets using PVC
 // with a given provisioner.
 func (k K8SOps) GetStatefulSetsUsingStorageClassProvisioner(provisionerName string) (*appsv1.StatefulSetList, error) {
-	ss, err := k.client.AppsV1().StatefulSets("").List(metav1.ListOptions{})
+	ss, err := k.client.AppsV1().StatefulSets("").List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +162,7 @@ func (k K8SOps) GetStorageClassForPVC(pvc *corev1.PersistentVolumeClaim) (*stora
 		return nil, fmt.Errorf("PVC: %s does not have a storage class", pvc.Name)
 	}
 
-	return k.client.StorageV1().StorageClasses().Get(scName, metav1.GetOptions{})
+	return k.client.StorageV1().StorageClasses().Get(context.TODO(), scName, metav1.GetOptions{})
 }
 
 // GetStorageOSApps returns a DeploymentList and a StatefulSetList of the apps
@@ -194,7 +195,7 @@ func (k K8SOps) ScaleDownApps() error {
 		k.logger.WithValues("Namespace", d.GetNamespace(), "Name", d.GetName()).Info("scaling down deployment")
 
 		t := func() (interface{}, bool, error) {
-			dCopy, err := k.client.AppsV1().Deployments(d.GetNamespace()).Get(d.GetName(), metav1.GetOptions{})
+			dCopy, err := k.client.AppsV1().Deployments(d.GetNamespace()).Get(context.TODO(), d.GetName(), metav1.GetOptions{})
 			if err != nil {
 				if errors.IsNotFound(err) {
 					return nil, false, nil
@@ -210,7 +211,7 @@ func (k K8SOps) ScaleDownApps() error {
 
 			dCopy.Annotations[replicaKey] = fmt.Sprintf("%d", *dCopy.Spec.Replicas)
 			dCopy.Spec.Replicas = &valZero
-			_, updateErr := k.client.AppsV1().Deployments(d.GetNamespace()).Update(dCopy)
+			_, updateErr := k.client.AppsV1().Deployments(d.GetNamespace()).Update(context.TODO(), dCopy, metav1.UpdateOptions{})
 			if updateErr != nil {
 				k.logger.Error(updateErr, "failed to update Deployment", "Name", dCopy.GetName())
 				return nil, true, updateErr
@@ -229,7 +230,7 @@ func (k K8SOps) ScaleDownApps() error {
 		k.logger.WithValues("Namespace", s.GetNamespace(), "Name", s.GetName()).Info("scaling down statefulset")
 
 		t := func() (interface{}, bool, error) {
-			sCopy, err := k.client.AppsV1().StatefulSets(s.GetNamespace()).Get(s.GetName(), metav1.GetOptions{})
+			sCopy, err := k.client.AppsV1().StatefulSets(s.GetNamespace()).Get(context.TODO(), s.GetName(), metav1.GetOptions{})
 			if err != nil {
 				if errors.IsNotFound(err) {
 					return nil, false, nil
@@ -245,7 +246,7 @@ func (k K8SOps) ScaleDownApps() error {
 
 			sCopy.Annotations[replicaKey] = fmt.Sprintf("%d", *sCopy.Spec.Replicas)
 			sCopy.Spec.Replicas = &valZero
-			_, updateErr := k.client.AppsV1().StatefulSets(s.GetNamespace()).Get(s.GetName(), metav1.GetOptions{})
+			_, updateErr := k.client.AppsV1().StatefulSets(s.GetNamespace()).Get(context.TODO(), s.GetName(), metav1.GetOptions{})
 			if updateErr != nil {
 				k.logger.Error(updateErr, "failed to update StatefulSet", "Name", sCopy.GetName())
 				return nil, true, updateErr
@@ -275,7 +276,7 @@ func (k K8SOps) ScaleUpApps() error {
 		k.logger.WithValues("Namespace", d.Namespace, "Name", d.Name).Info("restoring app")
 
 		t := func() (interface{}, bool, error) {
-			dCopy, err := k.client.AppsV1().Deployments(d.GetNamespace()).Get(d.GetName(), metav1.GetOptions{})
+			dCopy, err := k.client.AppsV1().Deployments(d.GetNamespace()).Get(context.TODO(), d.GetName(), metav1.GetOptions{})
 			if err != nil {
 				if errors.IsNotFound(err) {
 					return nil, false, nil
@@ -303,7 +304,7 @@ func (k K8SOps) ScaleUpApps() error {
 
 			delete(dCopy.Annotations, replicaKey)
 			dCopy.Spec.Replicas = int32Ptr(int32(i))
-			_, updateErr := k.client.AppsV1().Deployments(dCopy.GetNamespace()).Update(dCopy)
+			_, updateErr := k.client.AppsV1().Deployments(dCopy.GetNamespace()).Update(context.TODO(), dCopy, metav1.UpdateOptions{})
 			if updateErr != nil {
 				k.logger.Error(updateErr, "failed to update DaemonSet", "Name", dCopy.GetName())
 				return nil, true, updateErr
@@ -322,7 +323,7 @@ func (k K8SOps) ScaleUpApps() error {
 		k.logger.WithValues("Namespace", s.Namespace, "Name", s.Name).Info("restoring app")
 
 		t := func() (interface{}, bool, error) {
-			sCopy, err := k.client.AppsV1().StatefulSets(s.GetNamespace()).Get(s.GetName(), metav1.GetOptions{})
+			sCopy, err := k.client.AppsV1().StatefulSets(s.GetNamespace()).Get(context.TODO(), s.GetName(), metav1.GetOptions{})
 			if err != nil {
 				if errors.IsNotFound(err) {
 					return nil, false, nil
@@ -350,7 +351,7 @@ func (k K8SOps) ScaleUpApps() error {
 
 			delete(sCopy.Annotations, replicaKey)
 			sCopy.Spec.Replicas = int32Ptr(int32(i))
-			_, updateErr := k.client.AppsV1().StatefulSets(sCopy.GetNamespace()).Update(sCopy)
+			_, updateErr := k.client.AppsV1().StatefulSets(sCopy.GetNamespace()).Update(context.TODO(), sCopy, metav1.UpdateOptions{})
 			if updateErr != nil {
 				k.logger.Error(updateErr, "failed to update StatefulSet", "Name", sCopy.GetName())
 				return nil, true, updateErr
@@ -381,7 +382,7 @@ func (k K8SOps) UpgradeDaemonSet(newImage string) error {
 	expectedGenerations := make(map[types.UID]int64)
 
 	t := func() (interface{}, bool, error) {
-		dCopy, err := k.client.AppsV1().DaemonSets(ds.GetNamespace()).Get(ds.GetName(), metav1.GetOptions{})
+		dCopy, err := k.client.AppsV1().DaemonSets(ds.GetNamespace()).Get(context.TODO(), ds.GetName(), metav1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return nil, false, nil
@@ -413,7 +414,7 @@ func (k K8SOps) UpgradeDaemonSet(newImage string) error {
 		}
 		// Set the new container image.
 		dCopy.Spec.Template.Spec.Containers[0].Image = newImage
-		_, updateErr := k.client.AppsV1().DaemonSets(dCopy.GetNamespace()).Update(dCopy)
+		_, updateErr := k.client.AppsV1().DaemonSets(dCopy.GetNamespace()).Update(context.TODO(), dCopy, metav1.UpdateOptions{})
 		if updateErr != nil {
 			k.logger.Error(updateErr, "failed to update DaemonSet", "Name", dCopy.GetName())
 			return nil, true, updateErr
@@ -432,7 +433,7 @@ func (k K8SOps) UpgradeDaemonSet(newImage string) error {
 	// Check the DaemonSet generation and block until the latest expected
 	// generation is available.
 	t = func() (interface{}, bool, error) {
-		updatedDS, err := k.client.AppsV1().DaemonSets(ds.GetNamespace()).Get(ds.GetName(), metav1.GetOptions{})
+		updatedDS, err := k.client.AppsV1().DaemonSets(ds.GetNamespace()).Get(context.TODO(), ds.GetName(), metav1.GetOptions{})
 		if err != nil {
 			return nil, true, err
 		}
@@ -461,7 +462,7 @@ func (k K8SOps) UpgradeDaemonSet(newImage string) error {
 // WaitForDaemonSetToBeReady checks a given DaemonSet to be available and ready.
 func (k K8SOps) WaitForDaemonSetToBeReady(name, namespace string) error {
 	t := func() (interface{}, bool, error) {
-		ds, err := k.client.AppsV1().DaemonSets(namespace).Get(name, metav1.GetOptions{})
+		ds, err := k.client.AppsV1().DaemonSets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 		if err != nil {
 			return nil, true, err
 		}
@@ -521,7 +522,7 @@ func (k K8SOps) GetDaemonSetsByLabel(label string) (*appsv1.DaemonSetList, error
 		LabelSelector: label,
 	}
 
-	dss, err := k.client.AppsV1().DaemonSets("").List(listOpts)
+	dss, err := k.client.AppsV1().DaemonSets("").List(context.TODO(), listOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -538,7 +539,7 @@ func (k K8SOps) GetDaemonSetPods(ds *appsv1.DaemonSet) (*corev1.PodList, error) 
 // GetPodsByOwner returns PodList of all the pods that are owned by the given
 // ownerUID in the given namespace.
 func (k K8SOps) GetPodsByOwner(ownerUID types.UID, namespace string) (*corev1.PodList, error) {
-	pods, err := k.client.CoreV1().Pods(namespace).List(metav1.ListOptions{})
+	pods, err := k.client.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

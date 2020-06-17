@@ -20,7 +20,7 @@ import (
 // admission controller mutates the scheduler name of a pod by creates a pvc
 // backed by StorageOS and a pod that uses the PVC.
 // NOTE: This test has a minimum k8s version requirement.
-func PodSchedulerAdmissionControllerTest(t *testing.T, ctx *framework.TestCtx) {
+func PodSchedulerAdmissionControllerTest(t *testing.T, ctx *framework.Context) {
 	k8sVerMajor := 1
 	k8sVerMinor := 13
 	k8sVerPatch := 0

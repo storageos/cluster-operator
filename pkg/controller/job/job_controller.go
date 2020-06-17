@@ -186,7 +186,7 @@ func checkPods(client kubernetes.Interface, cr *storageosv1.Job, recorder record
 		LabelSelector: cr.Spec.GetLabelSelector(),
 	}
 
-	pods, err := client.CoreV1().Pods(cr.GetNamespace()).List(podListOpts)
+	pods, err := client.CoreV1().Pods(cr.GetNamespace()).List(context.TODO(), podListOpts)
 	if err != nil {
 		log.Info("Failed to get pods", "error", err)
 		return false, err
@@ -228,7 +228,7 @@ func checkPods(client kubernetes.Interface, cr *storageosv1.Job, recorder record
 // getPlainLogs reads the logs from a request and returns the log text as string.
 func getPlainLogs(req *restclient.Request) (string, error) {
 	var buf bytes.Buffer
-	readCloser, err := req.Stream()
+	readCloser, err := req.Stream(context.TODO())
 	if err != nil {
 		return "", err
 	}
