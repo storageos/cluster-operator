@@ -7,23 +7,11 @@ metadata:
 data:
   customResourceDefinitions: |-
 
-    - apiVersion: apiextensions.k8s.io/v1beta1
+    - apiVersion: apiextensions.k8s.io/v1
       kind: CustomResourceDefinition
       metadata:
         name: storageosclusters.storageos.com
       spec:
-        additionalPrinterColumns:
-        - JSONPath: .status.ready
-          description: Ready status of the storageos nodes.
-          name: ready
-          type: string
-        - JSONPath: .status.phase
-          description: Status of the whole cluster.
-          name: status
-          type: string
-        - JSONPath: .metadata.creationTimestamp
-          name: age
-          type: date
         group: storageos.com
         names:
           kind: StorageOSCluster
@@ -33,292 +21,440 @@ data:
           - stos
           singular: storageoscluster
         scope: Namespaced
-        subresources:
-          status: {}
-        validation:
-          openAPIV3Schema:
-            properties:
-              apiVersion:
-                description: 'APIVersion defines the versioned schema of this representation
-                  of an object. Servers should convert recognized schemas to the latest
-                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
-                type: string
-              kind:
-                description: 'Kind is a string value representing the REST resource this
-                  object represents. Servers may infer this from the endpoint the client
-                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
-                type: string
-              metadata:
-                type: object
-              spec:
-                properties:
-                  csi:
-                    description: CSI defines the configurations for CSI.
-                    properties:
-                      deploymentStrategy:
-                        type: string
-                      deviceDir:
-                        type: string
-                      driverRegisterationMode:
-                        type: string
-                      driverRequiresAttachment:
-                        type: string
-                      enable:
-                        type: boolean
-                      enableControllerExpandCreds:
-                        type: boolean
-                      enableControllerPublishCreds:
-                        type: boolean
-                      enableNodePublishCreds:
-                        type: boolean
-                      enableProvisionCreds:
-                        type: boolean
-                      endpoint:
-                        type: string
-                      kubeletDir:
-                        type: string
-                      kubeletRegistrationPath:
-                        type: string
-                      pluginDir:
-                        type: string
-                      registrarSocketDir:
-                        type: string
-                      registrationDir:
-                        type: string
-                      version:
-                        type: string
-                    type: object
-                  debug:
-                    description: Debug is to set debug mode of the cluster.
-                    type: boolean
-                  disableFencing:
-                    description: 'Disable Pod Fencing.  With StatefulSets, Pods are only
-                      re-scheduled if the Pod has been marked as killed.  In practice this
-                      means that failover of a StatefulSet pod is a manual operation.  By
-                      enabling Pod Fencing and setting the `storageos.com/fenced=true` label
-                      on a Pod, StorageOS will enable automated Pod failover (by killing
-                      the application Pod on the failed node) if the following conditions
-                      exist:  - Pod fencing has not been explicitly disabled. - StorageOS
-                      has determined that the node the Pod is running on is   offline.  StorageOS
-                      uses Gossip and TCP checks and will retry for 30   seconds.  At this
-                      point all volumes on the failed node are marked   offline (irrespective
-                      of whether fencing is enabled) and volume   failover starts. - The
-                      Pod has the label `storageos.com/fenced=true` set. - The Pod has at
-                      least one StorageOS volume attached. - Each StorageOS volume has at
-                      least 1 healthy replica.  When Pod Fencing is disabled, StorageOS
-                      will not perform any interaction with Kubernetes when it detects that
-                      a node has gone offline. Additionally, the Kubernetes permissions
-                      required for Fencing will not be added to the StorageOS role.'
-                    type: boolean
-                  disableScheduler:
-                    description: Disable StorageOS scheduler extender.
-                    type: boolean
-                  disableTCMU:
-                    description: Disable TCMU can be set to true to disable the TCMU storage
-                      driver.  This is required when there are multiple storage systems
-                      running on the same node and you wish to avoid conflicts.  Only one
-                      TCMU-based storage system can run on a node at a time.  Disabling
-                      TCMU will degrade performance.
-                    type: boolean
-                  disableTelemetry:
-                    description: Disable Telemetry.
-                    type: boolean
-                  forceTCMU:
-                    description: Force TCMU can be set to true to ensure that TCMU is enabled
-                      or cause StorageOS to abort startup.  At startup, StorageOS will automatically
-                      fallback to non-TCMU mode if another TCMU-based storage system is
-                      running on the node.  Since non-TCMU will degrade performance, this
-                      may not always be desired.
-                    type: boolean
-                  images:
-                    description: Images defines the various container images used in the
-                      cluster.
-                    properties:
-                      csiClusterDriverRegistrarContainer:
-                        type: string
-                      csiExternalAttacherContainer:
-                        type: string
-                      csiExternalProvisionerContainer:
-                        type: string
-                      csiExternalResizerContainer:
-                        type: string
-                      csiLivenessProbeContainer:
-                        type: string
-                      csiNodeDriverRegistrarContainer:
-                        type: string
-                      hyperkubeContainer:
-                        type: string
-                      initContainer:
-                        type: string
-                      kubeSchedulerContainer:
-                        type: string
-                      nfsContainer:
-                        type: string
-                      nodeContainer:
-                        type: string
-                    type: object
-                  ingress:
-                    description: Ingress defines the ingress configurations used in the
-                      cluster.
-                    properties:
-                      annotations:
-                        additionalProperties:
-                          type: string
-                        type: object
-                      enable:
-                        type: boolean
-                      hostname:
-                        type: string
-                      tls:
-                        type: boolean
-                    type: object
-                  join:
-                    description: Join is the join token used for service discovery.
-                    type: string
-                  k8sDistro:
-                    description: 'K8sDistro is the name of the Kubernetes distribution where
-                      the operator is being deployed.  It should be in the format: `name[-1.0]`,
-                      where the version is optional and should only be appended if known.  Suitable
-                      names include: `openshift`, `rancher`, `aks`, `gke`, `eks`, or the
-                      deployment method if using upstream directly, e.g `minishift` or `kubeadm`.  Setting
-                      k8sDistro is optional, and will be used to simplify cluster configuration
-                      by setting appropriate defaults for the distribution.  The distribution
-                      information will also be included in the product telemetry (if enabled),
-                      to help focus development efforts.'
-                    type: string
-                  kvBackend:
-                    description: KVBackend defines the key-value store backend used in the
-                      cluster.
-                    properties:
-                      address:
-                        type: string
-                      backend:
-                        type: string
-                    type: object
-                  namespace:
-                    description: Namespace is the kubernetes Namespace where storageos resources
-                      are provisioned.
-                    type: string
-                  nodeSelectorTerms:
-                    description: NodeSelectorTerms is to set the placement of storageos
-                      pods using node affinity requiredDuringSchedulingIgnoredDuringExecution.
-                    items:
-                      type: object
-                    type: array
-                  pause:
-                    description: Pause is to pause the operator for the cluster.
-                    type: boolean
-                  resources:
-                    description: Resources is to set the resource requirements of the storageos
-                      containers.
-                    type: object
-                  secretRefName:
-                    description: SecretRefName is the name of the secret object that contains
-                      all the sensitive cluster configurations.
-                    type: string
-                  secretRefNamespace:
-                    description: SecretRefNamespace is the namespace of the secret reference.
-                    type: string
-                  service:
-                    description: Service is the Service configuration for the cluster nodes.
-                    properties:
-                      annotations:
-                        additionalProperties:
-                          type: string
-                        type: object
-                      externalPort:
-                        format: int64
-                        type: integer
-                      internalPort:
-                        format: int64
-                        type: integer
-                      name:
-                        type: string
-                      type:
-                        type: string
-                    required:
-                    - name
-                    - type
-                    type: object
-                  sharedDir:
-                    description: 'SharedDir is the shared directory to be used when the
-                      kubelet is running in a container. Typically: "/var/lib/kubelet/plugins/kubernetes.io~storageos".
-                      If not set, defaults will be used.'
-                    type: string
-                  storageClassName:
-                    description: StorageClassName is the name of default StorageClass created
-                      for StorageOS volumes.
-                    type: string
-                  tlsEtcdSecretRefName:
-                    description: TLSEtcdSecretRefName is the name of the secret object that
-                      contains the etcd TLS certs. This secret is shared with etcd, therefore
-                      it's not part of the main storageos secret.
-                    type: string
-                  tlsEtcdSecretRefNamespace:
-                    description: TLSEtcdSecretRefNamespace is the namespace of the etcd
-                      TLS secret object.
-                    type: string
-                  tolerations:
-                    description: Tolerations is to set the placement of storageos pods using
-                      pod toleration.
-                    items:
-                      type: object
-                    type: array
-                required:
-                - secretRefName
-                - secretRefNamespace
-                type: object
-              status:
-                properties:
-                  members:
-                    properties:
-                      ready:
-                        description: Ready are the storageos cluster members that are ready
-                          to serve requests. The member names are the same as the node IPs.
-                        items:
-                          type: string
-                        type: array
-                      unready:
-                        description: Unready are the storageos cluster nodes not ready to
-                          serve requests.
-                        items:
-                          type: string
-                        type: array
-                    type: object
-                  nodeHealthStatus:
-                    additionalProperties:
-                      properties:
-                        directfsInitiator:
-                          type: string
-                        director:
-                          type: string
-                        kv:
-                          type: string
-                        kvWrite:
-                          type: string
-                        nats:
-                          type: string
-                        presentation:
-                          type: string
-                        rdb:
-                          type: string
-                      type: object
-                    type: object
-                  nodes:
-                    items:
-                      type: string
-                    type: array
-                  phase:
-                    type: string
-                  ready:
-                    type: string
-                type: object
-        version: v1
         versions:
-        - name: v1
+        - additionalPrinterColumns:
+          - description: Ready status of the storageos nodes.
+            jsonPath: .status.ready
+            name: ready
+            type: string
+          - description: Status of the whole cluster.
+            jsonPath: .status.phase
+            name: status
+            type: string
+          - jsonPath: .metadata.creationTimestamp
+            name: age
+            type: date
+          name: v1
+          schema:
+            openAPIV3Schema:
+              description: StorageOSCluster is the Schema for the storageosclusters API
+              properties:
+                apiVersion:
+                  description: 'APIVersion defines the versioned schema of this representation
+                    of an object. Servers should convert recognized schemas to the latest
+                    internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                  type: string
+                kind:
+                  description: 'Kind is a string value representing the REST resource this
+                    object represents. Servers may infer this from the endpoint the client
+                    submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                  type: string
+                metadata:
+                  type: object
+                spec:
+                  description: StorageOSClusterSpec defines the desired state of StorageOSCluster
+                  properties:
+                    csi:
+                      description: CSI defines the configurations for CSI.
+                      properties:
+                        deploymentStrategy:
+                          type: string
+                        deviceDir:
+                          type: string
+                        driverRegisterationMode:
+                          type: string
+                        driverRequiresAttachment:
+                          type: string
+                        enable:
+                          type: boolean
+                        enableControllerExpandCreds:
+                          type: boolean
+                        enableControllerPublishCreds:
+                          type: boolean
+                        enableNodePublishCreds:
+                          type: boolean
+                        enableProvisionCreds:
+                          type: boolean
+                        endpoint:
+                          type: string
+                        kubeletDir:
+                          type: string
+                        kubeletRegistrationPath:
+                          type: string
+                        pluginDir:
+                          type: string
+                        registrarSocketDir:
+                          type: string
+                        registrationDir:
+                          type: string
+                        version:
+                          type: string
+                      type: object
+                    debug:
+                      description: Debug is to set debug mode of the cluster.
+                      type: boolean
+                    disableFencing:
+                      description: "Disable Pod Fencing.  With StatefulSets, Pods are only
+                        re-scheduled if the Pod has been marked as killed.  In practice
+                        this means that failover of a StatefulSet pod is a manual operation.
+                        \n By enabling Pod Fencing and setting the `storageos.com/fenced=true`
+                        label on a Pod, StorageOS will enable automated Pod failover (by
+                        killing the application Pod on the failed node) if the following
+                        conditions exist: \n - Pod fencing has not been explicitly disabled.
+                        - StorageOS has determined that the node the Pod is running on is
+                        \  offline.  StorageOS uses Gossip and TCP checks and will retry
+                        for 30   seconds.  At this point all volumes on the failed node
+                        are marked   offline (irrespective of whether fencing is enabled)
+                        and volume   failover starts. - The Pod has the label `storageos.com/fenced=true`
+                        set. - The Pod has at least one StorageOS volume attached. - Each
+                        StorageOS volume has at least 1 healthy replica. \n When Pod Fencing
+                        is disabled, StorageOS will not perform any interaction with Kubernetes
+                        when it detects that a node has gone offline. Additionally, the
+                        Kubernetes permissions required for Fencing will not be added to
+                        the StorageOS role."
+                      type: boolean
+                    disableScheduler:
+                      description: Disable StorageOS scheduler extender.
+                      type: boolean
+                    disableTCMU:
+                      description: "Disable TCMU can be set to true to disable the TCMU
+                        storage driver.  This is required when there are multiple storage
+                        systems running on the same node and you wish to avoid conflicts.
+                        \ Only one TCMU-based storage system can run on a node at a time.
+                        \n Disabling TCMU will degrade performance."
+                      type: boolean
+                    disableTelemetry:
+                      description: Disable Telemetry.
+                      type: boolean
+                    forceTCMU:
+                      description: "Force TCMU can be set to true to ensure that TCMU is
+                        enabled or cause StorageOS to abort startup. \n At startup, StorageOS
+                        will automatically fallback to non-TCMU mode if another TCMU-based
+                        storage system is running on the node.  Since non-TCMU will degrade
+                        performance, this may not always be desired."
+                      type: boolean
+                    images:
+                      description: Images defines the various container images used in the
+                        cluster.
+                      properties:
+                        csiClusterDriverRegistrarContainer:
+                          type: string
+                        csiExternalAttacherContainer:
+                          type: string
+                        csiExternalProvisionerContainer:
+                          type: string
+                        csiExternalResizerContainer:
+                          type: string
+                        csiLivenessProbeContainer:
+                          type: string
+                        csiNodeDriverRegistrarContainer:
+                          type: string
+                        hyperkubeContainer:
+                          type: string
+                        initContainer:
+                          type: string
+                        kubeSchedulerContainer:
+                          type: string
+                        nfsContainer:
+                          type: string
+                        nodeContainer:
+                          type: string
+                      type: object
+                    ingress:
+                      description: Ingress defines the ingress configurations used in the
+                        cluster.
+                      properties:
+                        annotations:
+                          additionalProperties:
+                            type: string
+                          type: object
+                        enable:
+                          type: boolean
+                        hostname:
+                          type: string
+                        tls:
+                          type: boolean
+                      type: object
+                    join:
+                      description: Join is the join token used for service discovery.
+                      type: string
+                    k8sDistro:
+                      description: "K8sDistro is the name of the Kubernetes distribution
+                        where the operator is being deployed.  It should be in the format:
+                        `name[-1.0]`, where the version is optional and should only be appended
+                        if known.  Suitable names include: `openshift`, `rancher`, `aks`,
+                        `gke`, `eks`, or the deployment method if using upstream directly,
+                        e.g `minishift` or `kubeadm`. \n Setting k8sDistro is optional,
+                        and will be used to simplify cluster configuration by setting appropriate
+                        defaults for the distribution.  The distribution information will
+                        also be included in the product telemetry (if enabled), to help
+                        focus development efforts."
+                      type: string
+                    kvBackend:
+                      description: KVBackend defines the key-value store backend used in
+                        the cluster.
+                      properties:
+                        address:
+                          type: string
+                        backend:
+                          type: string
+                      type: object
+                    namespace:
+                      description: Namespace is the kubernetes Namespace where storageos
+                        resources are provisioned.
+                      type: string
+                    nodeSelectorTerms:
+                      description: NodeSelectorTerms is to set the placement of storageos
+                        pods using node affinity requiredDuringSchedulingIgnoredDuringExecution.
+                      items:
+                        description: A null or empty node selector term matches no objects.
+                          The requirements of them are ANDed. The TopologySelectorTerm type
+                          implements a subset of the NodeSelectorTerm.
+                        properties:
+                          matchExpressions:
+                            description: A list of node selector requirements by node's
+                              labels.
+                            items:
+                              description: A node selector requirement is a selector that
+                                contains values, a key, and an operator that relates the
+                                key and values.
+                              properties:
+                                key:
+                                  description: The label key that the selector applies to.
+                                  type: string
+                                operator:
+                                  description: Represents a key's relationship to a set
+                                    of values. Valid operators are In, NotIn, Exists, DoesNotExist.
+                                    Gt, and Lt.
+                                  type: string
+                                values:
+                                  description: An array of string values. If the operator
+                                    is In or NotIn, the values array must be non-empty.
+                                    If the operator is Exists or DoesNotExist, the values
+                                    array must be empty. If the operator is Gt or Lt, the
+                                    values array must have a single element, which will
+                                    be interpreted as an integer. This array is replaced
+                                    during a strategic merge patch.
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                          matchFields:
+                            description: A list of node selector requirements by node's
+                              fields.
+                            items:
+                              description: A node selector requirement is a selector that
+                                contains values, a key, and an operator that relates the
+                                key and values.
+                              properties:
+                                key:
+                                  description: The label key that the selector applies to.
+                                  type: string
+                                operator:
+                                  description: Represents a key's relationship to a set
+                                    of values. Valid operators are In, NotIn, Exists, DoesNotExist.
+                                    Gt, and Lt.
+                                  type: string
+                                values:
+                                  description: An array of string values. If the operator
+                                    is In or NotIn, the values array must be non-empty.
+                                    If the operator is Exists or DoesNotExist, the values
+                                    array must be empty. If the operator is Gt or Lt, the
+                                    values array must have a single element, which will
+                                    be interpreted as an integer. This array is replaced
+                                    during a strategic merge patch.
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                        type: object
+                      type: array
+                    pause:
+                      description: Pause is to pause the operator for the cluster.
+                      type: boolean
+                    resources:
+                      description: Resources is to set the resource requirements of the
+                        storageos containers.
+                      properties:
+                        limits:
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: 'Limits describes the maximum amount of compute resources
+                            allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                          type: object
+                        requests:
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: 'Requests describes the minimum amount of compute
+                            resources required. If Requests is omitted for a container,
+                            it defaults to Limits if that is explicitly specified, otherwise
+                            to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                          type: object
+                      type: object
+                    secretRefName:
+                      description: SecretRefName is the name of the secret object that contains
+                        all the sensitive cluster configurations.
+                      type: string
+                    secretRefNamespace:
+                      description: SecretRefNamespace is the namespace of the secret reference.
+                      type: string
+                    service:
+                      description: Service is the Service configuration for the cluster
+                        nodes.
+                      properties:
+                        annotations:
+                          additionalProperties:
+                            type: string
+                          type: object
+                        externalPort:
+                          type: integer
+                        internalPort:
+                          type: integer
+                        name:
+                          type: string
+                        type:
+                          type: string
+                      required:
+                      - name
+                      - type
+                      type: object
+                    sharedDir:
+                      description: 'SharedDir is the shared directory to be used when the
+                        kubelet is running in a container. Typically: "/var/lib/kubelet/plugins/kubernetes.io~storageos".
+                        If not set, defaults will be used.'
+                      type: string
+                    storageClassName:
+                      description: StorageClassName is the name of default StorageClass
+                        created for StorageOS volumes.
+                      type: string
+                    tlsEtcdSecretRefName:
+                      description: TLSEtcdSecretRefName is the name of the secret object
+                        that contains the etcd TLS certs. This secret is shared with etcd,
+                        therefore it's not part of the main storageos secret.
+                      type: string
+                    tlsEtcdSecretRefNamespace:
+                      description: TLSEtcdSecretRefNamespace is the namespace of the etcd
+                        TLS secret object.
+                      type: string
+                    tolerations:
+                      description: Tolerations is to set the placement of storageos pods
+                        using pod toleration.
+                      items:
+                        description: The pod this Toleration is attached to tolerates any
+                          taint that matches the triple <key,value,effect> using the matching
+                          operator <operator>.
+                        properties:
+                          effect:
+                            description: Effect indicates the taint effect to match. Empty
+                              means match all taint effects. When specified, allowed values
+                              are NoSchedule, PreferNoSchedule and NoExecute.
+                            type: string
+                          key:
+                            description: Key is the taint key that the toleration applies
+                              to. Empty means match all taint keys. If the key is empty,
+                              operator must be Exists; this combination means to match all
+                              values and all keys.
+                            type: string
+                          operator:
+                            description: Operator represents a key's relationship to the
+                              value. Valid operators are Exists and Equal. Defaults to Equal.
+                              Exists is equivalent to wildcard for value, so that a pod
+                              can tolerate all taints of a particular category.
+                            type: string
+                          tolerationSeconds:
+                            description: TolerationSeconds represents the period of time
+                              the toleration (which must be of effect NoExecute, otherwise
+                              this field is ignored) tolerates the taint. By default, it
+                              is not set, which means tolerate the taint forever (do not
+                              evict). Zero and negative values will be treated as 0 (evict
+                              immediately) by the system.
+                            format: int64
+                            type: integer
+                          value:
+                            description: Value is the taint value the toleration matches
+                              to. If the operator is Exists, the value should be empty,
+                              otherwise just a regular string.
+                            type: string
+                        type: object
+                      type: array
+                  required:
+                  - secretRefName
+                  - secretRefNamespace
+                  type: object
+                status:
+                  description: StorageOSClusterStatus defines the observed state of StorageOSCluster
+                  properties:
+                    members:
+                      description: MembersStatus stores the status details of cluster member
+                        nodes.
+                      properties:
+                        ready:
+                          description: Ready are the storageos cluster members that are
+                            ready to serve requests. The member names are the same as the
+                            node IPs.
+                          items:
+                            type: string
+                          type: array
+                        unready:
+                          description: Unready are the storageos cluster nodes not ready
+                            to serve requests.
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    nodeHealthStatus:
+                      additionalProperties:
+                        description: NodeHealth contains health status of a node.
+                        properties:
+                          directfsInitiator:
+                            type: string
+                          director:
+                            type: string
+                          kv:
+                            type: string
+                          kvWrite:
+                            type: string
+                          nats:
+                            type: string
+                          presentation:
+                            type: string
+                          rdb:
+                            type: string
+                        type: object
+                      type: object
+                    nodes:
+                      items:
+                        type: string
+                      type: array
+                    phase:
+                      description: ClusterPhase is the phase of the storageos cluster at
+                        a given point in time.
+                      type: string
+                    ready:
+                      type: string
+                  type: object
+              type: object
           served: true
           storage: true
-    - apiVersion: apiextensions.k8s.io/v1beta1
+          subresources:
+            status: {}
+    - apiVersion: apiextensions.k8s.io/v1
       kind: CustomResourceDefinition
       metadata:
         name: jobs.storageos.com
@@ -330,80 +466,186 @@ data:
           plural: jobs
           singular: job
         scope: Namespaced
-        subresources:
-          status: {}
-        validation:
-          openAPIV3Schema:
-            properties:
-              apiVersion:
-                description: 'APIVersion defines the versioned schema of this representation
-                  of an object. Servers should convert recognized schemas to the latest
-                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
-                type: string
-              kind:
-                description: 'Kind is a string value representing the REST resource this
-                  object represents. Servers may infer this from the endpoint the client
-                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
-                type: string
-              metadata:
-                type: object
-              spec:
-                properties:
-                  args:
-                    description: Args is an array of strings passed as an argument to the
-                      job container.
-                    items:
-                      type: string
-                    type: array
-                  completionWord:
-                    description: CompletionWord is the word that's looked for in the pod
-                      logs to find out if a DaemonSet Pod has completed its task.
-                    type: string
-                  hostPath:
-                    description: HostPath is the path in the host that's mounted into a
-                      job container.
-                    type: string
-                  image:
-                    description: Image is the container image to run as the job.
-                    type: string
-                  labelSelector:
-                    description: LabelSelector is the label selector for the job Pods.
-                    type: string
-                  mountPath:
-                    description: MountPath is the path in the job container where a volume
-                      is mounted.
-                    type: string
-                  nodeSelectorTerms:
-                    description: NodeSelectorTerms is the set of placement of the job pods
-                      using node affinity requiredDuringSchedulingIgnoredDuringExecution.
-                    items:
-                      type: object
-                    type: array
-                  tolerations:
-                    description: Tolerations is to set the placement of storageos pods using
-                      pod toleration.
-                    items:
-                      type: object
-                    type: array
-                required:
-                - image
-                - args
-                - mountPath
-                - hostPath
-                - completionWord
-                type: object
-              status:
-                properties:
-                  completed:
-                    description: Completed indicates the complete status of job.
-                    type: boolean
-                type: object
-        version: v1
         versions:
         - name: v1
+          schema:
+            openAPIV3Schema:
+              description: Job is the Schema for the jobs API
+              properties:
+                apiVersion:
+                  description: 'APIVersion defines the versioned schema of this representation
+                    of an object. Servers should convert recognized schemas to the latest
+                    internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                  type: string
+                kind:
+                  description: 'Kind is a string value representing the REST resource this
+                    object represents. Servers may infer this from the endpoint the client
+                    submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                  type: string
+                metadata:
+                  type: object
+                spec:
+                  description: JobSpec defines the desired state of Job
+                  properties:
+                    args:
+                      description: Args is an array of strings passed as an argument to
+                        the job container.
+                      items:
+                        type: string
+                      type: array
+                    completionWord:
+                      description: CompletionWord is the word that's looked for in the pod
+                        logs to find out if a DaemonSet Pod has completed its task.
+                      type: string
+                    hostPath:
+                      description: HostPath is the path in the host that's mounted into
+                        a job container.
+                      type: string
+                    image:
+                      description: Image is the container image to run as the job.
+                      type: string
+                    labelSelector:
+                      description: LabelSelector is the label selector for the job Pods.
+                      type: string
+                    mountPath:
+                      description: MountPath is the path in the job container where a volume
+                        is mounted.
+                      type: string
+                    nodeSelectorTerms:
+                      description: NodeSelectorTerms is the set of placement of the job
+                        pods using node affinity requiredDuringSchedulingIgnoredDuringExecution.
+                      items:
+                        description: A null or empty node selector term matches no objects.
+                          The requirements of them are ANDed. The TopologySelectorTerm type
+                          implements a subset of the NodeSelectorTerm.
+                        properties:
+                          matchExpressions:
+                            description: A list of node selector requirements by node's
+                              labels.
+                            items:
+                              description: A node selector requirement is a selector that
+                                contains values, a key, and an operator that relates the
+                                key and values.
+                              properties:
+                                key:
+                                  description: The label key that the selector applies to.
+                                  type: string
+                                operator:
+                                  description: Represents a key's relationship to a set
+                                    of values. Valid operators are In, NotIn, Exists, DoesNotExist.
+                                    Gt, and Lt.
+                                  type: string
+                                values:
+                                  description: An array of string values. If the operator
+                                    is In or NotIn, the values array must be non-empty.
+                                    If the operator is Exists or DoesNotExist, the values
+                                    array must be empty. If the operator is Gt or Lt, the
+                                    values array must have a single element, which will
+                                    be interpreted as an integer. This array is replaced
+                                    during a strategic merge patch.
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                          matchFields:
+                            description: A list of node selector requirements by node's
+                              fields.
+                            items:
+                              description: A node selector requirement is a selector that
+                                contains values, a key, and an operator that relates the
+                                key and values.
+                              properties:
+                                key:
+                                  description: The label key that the selector applies to.
+                                  type: string
+                                operator:
+                                  description: Represents a key's relationship to a set
+                                    of values. Valid operators are In, NotIn, Exists, DoesNotExist.
+                                    Gt, and Lt.
+                                  type: string
+                                values:
+                                  description: An array of string values. If the operator
+                                    is In or NotIn, the values array must be non-empty.
+                                    If the operator is Exists or DoesNotExist, the values
+                                    array must be empty. If the operator is Gt or Lt, the
+                                    values array must have a single element, which will
+                                    be interpreted as an integer. This array is replaced
+                                    during a strategic merge patch.
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                        type: object
+                      type: array
+                    tolerations:
+                      description: Tolerations is to set the placement of storageos pods
+                        using pod toleration.
+                      items:
+                        description: The pod this Toleration is attached to tolerates any
+                          taint that matches the triple <key,value,effect> using the matching
+                          operator <operator>.
+                        properties:
+                          effect:
+                            description: Effect indicates the taint effect to match. Empty
+                              means match all taint effects. When specified, allowed values
+                              are NoSchedule, PreferNoSchedule and NoExecute.
+                            type: string
+                          key:
+                            description: Key is the taint key that the toleration applies
+                              to. Empty means match all taint keys. If the key is empty,
+                              operator must be Exists; this combination means to match all
+                              values and all keys.
+                            type: string
+                          operator:
+                            description: Operator represents a key's relationship to the
+                              value. Valid operators are Exists and Equal. Defaults to Equal.
+                              Exists is equivalent to wildcard for value, so that a pod
+                              can tolerate all taints of a particular category.
+                            type: string
+                          tolerationSeconds:
+                            description: TolerationSeconds represents the period of time
+                              the toleration (which must be of effect NoExecute, otherwise
+                              this field is ignored) tolerates the taint. By default, it
+                              is not set, which means tolerate the taint forever (do not
+                              evict). Zero and negative values will be treated as 0 (evict
+                              immediately) by the system.
+                            format: int64
+                            type: integer
+                          value:
+                            description: Value is the taint value the toleration matches
+                              to. If the operator is Exists, the value should be empty,
+                              otherwise just a regular string.
+                            type: string
+                        type: object
+                      type: array
+                  required:
+                  - args
+                  - completionWord
+                  - hostPath
+                  - image
+                  - mountPath
+                  type: object
+                status:
+                  description: JobStatus defines the observed state of Job
+                  properties:
+                    completed:
+                      description: Completed indicates the complete status of job.
+                      type: boolean
+                  type: object
+              type: object
           served: true
           storage: true
-    - apiVersion: apiextensions.k8s.io/v1beta1
+          subresources:
+            status: {}
+    - apiVersion: apiextensions.k8s.io/v1
       kind: CustomResourceDefinition
       metadata:
         name: storageosupgrades.storageos.com
@@ -415,71 +657,50 @@ data:
           plural: storageosupgrades
           singular: storageosupgrade
         scope: Namespaced
-        subresources:
-          status: {}
-        validation:
-          openAPIV3Schema:
-            properties:
-              apiVersion:
-                description: 'APIVersion defines the versioned schema of this representation
-                  of an object. Servers should convert recognized schemas to the latest
-                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
-                type: string
-              kind:
-                description: 'Kind is a string value representing the REST resource this
-                  object represents. Servers may infer this from the endpoint the client
-                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
-                type: string
-              metadata:
-                type: object
-              spec:
-                properties:
-                  newImage:
-                    description: NewImage is the new StorageOS node container image.
-                    type: string
-                required:
-                - newImage
-                type: object
-              status:
-                properties:
-                  completed:
-                    description: Completed is the status of upgrade process.
-                    type: boolean
-                type: object
-        version: v1
         versions:
         - name: v1
+          schema:
+            openAPIV3Schema:
+              description: StorageOSUpgrade is the Schema for the storageosupgrades API
+              properties:
+                apiVersion:
+                  description: 'APIVersion defines the versioned schema of this representation
+                    of an object. Servers should convert recognized schemas to the latest
+                    internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                  type: string
+                kind:
+                  description: 'Kind is a string value representing the REST resource this
+                    object represents. Servers may infer this from the endpoint the client
+                    submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                  type: string
+                metadata:
+                  type: object
+                spec:
+                  description: StorageOSUpgradeSpec defines the desired state of StorageOSUpgrade
+                  properties:
+                    newImage:
+                      description: NewImage is the new StorageOS node container image.
+                      type: string
+                  required:
+                  - newImage
+                  type: object
+                status:
+                  description: StorageOSUpgradeStatus defines the observed state of StorageOSUpgrade
+                  properties:
+                    completed:
+                      description: Completed is the status of upgrade process.
+                      type: boolean
+                  type: object
+              type: object
           served: true
           storage: true
-    - apiVersion: apiextensions.k8s.io/v1beta1
+          subresources:
+            status: {}
+    - apiVersion: apiextensions.k8s.io/v1
       kind: CustomResourceDefinition
       metadata:
         name: nfsservers.storageos.com
       spec:
-        additionalPrinterColumns:
-        - JSONPath: .status.phase
-          description: Status of the NFS server.
-          name: status
-          type: string
-        - JSONPath: .spec.resources.requests.storage
-          description: Capacity of the NFS server.
-          name: capacity
-          type: string
-        - JSONPath: .status.remoteTarget
-          description: Remote target address of the NFS server.
-          name: target
-          type: string
-        - JSONPath: .status.accessModes
-          description: Access modes supported by the NFS server.
-          name: access modes
-          type: string
-        - JSONPath: .spec.storageClassName
-          description: StorageClass used for creating the NFS volume.
-          name: storageclass
-          type: string
-        - JSONPath: .metadata.creationTimestamp
-          name: age
-          type: date
         group: storageos.com
         names:
           kind: NFSServer
@@ -489,121 +710,232 @@ data:
           - nfsserver
           singular: nfsserver
         scope: Namespaced
-        subresources:
-          status: {}
-        validation:
-          openAPIV3Schema:
-            properties:
-              apiVersion:
-                description: 'APIVersion defines the versioned schema of this representation
-                  of an object. Servers should convert recognized schemas to the latest
-                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
-                type: string
-              kind:
-                description: 'Kind is a string value representing the REST resource this
-                  object represents. Servers may infer this from the endpoint the client
-                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
-                type: string
-              metadata:
-                type: object
-              spec:
-                properties:
-                  annotations:
-                    additionalProperties:
-                      type: string
-                    description: The annotations-related configuration to add/set on each
-                      Pod related object.
-                    type: object
-                  export:
-                    description: The parameters to configure the NFS export
-                    properties:
-                      name:
-                        description: Name of the export
-                        type: string
-                      persistentVolumeClaim:
-                        description: PVC from which the NFS daemon gets storage for sharing
-                        type: object
-                      server:
-                        description: The NFS server configuration
-                        properties:
-                          accessMode:
-                            description: Reading and Writing permissions on the export Valid
-                              values are "ReadOnly", "ReadWrite" and "none"
-                            type: string
-                          squash:
-                            description: This prevents the root users connected remotely
-                              from having root privileges Valid values are "none", "rootid",
-                              "root", and "all"
-                            type: string
-                        type: object
-                    type: object
-                  mountOptions:
-                    description: PV mount options. Not validated - mount of the PVs will
-                      simply fail if one is invalid.
-                    items:
-                      type: string
-                    type: array
-                  nfsContainer:
-                    description: NFSContainer is the container image to use for the NFS
-                      server.
-                    type: string
-                  persistentVolumeClaim:
-                    description: PersistentVolumeClaim is the PVC source of the PVC to be
-                      used with the NFS Server. If not specified, a new PVC is provisioned
-                      and used.
-                    type: object
-                  persistentVolumeReclaimPolicy:
-                    description: Reclamation policy for the persistent volume shared to
-                      the user's pod.
-                    type: string
-                  resources:
-                    description: Resources represents the minimum resources required
-                    type: object
-                  storageClassName:
-                    description: StorageClassName is the name of the StorageClass used by
-                      the NFS volume.
-                    type: string
-                  tolerations:
-                    description: Tolerations is to set the placement of NFS server pods
-                      using pod toleration.
-                    items:
-                      type: object
-                    type: array
-                type: object
-              status:
-                properties:
-                  accessModes:
-                    description: AccessModes is the access modes supported by the NFS server.
-                    type: string
-                  phase:
-                    description: 'Phase is a simple, high-level summary of where the NFS
-                      Server is in its lifecycle. Phase will be set to Ready when the NFS
-                      Server is ready for use.  It is intended to be similar to the PodStatus
-                      Phase described at: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#podstatus-v1-core  There
-                      are five possible phase values:   - Pending: The NFS Server has been
-                      accepted by the Kubernetes system,     but one or more of the components
-                      has not been created. This includes     time before being scheduled
-                      as well as time spent downloading images     over the network, which
-                      could take a while.   - Running: The NFS Server has been bound to
-                      a node, and all of the     dependencies have been created.   - Succeeded:
-                      All NFS Server dependencies have terminated in success,     and will
-                      not be restarted.   - Failed: All NFS Server dependencies in the pod
-                      have terminated, and     at least one container has terminated in
-                      failure. The container     either exited with non-zero status or was
-                      terminated by the system.   - Unknown: For some reason the state of
-                      the NFS Server could not be     obtained, typically due to an error
-                      in communicating with the host of     the pod.'
-                    type: string
-                  remoteTarget:
-                    description: RemoteTarget is the connection string that clients can
-                      use to access the shared filesystem.
-                    type: string
-                type: object
-        version: v1
         versions:
-        - name: v1
+        - additionalPrinterColumns:
+          - description: Status of the NFS server.
+            jsonPath: .status.phase
+            name: status
+            type: string
+          - description: Capacity of the NFS server.
+            jsonPath: .spec.resources.requests.storage
+            name: capacity
+            type: string
+          - description: Remote target address of the NFS server.
+            jsonPath: .status.remoteTarget
+            name: target
+            type: string
+          - description: Access modes supported by the NFS server.
+            jsonPath: .status.accessModes
+            name: access modes
+            type: string
+          - description: StorageClass used for creating the NFS volume.
+            jsonPath: .spec.storageClassName
+            name: storageclass
+            type: string
+          - jsonPath: .metadata.creationTimestamp
+            name: age
+            type: date
+          name: v1
+          schema:
+            openAPIV3Schema:
+              description: NFSServer is the Schema for the nfsservers API
+              properties:
+                apiVersion:
+                  description: 'APIVersion defines the versioned schema of this representation
+                    of an object. Servers should convert recognized schemas to the latest
+                    internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                  type: string
+                kind:
+                  description: 'Kind is a string value representing the REST resource this
+                    object represents. Servers may infer this from the endpoint the client
+                    submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                  type: string
+                metadata:
+                  type: object
+                spec:
+                  description: NFSServerSpec defines the desired state of NFSServer
+                  properties:
+                    annotations:
+                      additionalProperties:
+                        type: string
+                      description: The annotations-related configuration to add/set on each
+                        Pod related object.
+                      type: object
+                    export:
+                      description: The parameters to configure the NFS export
+                      properties:
+                        name:
+                          description: Name of the export
+                          type: string
+                        persistentVolumeClaim:
+                          description: PVC from which the NFS daemon gets storage for sharing
+                          properties:
+                            claimName:
+                              description: 'ClaimName is the name of a PersistentVolumeClaim
+                                in the same namespace as the pod using this volume. More
+                                info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims'
+                              type: string
+                            readOnly:
+                              description: Will force the ReadOnly setting in VolumeMounts.
+                                Default false.
+                              type: boolean
+                          required:
+                          - claimName
+                          type: object
+                        server:
+                          description: The NFS server configuration
+                          properties:
+                            accessMode:
+                              description: Reading and Writing permissions on the export
+                                Valid values are "ReadOnly", "ReadWrite" and "none"
+                              type: string
+                            squash:
+                              description: This prevents the root users connected remotely
+                                from having root privileges Valid values are "none", "rootid",
+                                "root", and "all"
+                              type: string
+                          type: object
+                      type: object
+                    mountOptions:
+                      description: PV mount options. Not validated - mount of the PVs will
+                        simply fail if one is invalid.
+                      items:
+                        type: string
+                      type: array
+                    nfsContainer:
+                      description: NFSContainer is the container image to use for the NFS
+                        server.
+                      type: string
+                    persistentVolumeClaim:
+                      description: PersistentVolumeClaim is the PVC source of the PVC to
+                        be used with the NFS Server. If not specified, a new PVC is provisioned
+                        and used.
+                      properties:
+                        claimName:
+                          description: 'ClaimName is the name of a PersistentVolumeClaim
+                            in the same namespace as the pod using this volume. More info:
+                            https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims'
+                          type: string
+                        readOnly:
+                          description: Will force the ReadOnly setting in VolumeMounts.
+                            Default false.
+                          type: boolean
+                      required:
+                      - claimName
+                      type: object
+                    persistentVolumeReclaimPolicy:
+                      description: Reclamation policy for the persistent volume shared to
+                        the user's pod.
+                      type: string
+                    resources:
+                      description: Resources represents the minimum resources required
+                      properties:
+                        limits:
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: 'Limits describes the maximum amount of compute resources
+                            allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                          type: object
+                        requests:
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: 'Requests describes the minimum amount of compute
+                            resources required. If Requests is omitted for a container,
+                            it defaults to Limits if that is explicitly specified, otherwise
+                            to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                          type: object
+                      type: object
+                    storageClassName:
+                      description: StorageClassName is the name of the StorageClass used
+                        by the NFS volume.
+                      type: string
+                    tolerations:
+                      description: Tolerations is to set the placement of NFS server pods
+                        using pod toleration.
+                      items:
+                        description: The pod this Toleration is attached to tolerates any
+                          taint that matches the triple <key,value,effect> using the matching
+                          operator <operator>.
+                        properties:
+                          effect:
+                            description: Effect indicates the taint effect to match. Empty
+                              means match all taint effects. When specified, allowed values
+                              are NoSchedule, PreferNoSchedule and NoExecute.
+                            type: string
+                          key:
+                            description: Key is the taint key that the toleration applies
+                              to. Empty means match all taint keys. If the key is empty,
+                              operator must be Exists; this combination means to match all
+                              values and all keys.
+                            type: string
+                          operator:
+                            description: Operator represents a key's relationship to the
+                              value. Valid operators are Exists and Equal. Defaults to Equal.
+                              Exists is equivalent to wildcard for value, so that a pod
+                              can tolerate all taints of a particular category.
+                            type: string
+                          tolerationSeconds:
+                            description: TolerationSeconds represents the period of time
+                              the toleration (which must be of effect NoExecute, otherwise
+                              this field is ignored) tolerates the taint. By default, it
+                              is not set, which means tolerate the taint forever (do not
+                              evict). Zero and negative values will be treated as 0 (evict
+                              immediately) by the system.
+                            format: int64
+                            type: integer
+                          value:
+                            description: Value is the taint value the toleration matches
+                              to. If the operator is Exists, the value should be empty,
+                              otherwise just a regular string.
+                            type: string
+                        type: object
+                      type: array
+                  type: object
+                status:
+                  description: NFSServerStatus defines the observed state of NFSServer
+                  properties:
+                    accessModes:
+                      description: AccessModes is the access modes supported by the NFS
+                        server.
+                      type: string
+                    phase:
+                      description: "Phase is a simple, high-level summary of where the NFS
+                        Server is in its lifecycle. Phase will be set to Ready when the
+                        NFS Server is ready for use.  It is intended to be similar to the
+                        PodStatus Phase described at: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#podstatus-v1-core
+                        \n There are five possible phase values:   - Pending: The NFS Server
+                        has been accepted by the Kubernetes system,     but one or more
+                        of the components has not been created. This includes     time before
+                        being scheduled as well as time spent downloading images     over
+                        the network, which could take a while.   - Running: The NFS Server
+                        has been bound to a node, and all of the     dependencies have been
+                        created.   - Succeeded: All NFS Server dependencies have terminated
+                        in success,     and will not be restarted.   - Failed: All NFS Server
+                        dependencies in the pod have terminated, and     at least one container
+                        has terminated in failure. The container     either exited with
+                        non-zero status or was terminated by the system.   - Unknown: For
+                        some reason the state of the NFS Server could not be     obtained,
+                        typically due to an error in communicating with the host of     the
+                        pod."
+                      type: string
+                    remoteTarget:
+                      description: RemoteTarget is the connection string that clients can
+                        use to access the shared filesystem.
+                      type: string
+                  type: object
+              type: object
           served: true
           storage: true
+          subresources:
+            status: {}
 
 
   clusterServiceVersions: |-
