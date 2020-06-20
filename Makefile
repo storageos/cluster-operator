@@ -154,7 +154,7 @@ golangci-lint: ## Install golangci-lint
 .PHONY: unittest scorecard-test
 
 unittest: ## Run all the unit tests.
-	go test -v -race `go list -v ./... | grep -v test/e2e | grep -v olm`
+	go test -v -race `go list -v ./... | grep -v test/e2e | grep -v olm` -count=1
 
 # Runs the operator-sdk scorecard tests. Expects the operator to be installed
 # using OLM first.

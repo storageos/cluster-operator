@@ -280,7 +280,7 @@ func (s *Deployment) addNodeAffinity(podSpec *corev1.PodSpec) {
 // addTolerations adds tolerations to the given pod spec from cluster
 // spec Tolerations.
 func (s *Deployment) addTolerations(podSpec *corev1.PodSpec) error {
-	return util.AddTolerations(podSpec, s.stos.Spec.Tolerations)
+	return util.AddTolerations(podSpec, s.stos.Spec.GetTolerations())
 }
 
 // addTLSEtcdCerts adds the etcd TLS secret as a secret mount in the given

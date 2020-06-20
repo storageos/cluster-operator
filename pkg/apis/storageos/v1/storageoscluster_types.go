@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/storageos/cluster-operator/internal/pkg/image"
+	"github.com/storageos/cluster-operator/internal/pkg/toleration"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -542,6 +543,19 @@ func (s StorageOSClusterSpec) GetCSIDeploymentStrategy() string {
 		return s.CSI.DeploymentStrategy
 	}
 	return DefaultCSIDeploymentStrategy
+}
+
+// GetTolerations returns the tolerations applied to all the StorageOS related
+// pods.
+func (s StorageOSClusterSpec) GetTolerations() []corev1.Toleration {
+	tolerations := toleration.GetDefaultTolerations()
+
+	// Append the tolerations specified in the spec.
+	if len(s.Tolerations) > 0 {
+		tolerations = append(tolerations, s.Tolerations...)
+	}
+
+	return tolerations
 }
 
 // ContainerImages contains image names of all the containers used by the operator.
