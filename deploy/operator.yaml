@@ -82,6 +82,22 @@ spec:
             - name: JAEGER_SERVICE_NAME
               value: ""
       tolerations:
+      - key: node.kubernetes.io/disk-pressure
+        operator: Exists
+      - key: node.kubernetes.io/memory-pressure
+        operator: Exists
+      - key: node.kubernetes.io/network-unavailable
+        operator: Exists
+      - key: node.kubernetes.io/not-ready
+        operator: Exists
+      - key: node.kubernetes.io/out-of-disk
+        operator: Exists
+      - key: node.kubernetes.io/pid-pressure
+        operator: Exists
+      - key: node.kubernetes.io/unreachable
+        operator: Exists
+      - key: node.kubernetes.io/unschedulable
+        operator: Exists
       - key: "key"
         operator: "Equal"
         value: "value"
