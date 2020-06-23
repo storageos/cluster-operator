@@ -1065,6 +1065,23 @@ data:
                         valueFrom:
                           fieldRef:
                             fieldPath: metadata.namespace
+                    tolerations:
+                    - key: node.kubernetes.io/disk-pressure
+                      operator: Exists
+                    - key: node.kubernetes.io/memory-pressure
+                      operator: Exists
+                    - key: node.kubernetes.io/network-unavailable
+                      operator: Exists
+                    - key: node.kubernetes.io/not-ready
+                      operator: Exists
+                    - key: node.kubernetes.io/out-of-disk
+                      operator: Exists
+                    - key: node.kubernetes.io/pid-pressure
+                      operator: Exists
+                    - key: node.kubernetes.io/unreachable
+                      operator: Exists
+                    - key: node.kubernetes.io/unschedulable
+                      operator: Exists
         customresourcedefinitions:
           owned:
           - name: storageosclusters.storageos.com

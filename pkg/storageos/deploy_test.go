@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/storageos/cluster-operator/internal/pkg/image"
+	"github.com/storageos/cluster-operator/internal/pkg/toleration"
 	storageosapis "github.com/storageos/cluster-operator/pkg/apis"
 	api "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 )
@@ -958,11 +959,16 @@ func TestDeployNodeAffinity(t *testing.T) {
 }
 
 func TestDeployTolerations(t *testing.T) {
+	defaultTolerations := toleration.GetDefaultTolerations()
+
 	testCases := []struct {
 		name        string
 		tolerations []corev1.Toleration
 		wantError   bool
 	}{
+		{
+			name: "No tolerations, default",
+		},
 		{
 			name: "TolerationOpExists without value",
 			tolerations: []corev1.Toleration{
@@ -1061,8 +1067,10 @@ func TestDeployTolerations(t *testing.T) {
 
 			podSpec := createdDaemonset.Spec.Template.Spec
 
-			if !reflect.DeepEqual(podSpec.Tolerations, stosCluster.Spec.Tolerations) {
-				t.Errorf("unexpected Tolerations value:\n\t(GOT) %v\n\t(WNT) %v", podSpec.Tolerations, stosCluster.Spec.Tolerations)
+			wantTolerations := append(defaultTolerations, tc.tolerations...)
+
+			if !reflect.DeepEqual(podSpec.Tolerations, wantTolerations) {
+				t.Errorf("unexpected Tolerations value:\n\t(GOT) %v\n\t(WNT) %v", podSpec.Tolerations, wantTolerations)
 			}
 		})
 	}
