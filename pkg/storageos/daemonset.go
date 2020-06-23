@@ -298,7 +298,7 @@ func (s *Deployment) createDaemonSet() error {
 		s.addNodeContainerProbes(nodeContainer)
 	}
 
-	if err := s.addTolerations(podSpec); err != nil {
+	if err := s.addTolerationsWithDefaults(podSpec); err != nil {
 		return err
 	}
 

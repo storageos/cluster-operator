@@ -280,6 +280,13 @@ func (s *Deployment) addNodeAffinity(podSpec *corev1.PodSpec) {
 // addTolerations adds tolerations to the given pod spec from cluster
 // spec Tolerations.
 func (s *Deployment) addTolerations(podSpec *corev1.PodSpec) error {
+	return util.AddTolerations(podSpec, s.stos.Spec.Tolerations)
+}
+
+// addTolerationsWithDefaults adds the default tolerations along with the
+// tolerations in the cluster configuration to a given pod spec. The default
+// tolerations prevent pod eviction under various conditions.
+func (s *Deployment) addTolerationsWithDefaults(podSpec *corev1.PodSpec) error {
 	return util.AddTolerations(podSpec, s.stos.Spec.GetTolerations())
 }
 
