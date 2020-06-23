@@ -1018,7 +1018,8 @@ func TestDeployTolerations(t *testing.T) {
 				},
 				Spec: api.StorageOSClusterSpec{
 					CSI: api.StorageOSClusterCSI{
-						Enable: false,
+						Enable:             true,
+						DeploymentStrategy: "deployment",
 					},
 					Tolerations: tc.tolerations,
 				},
@@ -1045,6 +1046,7 @@ func TestDeployTolerations(t *testing.T) {
 				return
 			}
 
+			// Check daemonset tolerations.
 			createdDaemonset := &appsv1.DaemonSet{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "apps/v1",
@@ -1055,22 +1057,83 @@ func TestDeployTolerations(t *testing.T) {
 					Namespace: stosCluster.Spec.GetResourceNS(),
 				},
 			}
-
 			nsName := types.NamespacedName{
 				Name:      daemonsetName,
 				Namespace: defaultNS,
 			}
-
 			if err := c.Get(context.Background(), nsName, createdDaemonset); err != nil {
 				t.Fatal("failed to get the created daemonset", err)
 			}
-
 			podSpec := createdDaemonset.Spec.Template.Spec
-
 			wantTolerations := append(defaultTolerations, tc.tolerations...)
-
 			if !reflect.DeepEqual(podSpec.Tolerations, wantTolerations) {
 				t.Errorf("unexpected Tolerations value:\n\t(GOT) %v\n\t(WNT) %v", podSpec.Tolerations, wantTolerations)
+			}
+
+			// Check csi-helpers tolerations.
+			createdCSIHelperDeployment := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      csiHelperName,
+					Namespace: stosCluster.Spec.GetResourceNS(),
+				},
+			}
+			nsName = types.NamespacedName{
+				Name:      createdCSIHelperDeployment.Name,
+				Namespace: createdCSIHelperDeployment.Namespace,
+			}
+			if err := c.Get(context.Background(), nsName, createdCSIHelperDeployment); err != nil {
+				t.Fatal("failed to get the created csi helpers deployment", err)
+			}
+			// Remove extra tolerations (unreachable and not-ready) that are
+			// added by k8s by default before comparison. These tolerations
+			// have non-nil toleration seconds attribute.
+			removeExtraTolerations := func(allTolerations []corev1.Toleration) []corev1.Toleration {
+				result := []corev1.Toleration{}
+				for _, tol := range allTolerations {
+					switch tol.Key {
+					case toleration.TaintNodeUnreachable, toleration.TaintNodeNotReady:
+						if tol.TolerationSeconds == nil {
+							result = append(result, tol)
+						}
+						continue
+					default:
+						result = append(result, tol)
+					}
+				}
+				return result
+			}
+			gotTolerations := removeExtraTolerations(createdCSIHelperDeployment.Spec.Template.Spec.Tolerations)
+
+			if !reflect.DeepEqual(gotTolerations, tc.tolerations) {
+				// Deepequal fails for empty maps. If the maps are empty, don't
+				// fail.
+				if len(gotTolerations) != 0 || len(tc.tolerations) != 0 {
+					t.Errorf("unexpected Tolerations value:\n\t(GOT) %v\n\t(WNT) %v", gotTolerations, tc.tolerations)
+				}
+			}
+
+			// Check scheduler tolerations.
+			createdSchedulerDeployment := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      SchedulerExtenderName,
+					Namespace: stosCluster.Spec.GetResourceNS(),
+				},
+			}
+			nsName = types.NamespacedName{
+				Name:      createdSchedulerDeployment.Name,
+				Namespace: createdSchedulerDeployment.Namespace,
+			}
+			if err := c.Get(context.Background(), nsName, createdSchedulerDeployment); err != nil {
+				t.Fatal("failed to get the created scheduler deployment", err)
+			}
+			gotTolerations = removeExtraTolerations(createdSchedulerDeployment.Spec.Template.Spec.Tolerations)
+
+			if !reflect.DeepEqual(gotTolerations, tc.tolerations) {
+				// Deepequal fails for empty maps. If the maps are empty, don't
+				// fail.
+				if len(gotTolerations) != 0 || len(tc.tolerations) != 0 {
+					t.Errorf("unexpected Tolerations value:\n\t(GOT) %v\n\t(WNT) %v", gotTolerations, tc.tolerations)
+				}
 			}
 		})
 	}
