@@ -1,0 +1,2670 @@
+openapi: "3.0.2"
+info:
+    title: "StorageOS API"
+    version: "2.0.0"
+    contact:
+        name: StorageOS
+        url: https://storageos.com
+        email: info@storageos.com
+
+externalDocs:
+    url: https://docs.storageos.com/
+    description: "The latest StorageOS user documentation"
+
+servers:
+    - url: /v2
+
+components:
+    securitySchemes:
+        # The StorageOS API uses JWT (JSON web token) based authentication.
+        jwt:
+            type: http
+            scheme: bearer
+            bearerFormat: "JWT"
+            description: StorageOS uses JSON web tokens for authentication.
+
+    schemas:
+        OpenAPISpec:
+            type: string
+            readOnly: true
+            description: >
+                Serves this openapi specification file.
+
+        # This is the standard HTTP error format used for all API errors.
+
+        Error:
+            type: object
+            required:
+                - error
+            properties:
+                error:
+                    type: string
+            example:
+                error: A short description of the error
+
+        # ------------------------------------------------------------------------------
+        # generic types used across multiple endpoints
+        # ------------------------------------------------------------------------------
+
+        Version:
+            type: string
+            maxLength: 30
+            description: >
+                An opaque representation of an entity version at the time it was
+                obtained from the API.
+
+                All operations that mutate the entity must include this version
+                field in the request unchanged.
+
+                The format of this type is undefined and may change but the
+                defined properties will not change.
+            example: NDI0MjQyNDI0MjQyNDI0MjQy
+
+        IgnoreVersion:
+            type: boolean
+            default: false
+            description: >
+                Ignoring the entity version constraints.
+
+                If set to true this value indicates that the user wants to
+                ignore entity version constraints, thereby "forcing" the
+                operation.
+            example: true
+
+        ExpiresAt:
+            type: string
+            format: date-time
+            readOnly: true
+            description: >
+                The time after which a licence will no longer be valid
+
+                This timestamp is set when the licence is created.
+
+                String format is RFC3339.
+            example: "2019-03-10T13:42:42Z"
+
+        CreatedAt:
+            type: string
+            format: date-time
+            readOnly: true
+            description: >
+                The time the entity was created.
+
+                This timestamp is set by the node that created the entity, and
+                may not be correct if the node's local clock was skewed.
+
+                This value is for the user's informative purposes only, and
+                correctness is not required.
+
+                String format is RFC3339.
+            example: "2019-03-10T13:42:42Z"
+
+        UpdatedAt:
+            type: string
+            format: date-time
+            readOnly: true
+            description: >
+                The time the entity was last updated.
+
+                This timestamp is set by the node that last updated the entity,
+                and may not be correct if the node's local clock was skewed.
+
+                This value is for the user's informative purposes only, and
+                correctness is not required.
+
+                String format is RFC3339.
+            example: "2019-03-29T23:13:13Z"
+
+        FsType:
+            type: string
+            enum:
+                - "ext2"
+                - "ext3"
+                - "ext4"
+                - "xfs"
+                - "btrfs"
+                - "block"
+            description: >
+                The file system type of a volume. "block" is a raw block device (no filesystem).
+            example: "ext4"
+
+        NodeHealth:
+            type: string
+            readOnly: true
+            enum:
+                - "online"
+                - "offline"
+                - "unknown"
+            description: >
+                The operational health of a node entity
+            example: "online"
+
+        MasterHealth:
+            type: string
+            readOnly: true
+            enum:
+                - "online"
+                - "offline"
+                - "unknown"
+            description: >
+                The operational health of a volume master deployment
+            example:
+                "online"
+
+        ReplicaHealth:
+            type: string
+            readOnly: true
+            enum:
+                - "recovering"
+                - "provisioning"
+                - "provisioned"
+                - "syncing"
+                - "ready"
+                - "deleted"
+                - "failed"
+                - "unknown"
+            description: >
+                The operational health of a volume replica deployment
+            example: "ready"
+
+        SyncProgress:
+            type: object
+            readOnly: true
+            properties:
+                bytesRemaining:
+                    type: uint64
+                    description: >
+                        Number of bytes left remaining to complete the sync.
+                    example: 500000
+                throughputBytes:
+                    type: uint64
+                    description: >
+                        The average throughput of the sync given as bytes per 
+                        second.
+                    example: 100000
+                estimatedSecondsRemaining:
+                    type: uint64
+                    description: >
+                        The estimated time left for the sync to complete, given
+                        in seconds. When this field has a value of 0 either the 
+                        sync is complete or no duration estimate could be made.
+                        The values reported for bytesRemaining and 
+                        throughputBytes provide the client with the information
+                        needed to choose what to display.
+                    example: 5
+            description: >
+                The progress report for an ongoing sync. 
+
+        CapacityStats:
+            type: object
+            properties:
+                total:
+                    type: uint64
+                    default: 0
+                    description: >
+                        Total bytes in the filesystem
+                    example: 42
+                free:
+                    type: uint64
+                    default: 0
+                    description: >
+                        Free bytes in the filesystem available to root user
+                    example: 42
+                available:
+                    type: uint64
+                    default: 0
+                    description: >
+                       Byte value available to an unprivileged user
+                    example: 42
+
+        Labels:
+            type: object
+            description: >
+                A set of arbitrary key value labels to apply to the entity.
+            externalDocs:
+                url: https://docs.storageos.com/v2/openapi-help/labels
+            additionalProperties:
+                type: string
+            example:
+                env: prod
+                rack: db-1
+
+        LogLevel:
+            type: string
+            enum:
+                - "debug"
+                - "info"
+                - "warn"
+                - "error"
+            default: "info"
+            description: >
+                This setting determines the log level for nodes across
+                the cluster to use when recording entries in the log.
+                All entries below the specified log level are discarded,
+                where "error" is the highest log level and "debug" is
+                the lowest.
+
+                This setting is only checked by nodes on startup.
+                Changing this setting will not affect the behaviour of
+                nodes that are already operational.
+            example: "debug"
+
+        LogFormat:
+            type: string
+            enum:
+                - "default"
+                - "json"
+            default: "default"
+            description: >
+                This setting determines the format nodes in the cluster
+                will use for log entries.
+
+                This setting is only checked by nodes on startup.
+                Changing this setting will not affect the behaviour of
+                nodes that are already operational.
+            example: "json"
+
+        # ------------------------------------------------------------------------------
+        # UUIDs
+        # ------------------------------------------------------------------------------
+
+        ClusterID:
+            readOnly: true
+            type: string
+            description: >
+                A unique identifier for a cluster.
+                The format of this type is undefined and may change but the
+                defined properties will not change.
+            example: c5666b58-b805-4215-ab4a-cb094948ccc6
+
+        NodeID:
+            readOnly: true
+            type: string
+            description: >
+                A unique identifier for a node.
+                The format of this type is undefined and may change but the
+                defined properties will not change.
+            example: c5666b58-b805-4215-ab4a-cb094948ccc6
+
+        VolumeID:
+            type: string
+            description: >
+                A unique identifier for a volume.
+                The format of this type is undefined and may change but the
+                defined properties will not change.
+            example: c5666b58-b805-4215-ab4a-cb094948ccc6
+
+        DeploymentID:
+            type: string
+            description: >
+                A unique identifier for a volume deployment.
+                The format of this type is undefined and may change but the
+                defined properties will not change.
+            example: c5666b58-b805-4215-ab4a-cb094948ccc6
+
+        NamespaceID:
+            type: string
+            description: >
+                A unique identifier for a namespace.
+                The format of this type is undefined and may change but the
+                defined properties will not change..
+            example: c5666b58-b805-4215-ab4a-cb094948ccc6
+
+        UserID:
+            type: string
+            description: >
+                A unique identifier for a user.
+                The format of this type is undefined and may change but the
+                defined properties will not change..
+            example: c5666b58-b805-4215-ab4a-cb094948ccc6
+
+        PolicyGroupID:
+            type: string
+            description: >
+                A unique identifier for a policy group.
+                The format of this type is undefined and may change but the
+                defined properties will not change..
+            example: c5666b58-b805-4215-ab4a-cb094948ccc6
+
+        # ------------------------------------------------------------------------------
+        # entity objects (e.g user)
+        #
+        # Mutating an entity will have a slightly different data model and are
+        # defined inline for each endpoint.
+        # ------------------------------------------------------------------------------
+
+        Cluster:
+            type: object
+            properties:
+                id:
+                    $ref: "#/components/schemas/ClusterID"
+                disableTelemetry:
+                    type: boolean
+                    default: false
+                    description: Disables collection of telemetry data across the cluster.
+                    example: false
+                disableCrashReporting:
+                    type: boolean
+                    default: false
+                    description: >
+                        Disables collection of reports for any fatal crashes across the
+                        cluster.
+                    example: false
+                disableVersionCheck:
+                    type: boolean
+                    default: false
+                    description: >
+                        Disables the mechanism responsible for checking if there is an
+                        updated version of StorageOS available for installation.
+                    example: false
+                logLevel:
+                    $ref: "#/components/schemas/LogLevel"
+                logFormat:
+                    $ref: "#/components/schemas/LogFormat"
+                createdAt:
+                    $ref: "#/components/schemas/CreatedAt"
+                updatedAt:
+                    $ref: "#/components/schemas/UpdatedAt"
+                version:
+                    $ref: "#/components/schemas/Version"
+        User:
+            type: object
+            properties:
+                id:
+                    $ref: "#/components/schemas/UserID"
+                username:
+                    type: string
+                    example: admin
+                isAdmin:
+                    type: boolean
+                    default: false
+                    description: >
+                        If true, this user is an administrator of the cluster.
+
+                        Administrators bypass the usual authentication checks
+                        and are granted access to all resources. Some actions
+                        (such as adding a new user) can only be performed by an
+                        administrator.
+                    example: true
+                groups:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/PolicyGroupID"
+                    default: []
+                    nullable: true
+                    description: >
+                        Defines a set of policy group IDs this user is a member
+                        of.
+
+                        Policy groups can be used to logically group users and 
+                        apply authorisation policies to all members.
+                    example:
+                        - "24d5db6f-9738-4f17-a257-b9dd41a35309"
+                        - "4223b453-4d47-49d5-960f-23fc7a8153ba"
+                createdAt:
+                    $ref: "#/components/schemas/CreatedAt"
+                updatedAt:
+                    $ref: "#/components/schemas/UpdatedAt"
+                version:
+                    $ref: "#/components/schemas/Version"
+        
+        UserSession:
+            allOf:
+                - $ref: "#/components/schemas/User"
+                - type: object
+                  properties:
+                      session:
+                          type: object
+                          properties:
+                              expiresInSeconds:
+                                  type: uint64
+                                  description: >
+                                      The maximum duration which the auth session 
+                                      will remain valid for in seconds.
+                                  minimum: 0
+                                  example: 60
+                              token:
+                                  type: string
+                                  description: >
+                                      The JWT token for the auth session.
+
+        Volume:
+            type: object
+            properties:
+                id:
+                    $ref: "#/components/schemas/VolumeID"
+                name:
+                    type: string
+                    example: "app-data"
+                description:
+                    type: string
+                    example: "This volume contains the data for my app"
+                attachedOn:
+                    readOnly: true
+                    allOf:
+                        - $ref: "#/components/schemas/NodeID"
+                namespaceID:
+                    readOnly: true
+                    allOf:
+                        - $ref: "#/components/schemas/NamespaceID"
+                labels:
+                    $ref: "#/components/schemas/Labels"
+                fsType:
+                    $ref: "#/components/schemas/FsType"
+                master:
+                    readOnly: true
+                    allOf:
+                        - $ref: "#/components/schemas/MasterDeploymentInfo"
+                replicas:
+                    type: array
+                    nullable: true
+                    readOnly: true
+                    default: []
+                    items:
+                        $ref: "#/components/schemas/ReplicaDeploymentInfo"
+                sizeBytes:
+                    type: uint64
+                    description: >
+                        A volume's size in bytes
+                    minimum: 0
+                    example: 5000
+                createdAt:
+                    $ref: "#/components/schemas/CreatedAt"
+                updatedAt:
+                    $ref: "#/components/schemas/UpdatedAt"
+                version:
+                    $ref: "#/components/schemas/Version"
+
+        DeploymentInfo:
+            type: object
+            properties:
+                id:
+                    $ref: "#/components/schemas/DeploymentID"
+                nodeID:
+                    $ref: "#/components/schemas/NodeID"
+                promotable:
+                    type: boolean
+                    description: >
+                        Indicates if the volume deployment is eligible for promotion
+
+        MasterDeploymentInfo:
+            allOf:
+                - $ref: '#/components/schemas/DeploymentInfo'
+                - type: object
+                  properties:
+                      health:
+                          $ref: "#/components/schemas/MasterHealth"
+
+        ReplicaDeploymentInfo:
+            allOf:
+                - $ref: '#/components/schemas/DeploymentInfo'
+                - type: object
+                  properties:
+                      health:
+                          $ref: "#/components/schemas/ReplicaHealth"
+                      syncProgress:
+                          $ref: "#/components/schemas/SyncProgress"
+
+        Node:
+            type: object
+            properties:
+                id:
+                    $ref: "#/components/schemas/NodeID"
+                name:
+                    type: string
+                    readOnly: true
+                    description: >
+                        The hostname of the node.
+
+                        This value is set by the node each time it joins the
+                        StorageOS cluster.
+                    example: db1.lcy.storageos.network
+                health:
+                    $ref: "#/components/schemas/NodeHealth"
+                capacity:
+                    $ref: "#/components/schemas/CapacityStats"
+                ioEndpoint:
+                    type: string
+                    readOnly: true
+                    description: >
+                        Endpoint at which we operate our dataplane's dfs
+                        service. (used for IO operations)
+
+                        This value is set on startup by the corresponding
+                        environment variable (IO_ADVERTISE_ADDRESS)
+                    example:
+                        - "192.0.2.1:5703"
+                supervisorEndpoint:
+                    type: string
+                    readOnly: true
+                    description: >
+                        Endpoint at which we operate our dataplane's supervisor
+                        service (used for sync).
+
+                        This value is set on startup by the corresponding
+                        environment variable (SUPERVISOR_ADVERTISE_ADDRESS)
+                    example:
+                        - "192.0.2.1:5704"
+                gossipEndpoint:
+                    type: string
+                    readOnly: true
+                    description: >
+                        Endpoint at which we operate our health checking service.
+
+                        This value is set on startup by the corresponding
+                        environment variable (GOSSIP_ADVERTISE_ADDRESS)
+                    example:
+                        - "192.0.2.1:5711"
+                clusteringEndpoint:
+                    type: string
+                    readOnly: true
+                    description: >
+                        Endpoint at which we operate our clustering GRPC API.
+
+                        This value is set on startup by the corresponding
+                        environment variable (INTERNAL_API_ADVERTISE_ADDRESS)
+                    example:
+                        - "192.0.2.1:5710"
+                labels:
+                    $ref: "#/components/schemas/Labels"
+                createdAt:
+                    $ref: "#/components/schemas/CreatedAt"
+                updatedAt:
+                    $ref: "#/components/schemas/UpdatedAt"
+                version:
+                    $ref: "#/components/schemas/Version"
+
+        Namespace:
+            type: object
+            properties:
+                id:
+                    $ref: "#/components/schemas/NamespaceID"
+                name:
+                    type: string
+                    readOnly: true
+                    example: "dev"
+                labels:
+                    $ref: "#/components/schemas/Labels"
+                createdAt:
+                    $ref: "#/components/schemas/CreatedAt"
+                updatedAt:
+                    $ref: "#/components/schemas/UpdatedAt"
+                version:
+                    $ref: "#/components/schemas/Version"
+
+        PolicyGroup:
+            type: object
+            properties:
+                id:
+                    $ref: "#/components/schemas/PolicyGroupID"
+                name:
+                    type: string
+                    example: "dev-users"
+                users:
+                    type: array
+                    readOnly: true
+                    items:
+                        type: object
+                        properties:
+                            id:
+                                $ref: "#/components/schemas/UserID"
+                            username:
+                                type: string
+                                example: "admin"
+                    description: The list of user IDs which this policy group governs.
+                    example:
+                        - id: "82f297ae-8381-4c09-b9a1-8401c83c418d"
+                          username: "user_a"
+                        - id: "f4bb11d6-594a-4f21-9d1c-d49711a0453e"
+                          username: "user_b"
+                        - id: "30d3a4dc-971b-4f3e-9b89-5da6fea383ce"
+                          username: "user_c"
+                specs:
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                            namespaceID:
+                                $ref: "#/components/schemas/NamespaceID"
+                            resourceType:
+                                type: string
+                                enum:
+                                    - "*"
+                                    - "volume"
+                                    - "policy"
+                                description: >
+                                    The resource type this policy grants access to.
+                                example: "volume"
+                            readOnly:
+                                type: boolean
+                                default: false
+                                description: >
+                                    If true, disallows requests that attempt to mutate the
+                                    resource.
+                                example: false
+                    description: A set of authorisation policies to apply to the policy group.
+                    default: []
+                    nullable: true
+                    example:
+                        - namespaceID: "251f065a-d89b-4426-a752-5fdd144d00e8"
+                          resourceType: "*"
+                          readOnly: false
+                        - namespaceID: "5f009d1f-6618-43c2-9ae4-e699461dda8e"
+                          resourceType: "volume"
+                          readOnly: true
+                createdAt:
+                    $ref: "#/components/schemas/CreatedAt"
+                updatedAt:
+                    $ref: "#/components/schemas/UpdatedAt"
+                version:
+                    $ref: "#/components/schemas/Version"
+
+        Licence:
+            type: object
+            properties:
+                clusterID:
+                    $ref: "#/components/schemas/ClusterID"
+                expiresAt:
+                    $ref: "#/components/schemas/ExpiresAt"
+                clusterCapacityBytes:
+                    type: uint64
+                    description: >
+                        The allowed provisioning capacity in bytes
+
+                        This value if for the cluster, if provisioning a volume
+                        brings the cluster's total provisioned capacity above
+                        it the request will fail
+                    minimum: 0
+                    example: 1000000
+                usedBytes:
+                    type: uint64
+                    default: 0
+                    description: >
+                        Sum of the size of all volumes in the cluster
+                    example: 42
+                kind:
+                    type: string
+                    description: >
+                        Denotes which category the licence belongs to
+                    example: "unregistered"
+                customerName:
+                    type: string
+                    description: >
+                        A user friendly reference to the customer
+                    example: "Desmond"
+                version:
+                    $ref: "#/components/schemas/Version"
+            description: >
+                A representation of a cluster's licence properties
+
+        AcceptedMessage:
+            type: object
+            properties:
+                msg:
+                    type: string
+            example:
+                msg: "asynchronous request accepted with timeout: 10s"
+
+        UserList:
+            type: array
+            items:
+                $ref: "#/components/schemas/User"
+
+        NamespaceList:
+            type: array
+            items:
+                $ref: "#/components/schemas/Namespace"
+
+        NodeList:
+            type: array
+            items:
+                $ref: "#/components/schemas/Node"
+
+        PolicyGroupList:
+            type: array
+            items:
+                $ref: "#/components/schemas/PolicyGroup"
+
+        VolumeList:
+            type: array
+            items:
+                $ref: "#/components/schemas/Volume"
+
+    parameters:
+        ObjectVersion:
+            name: version
+            in: query
+            description: >
+                This value is used to perform a conditional delete of the
+                entity.
+
+                If the entity has been modified since the version token was
+                obtained, the request will fail with a HTTP 409 Conflict.
+            required: true
+            schema:
+                $ref: "#/components/schemas/Version"
+        IgnoreVersion:
+            name: ignore-version
+            in: query
+            description: >
+                If set to true this value indicates that the user wants to
+                ignore entity version constraints, thereby "forcing" the
+                operation.
+            required: false
+            schema:
+                $ref: "#/components/schemas/IgnoreVersion"
+        AsyncHeader:
+            name: async-max
+            in: header
+            schema:
+                type: string
+            description: >
+                Optional header which will make the api request asynchronous. The
+                operation will not be cancelled even if the client disconnect.
+
+                The value of this header defines the timeout duration for the request,
+                it must be set to a valid duration string.
+
+                A duration string is a possibly signed sequence of decimal numbers, each with
+                optional fraction and a unit suffix, such as "300ms", or "2h45m". Valid time
+                units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+
+                We reject negative or nil duration values.
+            example: async-max:20s
+        AsyncParam:
+            name: async-max
+            in: query
+            schema:
+                type: string
+            description: >
+                Optional parameter which will make the api request asynchronous. The
+                operation will not be cancelled even if the client disconnect.
+
+                The URL parameter value overrides the "async-max" header value, if any.
+
+                The value of this header defines the timeout duration for the request,
+                it must be set to a valid duration string.
+
+                A duration string is a possibly signed sequence of decimal numbers, each with
+                optional fraction and a unit suffix, such as "300ms", or "2h45m". Valid time
+                units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+
+                We reject negative or nil duration values.
+
+    responses:
+        BadRequest:
+            description: The request does not conform to the API specification.
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/Error"
+                    example:
+                        error: a short description of the validation failure
+
+        ServerError:
+            description: >
+                The request caused an internal server error and should be
+                retried.
+
+                Check the health of the node/cluster and if the error persists,
+                contact support.
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/Error"
+
+        StoreError:
+            description: >
+                The server is currently unable to handle the request due to
+                a temporary store failure.
+
+                Check the health of the node/cluster and if the error persists,
+                contact support.
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/Error"
+
+        LicenceRestricted:
+            description: >
+                The requested operation failed because your storageOS licence
+                does not allow it, either create an account for a free licence
+                or buy a professional licence.
+
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/Error"
+                    example:
+                        error: insufficient allowed capacity (bytes) (used 53687091200, allowed 53687091200, requested 5000000)
+
+        Unauthorised:
+            description: >
+                The requested endpoint requires authentication - you must log in
+                first.
+
+                If attempting to log in, your credentials were not recognised.
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/Error"
+                    example:
+                        error: authentication required
+
+        Forbidden:
+            description: >
+                The authenticated user does not have permission to perform the
+                requested action.
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/Error"
+                    example:
+                        error: unauthorised
+
+        NotFound:
+            description: >
+                A referenced resource does not exist.
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/Error"
+                    example:
+                        error: not found
+
+        InsufficientStorage:
+            description: >
+                Available storage is not enough to handle the request.
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/Error"
+                    example:
+                        error: insufficient storage capacity available
+
+        StaleWrite:
+            description: >
+                The entity to be wrote has been concurrently updated by another
+                request - the submitted entity data has been replaced.
+
+                The caller should fetch the entity again, check the actions are
+                still required and resubmit the request with the new entity
+                version field.
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/Error"
+                    example:
+                        error: attempting to write stale object
+
+        InvalidStateTransition:
+            description: >
+                An action was requested that cannot be performed on the entity
+                in it's current state.
+
+                As an example, this error might be returned when trying to
+                delete a currently mounted volume.
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/Error"
+                    example:
+                        error: invalid state for operation (currently "deleted")
+
+        AlreadyExists:
+            description: >
+                The entity to be wrote uses an identifier that already exists.
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/Error"
+                    example:
+                        error: already exists
+
+        InUse:
+            description: >
+                A referenced entity is currently in use.
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/Error"
+                    example:
+                        error: in use
+
+        Accepted:
+            description: >
+                An aynchronous request has been accepted
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/AcceptedMessage"
+
+paths:
+    /auth/login:
+        post:
+            summary: Authenticate a user
+            operationId: authenticateUser
+            description: Generate a new JWT token for a user.
+            requestBody:
+                description: The credentials to use for authentication.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            title: AuthUserData
+                            required:
+                                - username
+                                - password
+                            properties:
+                                username:
+                                    type: string
+                                password:
+                                    type: string
+                                    format: password
+                            example:
+                                username: admin
+                                password: supersecret
+            responses:
+                "200":
+                    description: Successfully authenticated the returned user.
+                    headers:
+                        Authorization:
+                            description: >
+                                The JWT token - this header should be sent to
+                                the server to perform an authenticated request.
+                            schema:
+                                type: string
+                        Authorization-Expires-Seconds:
+                            description: >
+                                A formatted string representing the number of 
+                                seconds after which the login session will 
+                                expire.
+                            schema:
+                                type: uint64
+                                example: 60
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/UserSession"
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    # The user is not recognised, or the password is incorrect
+                    $ref: "#/components/responses/Unauthorised"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+    /auth/refresh:
+        post:
+            summary: Refresh the JWT
+            operationId: refreshJwt
+            description: Obtain a fresh token with an updated expiry deadline.
+            security:
+                - jwt: []
+            responses:
+                "200":
+                    description: Refresh was successful
+                    headers:
+                        Authorization:
+                            description: The new JWT token.
+                            schema:
+                                type: string
+                        Authorization-Expires-In:
+                            description: >
+                                A formatted string representing the duration 
+                                after which the refreshed token will expire.
+                            schema:
+                                type: uint64
+                                example: 60
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/UserSession"
+                "401":
+                    # The user has been removed from the system since acquiring
+                    # the token
+                    $ref: "#/components/responses/Unauthorised"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+    /users:
+        post:
+            summary: Create a new user
+            operationId: createUser
+            description: Create a new user in the cluster - only administrators can create new users.
+            security:
+                - jwt: []
+            requestBody:
+                description: Data required to create a new user in the cluster.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            # Defined to be able to mark "username" and "password" as required
+                            type: object
+                            title: CreateUserData
+                            required:
+                                - username
+                                - password
+                            properties:
+                                username:
+                                    type: string
+                                    example: admin
+                                password:
+                                    type: string
+                                    format: password
+                                    description: If not present, the existing password is not changed
+                                    default: unchanged
+                                    writeOnly: true
+                                    example: turtlesaregreat
+                                isAdmin:
+                                    type: boolean
+                                    default: false
+                                    description: >
+                                        If true, this user is an administrator of the cluster.
+
+                                        Administrators bypass the usual authentication checks
+                                        and are granted access to all resources. Some actions
+                                        (such as adding a new user) can only be performed by an
+                                        administrator.
+                                    example: true
+                                groups:
+                                    type: array
+                                    items:
+                                        $ref: "#/components/schemas/PolicyGroupID"
+                                    default: []
+                                    nullable: true
+                                    description: >
+                                        Defines a set of policy group IDs this
+                                        user is a member of.
+
+                                        Policy groups can be used to logically
+                                        group users and apply authorisation 
+                                        policies to all members.
+                                    example:
+                                        - "24d5db6f-9738-4f17-a257-b9dd41a35309"
+                                        - "4223b453-4d47-49d5-960f-23fc7a8153ba"
+            responses:
+                "201":
+                    description: The account was successfully created
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/User"
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "409":
+                    $ref: "#/components/responses/AlreadyExists"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+        get:
+            summary: Fetch the list of users
+            operationId: listUsers
+            description: Fetch the list of users of the cluster.
+            security:
+                - jwt: []
+            responses:
+                "200":
+                    description: A list of cluster users.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/UserList"
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+    /users/{id}:
+        parameters:
+            - name: id
+              in: path
+              description: ID of a user
+              required: true
+              schema:
+                  $ref: "#/components/schemas/UserID"
+
+        get:
+            summary: Fetch a user
+            operationId: getUser
+            description: Fetch the user identified by id.
+            security:
+                - jwt: []
+            responses:
+                "200":
+                    description: The user information.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/User"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+        put:
+            summary: Update a user
+            operationId: updateUser
+            description: >
+                Update the user identified by id.
+
+                This request will not succeed if the target account is the
+                currently authenticated account. Use the separate users/self
+                endpoint for this purpose.
+            security:
+                - jwt: []
+            requestBody:
+                description: The new User data to store.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            title: UpdateUserData
+                            properties:
+                                password:
+                                    type: string
+                                    format: password
+                                    description: If not present, the existing password is not changed
+                                    default: unchanged
+                                    writeOnly: true
+                                    example: turtlesaregreat
+                                isAdmin:
+                                    type: boolean
+                                    default: false
+                                    description: >
+                                        If true, this user is an administrator of the cluster.
+
+                                        Administrators bypass the usual authentication checks
+                                        and are granted access to all resources. Some actions
+                                        (such as adding a new user) can only be performed by an
+                                        administrator.
+                                    example: true
+                                groups:
+                                    type: array
+                                    items:
+                                        $ref: "#/components/schemas/PolicyGroupID"
+                                    default: []
+                                    nullable: true
+                                    description: >
+                                        Defines a set of policy group IDs this
+                                        user is a member of.
+
+                                        Policy groups can be used to logically
+                                        group users and apply authorisation 
+                                        policies to all members.
+                                    example:
+                                        - "24d5db6f-9738-4f17-a257-b9dd41a35309"
+                                        - "4223b453-4d47-49d5-960f-23fc7a8153ba"
+                                version:
+                                    $ref: "#/components/schemas/Version"
+            responses:
+                "200":
+                    description: The account was successfully updated
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/User"
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "412":
+                    $ref: "#/components/responses/StaleWrite"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+        delete:
+            summary: Delete a user
+            operationId: deleteUser
+            description: >
+                Remove the user identified by id.
+
+                This request will not succeed if the target account is the
+                currently authenticated account. Use the separate users/self
+                endpoint for this purpose.
+            security:
+                - jwt: []
+            parameters:
+                - $ref: "#/components/parameters/ObjectVersion"
+                - $ref: "#/components/parameters/IgnoreVersion"
+
+            responses:
+                "200":
+                    description: The user was successfully deleted.
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "412":
+                    $ref: "#/components/responses/StaleWrite"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+    /users/{id}/sessions:
+        parameters:
+            - name: id
+              in: path
+              description: ID of a user
+              required: true
+              schema:
+                  $ref: "#/components/schemas/UserID"
+
+        delete:
+            summary: Invalidate login sessions
+            operationId: deleteSessions
+            description: >
+                Invalidates active JWTs on a per-user basis, specified
+                by id.
+
+                This request will not succeed if the target account is the
+                currently authenticated account. Use the separate users/self
+                endpoint for this purpose.
+            security:
+                - jwt: []
+            responses:
+                "200":
+                    description: The users current session was successfully invalidated.
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "412":
+                    $ref: "#/components/responses/StaleWrite"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+    /users/self:
+        get:
+            summary: Get the currently authenticated user's information
+            operationId: getAuthenticatedUser
+            description: Fetch authenticated user's information.
+            security:
+                - jwt: []
+            responses:
+                "200":
+                    description: The authenticated user's information.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/User"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+        put:
+            summary: Update the authenticated user's information
+            operationId: updateAuthenticatedUser
+            description: Update the authenticated user.
+            security:
+                - jwt: []
+            requestBody:
+                description: The new authenticated user's data.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            title: UpdateAuthenticatedUserData
+                            properties:
+                                password:
+                                    type: string
+                                    format: password
+                                    description: If not present, the existing password is not changed
+                                    default: unchanged
+                                    writeOnly: true
+                                    example: turtlesaregreat
+                                version:
+                                    $ref: "#/components/schemas/Version"
+            responses:
+                "200":
+                    description: The account was successfully updated
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/User"
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "412":
+                    $ref: "#/components/responses/StaleWrite"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+        delete:
+            summary: Delete the authenticated user
+            operationId: deleteAuthenticatedUser
+            description: Remove the authenticated user from the cluster.
+            security:
+                - jwt: []
+            parameters:
+                - $ref: "#/components/parameters/ObjectVersion"
+                - $ref: "#/components/parameters/IgnoreVersion"
+
+            responses:
+                "200":
+                    description: The authenticated user was successfully deleted.
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "412":
+                    $ref: "#/components/responses/StaleWrite"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+    /users/self/sessions:
+        delete:
+            summary: Invalidate the logged in user's sessions
+            operationId: deleteAuthenticatedUserSessions
+            description: Invalidates logged in user's active JWTs.
+            security:
+                - jwt: []
+            responses:
+                "200":
+                    description: The authenticated user's sessions have been invalidated.
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "412":
+                    $ref: "#/components/responses/StaleWrite"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+    /namespaces:
+        post:
+            summary: Create a new namespace
+            operationId: createNamespace
+            description: Create a new namespace in the cluster - only administrators can create new namespaces.
+            security:
+                - jwt: []
+            requestBody:
+                description: Data required to create a new namespace in the cluster.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            title: CreateNamespaceData
+                            properties:
+                                name:
+                                    type: string
+                                    pattern: '^[a-z0-9.\-]{1,253}$'
+                                    description: >
+                                        The name of the namespace shown in the CLI and UI
+                                    example: "dev"
+                                labels:
+                                    $ref: "#/components/schemas/Labels"
+            responses:
+                "201":
+                    description: The namespace was successfully created
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Namespace"
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "409":
+                    $ref: "#/components/responses/AlreadyExists"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+        get:
+            summary: Fetch the list of namespaces
+            operationId: listNamespaces
+            description: Fetch the list of namespaces in the cluster.
+            security:
+                - jwt: []
+            responses:
+                "200":
+                    description: A list of cluster namespaces.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/NamespaceList"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+    /namespaces/{id}:
+        parameters:
+            - name: id
+              in: path
+              description: ID of a namespace
+              required: true
+              schema:
+                  $ref: "#/components/schemas/NamespaceID"
+
+        get:
+            summary: Fetch a namespace
+            operationId: getNamespace
+            description: Fetch the namespace identified by id.
+            security:
+                - jwt: []
+            responses:
+                "200":
+                    description: The namespace information.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Namespace"
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+        put:
+            summary: Update a namespace
+            operationId: updateNamespace
+            description: Update the namespace identified by id.
+            security:
+                - jwt: []
+            requestBody:
+                description: The new namespace data to store.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            title: UpdateNamespaceData
+                            properties:
+                                labels:
+                                    $ref: "#/components/schemas/Labels"
+                                version:
+                                    $ref: "#/components/schemas/Version"
+            responses:
+                "200":
+                    description: The namespace was successfully updated
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Namespace"
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "412":
+                    $ref: "#/components/responses/StaleWrite"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+        delete:
+            summary: Delete a namespace
+            operationId: deleteNamespace
+            description: Remove the namespace identified by id.
+            security:
+                - jwt: []
+            parameters:
+                - $ref: "#/components/parameters/ObjectVersion"
+                - $ref: "#/components/parameters/IgnoreVersion"
+
+            responses:
+                "200":
+                    description: The namespace was successfully deleted.
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "409":
+                    $ref: "#/components/responses/InUse"
+
+                "412":
+                    $ref: "#/components/responses/StaleWrite"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+    /nodes:
+        get:
+            summary: Fetch the list of nodes
+            operationId: listNodes
+            description: Fetch the list of nodes of the cluster.
+            security:
+                - jwt: []
+            responses:
+                "200":
+                    description: A list of cluster nodes.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/NodeList"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+    /nodes/{id}:
+        parameters:
+            - name: id
+              in: path
+              description: ID of a node
+              required: true
+              schema:
+                  $ref: "#/components/schemas/NodeID"
+
+        get:
+            summary: Fetch a node
+            operationId: getNode
+            description: Fetch the node identified by id.
+            security:
+                - jwt: []
+            responses:
+                "200":
+                    description: The node information.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Node"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+        put:
+            summary: Update a node
+            operationId: updateNode
+            description: Update the node identified by id.
+            security:
+                - jwt: []
+            requestBody:
+                description: The new node data to store.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            title: UpdateNodeData
+                            properties:
+                                labels:
+                                    $ref: "#/components/schemas/Labels"
+                                version:
+                                    $ref: "#/components/schemas/Version"
+            responses:
+                "200":
+                    description: The node was successfully updated
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Node"
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "412":
+                    $ref: "#/components/responses/StaleWrite"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+        delete:
+            summary: Delete a node
+            operationId: deleteNode
+            description: >
+                Remove the node identified by id.
+
+                A node can only be deleted if it is currently offline.
+            security:
+                - jwt: []
+            parameters:
+                - $ref: "#/components/parameters/ObjectVersion"
+                - $ref: "#/components/parameters/IgnoreVersion"
+                - $ref: "#/components/parameters/AsyncHeader"
+                - $ref: "#/components/parameters/AsyncParam"
+
+            responses:
+                "200":
+                    description: The node was successfully deleted.
+
+                "202":
+                    $ref: "#/components/responses/Accepted"
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "409":
+                    description: >
+                        The request attempted to delete a node that is not
+                        currently offline.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                            example:
+                                error: node not offline
+
+                "412":
+                    $ref: "#/components/responses/StaleWrite"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+    /policies:
+        post:
+            summary: Create a new policy group
+            operationId: createPolicyGroup
+            description: >
+                Create a new policy group in the cluster - only administrators
+                can create new policy groups.
+            security:
+                - jwt: []
+            requestBody:
+                description: Data required to create a new policy group in the cluster.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            title: CreatePolicyGroupData
+                            properties:
+                                name:
+                                    type: string
+                                    example: "dev-users"
+                                specs:
+                                    type: array
+                                    items:
+                                        type: object
+                                        properties:
+                                            namespaceID:
+                                                $ref: "#/components/schemas/NamespaceID"
+                                            resourceType:
+                                                type: string
+                                                enum:
+                                                    - "*"
+                                                    - "cluster"
+                                                    - "namespace"
+                                                    - "node"
+                                                    - "policy"
+                                                    - "user"
+                                                    - "volume"
+                                                description: >
+                                                    The resource type this policy grants access to.
+                                                example: "volume"
+                                            readOnly:
+                                                type: boolean
+                                                default: false
+                                                description: >
+                                                    If true, disallows requests that attempt to mutate the
+                                                    resource.
+                                                example: false
+                                    description: A set of authorisation policies to apply to the policy group.
+                                    default: []
+                                    nullable: true
+                                    example:
+                                        - namespaceID: "251f065a-d89b-4426-a752-5fdd144d00e8"
+                                          resourceType: "*"
+                                          readOnly: false
+                                        - namespaceID: "5f009d1f-6618-43c2-9ae4-e699461dda8e"
+                                          resourceType: "volume"
+                                          readOnly: true
+            responses:
+                "201":
+                    description: The policy group was successfully created
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PolicyGroup"
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "409":
+                    $ref: "#/components/responses/AlreadyExists"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+        get:
+            summary: Fetch the list of policy groups
+            operationId: listPolicyGroups
+            description: Fetch the list of policy groups in the cluster.
+            security:
+                - jwt: []
+            responses:
+                "200":
+                    description: A list of cluster policy groups.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PolicyGroupList"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+    /policies/{id}:
+        parameters:
+            - name: id
+              in: path
+              description: ID of a policy group
+              required: true
+              schema:
+                  $ref: "#/components/schemas/PolicyGroupID"
+
+        get:
+            summary: Fetch a policy group
+            operationId: getPolicyGroup
+            description: Fetch the policy group identified by id.
+            security:
+                - jwt: []
+            responses:
+                "200":
+                    description: The policy group information.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PolicyGroup"
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+        put:
+            summary: Update a policy group
+            operationId: updatePolicyGroup
+            description: Update the policy group identified by id.
+            security:
+                - jwt: []
+            requestBody:
+                description: The new policy group data to store.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            title: UpdatePolicyGroupData
+                            properties:
+                                specs:
+                                    type: array
+                                    items:
+                                        type: object
+                                        properties:
+                                            namespaceID:
+                                                $ref: "#/components/schemas/NamespaceID"
+                                            resourceType:
+                                                type: string
+                                                enum:
+                                                    - "*"
+                                                    - "volume"
+                                                    - "policy"
+                                                description: >
+                                                    The resource type this policy grants access to.
+                                                example: "volume"
+                                            readOnly:
+                                                type: boolean
+                                                default: false
+                                                description: >
+                                                    If true, disallows requests that attempt to mutate the
+                                                    resource.
+                                                example: false
+                                    description: A set of authorisation policies to apply to the policy group.
+                                    default: []
+                                    nullable: true
+                                    example:
+                                        - namespaceID: "251f065a-d89b-4426-a752-5fdd144d00e8"
+                                          resourceType: "*"
+                                          readOnly: false
+                                        - namespaceID: "5f009d1f-6618-43c2-9ae4-e699461dda8e"
+                                          resourceType: "volume"
+                                          readOnly: true
+                                version:
+                                    $ref: "#/components/schemas/Version"
+            responses:
+                "200":
+                    description: The policy group was successfully updated
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/PolicyGroup"
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "412":
+                    $ref: "#/components/responses/StaleWrite"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+        delete:
+            summary: Delete a policy group
+            operationId: deletePolicyGroup
+            description: Remove the policy group identified by id.
+            security:
+                - jwt: []
+            parameters:
+                - $ref: "#/components/parameters/ObjectVersion"
+                - $ref: "#/components/parameters/IgnoreVersion"
+
+            responses:
+                "200":
+                    description: The policy group was successfully deleted.
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "409":
+                    $ref: "#/components/responses/InUse"
+
+                "412":
+                    $ref: "#/components/responses/StaleWrite"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+    /namespaces/{namespaceID}/volumes:
+        parameters:
+            - name: namespaceID
+              in: path
+              description: ID of a Namespace
+              required: true
+              schema:
+                  $ref: "#/components/schemas/NamespaceID"
+        post:
+            summary: Create a new Volume in the specified namespace
+            operationId: createVolume
+            description: Create a new volume in the given namespace
+            security:
+                - jwt: []
+            parameters:
+                - $ref: "#/components/parameters/AsyncHeader"
+                - $ref: "#/components/parameters/AsyncParam"
+            requestBody:
+                description: Data required to create a new volume in the cluster.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            title: CreateVolumeData
+                            required:
+                                - name
+                                - namespaceID
+                                - sizeBytes
+                                - fsType
+                            properties:
+                                namespaceID:
+                                    $ref: "#/components/schemas/NamespaceID"
+                                labels:
+                                    $ref: "#/components/schemas/Labels"
+                                name:
+                                    type: string
+                                    pattern: '^[a-z0-9.\-]{1,253}$'
+                                    description: >
+                                        The name of the volume shown in the CLI and UI
+                                    example: "data"
+                                fsType:
+                                    $ref: "#/components/schemas/FsType"
+                                description:
+                                    type: string
+                                    example: "This volume contains the data for my app"
+                                sizeBytes:
+                                    type: uint64
+                                    description: >
+                                        A volume's size in bytes
+                                    minimum: 0
+                                    example: 5000
+            responses:
+                "201":
+                    description: The volume was successfully created
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Volume"
+                "202":
+                    $ref: "#/components/responses/Accepted"
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "409":
+                    $ref: "#/components/responses/AlreadyExists"
+
+                "451":
+                    $ref: "#/components/responses/LicenceRestricted"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+                "507":
+                    $ref: "#/components/responses/InsufficientStorage"
+
+        get:
+            summary: Fetch the list of volumes in the given namespace
+            operationId: listVolumes
+            description: Fetch the list of volumes in the cluster.
+            security:
+                - jwt: []
+            responses:
+                "200":
+                    description: A list of the namespace's volumes.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/VolumeList"
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+    /namespaces/{namespaceID}/volumes/{id}:
+        parameters:
+            - name: namespaceID
+              in: path
+              description: ID of a Namespace
+              required: true
+              schema:
+                  $ref: "#/components/schemas/NamespaceID"
+            - name: id
+              in: path
+              description: ID of a Volume
+              required: true
+              schema:
+                  $ref: "#/components/schemas/VolumeID"
+
+        get:
+            summary: Fetch a volume
+            operationId: getVolume
+            description: Fetch the volume identified by id.
+            security:
+                - jwt: []
+            responses:
+                "200":
+                    description: The volume information.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Volume"
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+        delete:
+            summary: Delete a volume
+            operationId: deleteVolume
+            description: Remove the volume identified by id.
+            security:
+                - jwt: []
+            parameters:
+                - $ref: "#/components/parameters/ObjectVersion"
+                - $ref: "#/components/parameters/IgnoreVersion"
+
+                - $ref: "#/components/parameters/AsyncHeader"
+                - $ref: "#/components/parameters/AsyncParam"
+            responses:
+                "200":
+                    description: The volume was successfully deleted.
+
+                "202":
+                    $ref: "#/components/responses/Accepted"
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "409":
+                    $ref: "#/components/responses/InUse"
+
+                "412":
+                    $ref: "#/components/responses/StaleWrite"
+
+                "422":
+                    $ref: "#/components/responses/InvalidStateTransition"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+    /namespaces/{namespaceID}/volumes/{id}/attach:
+        parameters:
+            - name: namespaceID
+              in: path
+              description: ID of a Namespace
+              required: true
+              schema:
+                  $ref: "#/components/schemas/NamespaceID"
+            - name: id
+              in: path
+              description: ID of a Volume
+              required: true
+              schema:
+                  $ref: "#/components/schemas/VolumeID"
+
+        post:
+            summary: Attach a volume to the given node
+            operationId: attachVolume
+            description: Attach the volume identified by id to the node identified in the request's body.
+            security:
+                - jwt: []
+            requestBody:
+                description: Node ID to which the volume will be attached.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            title: AttachVolumeData
+                            properties:
+                                nodeID:
+                                    $ref: "#/components/schemas/NodeID"
+            responses:
+                "200":
+                    description: The volume was successfully attached.
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "409":
+                    $ref: "#/components/responses/InUse"
+
+                "422":
+                    $ref: "#/components/responses/InvalidStateTransition"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+        delete:
+            summary: Detach the given volume
+            operationId: detachVolume
+            description: Detach the volume identified by id.
+            security:
+                - jwt: []
+            parameters:
+                - $ref: "#/components/parameters/ObjectVersion"
+                - $ref: "#/components/parameters/IgnoreVersion"
+            responses:
+                "200":
+                    description: The volume was successfully detached.
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "409":
+                    $ref: "#/components/responses/InUse"
+
+                "412":
+                    $ref: "#/components/responses/StaleWrite"
+
+                "422":
+                    $ref: "#/components/responses/InvalidStateTransition"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+    /cluster:
+        get:
+            summary: Retrieves the cluster's global configuration settings
+            operationId: getCluster
+            description: Retrieves the current global configuration settings in use by the cluster.
+            security:
+                - jwt: []
+            responses:
+                "200":
+                    description: The cluster-wide configuration information.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Cluster"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+        put:
+            summary: Update the cluster's global configuration settings
+            operationId: updateCluster
+            description: Update the global configuration settings to use for the cluster.
+            security:
+                - jwt: []
+            requestBody:
+                description: The new cluster-wide configuration settings to apply.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            title: UpdateClusterData
+                            properties:
+                                disableTelemetry:
+                                    type: boolean
+                                    default: false
+                                    description: >
+                                        Disables collection of telemetry data
+                                        across the cluster.
+                                    example: false
+                                disableCrashReporting:
+                                    type: boolean
+                                    default: false
+                                    description: >
+                                        Disables collection of reports for any
+                                        fatal crashes across the cluster.
+                                    example: false
+                                disableVersionCheck:
+                                    type: boolean
+                                    default: false
+                                    description: >
+                                        Disables the mechanism responsible for
+                                        checking if there is an updated version
+                                        of StorageOS available for installation.
+                                    example: false
+                                logLevel:
+                                    $ref: "#/components/schemas/LogLevel"
+                                logFormat:
+                                    $ref: "#/components/schemas/LogFormat"
+                                version:
+                                    $ref: "#/components/schemas/Version"
+            responses:
+                "200":
+                    description: The cluster was successfully updated.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Cluster"
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "412":
+                    $ref: "#/components/responses/StaleWrite"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+    
+    /cluster/licence:
+        get:
+            summary: Retrieves the cluster's licence information
+            operationId: getLicence
+            description: >
+                Retrieves the cluster's current licence information
+            security:
+                - jwt: []
+            responses:
+                "200":
+                    description: The cluster's licence information.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Licence"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+        put:
+            summary: Update the licence global configuration settings
+            operationId: updateLicence
+            description: Update the cluster's licence.
+            security:
+                - jwt: []
+            requestBody:
+                description: >
+                    A StorageOS product licence key, used to
+                    register a cluster. The format of this
+                    type is opaque and may change.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            title: UpdateLicence
+                            properties:
+                                key:
+                                    type: string
+                                    description: >
+                                        A StorageOS product licence key, used to
+                                        register a cluster. The format of this
+                                        type is opaque and may change.
+                                version:
+                                    $ref: "#/components/schemas/Version"
+            responses:
+                "200":
+                    description: The provided licence was successfully applied.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Licence"
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "412":
+                    $ref: "#/components/responses/StaleWrite"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+                
+
+    /diagnostics:
+        get:
+            summary: Retrieves a diagnostics bundle from the target node
+            operationId: getDiagnostics
+            description: >
+                Requests that the target node gathers detailed information
+                about the state of the cluster, using it to then build and
+                return a bundle which can be used for troubleshooting.
+
+                The request will only be served when the authenticated user
+                is an administrator.
+
+                The node will attempt to gather information about its local
+                state, cluster-wide state and local state of other nodes
+                in the cluster. If the cluster is unhealthy this may cause
+                a slower response.
+            security:
+                - jwt: []
+            responses:
+                "200":
+                    description: >
+                        A diagnostics bundle was successfully built and
+                        returned.
+                    content:
+                        application/gzip:
+                            schema:
+                                type: string
+                                format: binary
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
+    /openapi:
+        get:
+            summary: Serves this openapi spec file
+            operationId: spec
+            description: Serves this openapi spec file
+            responses:
+                "200":
+                    description: The openapi spec file has been served
+                    content:
+                        text/yaml:
+                            schema:
+                                $ref: "#/components/schemas/OpenAPISpec"

@@ -16,7 +16,6 @@ import (
 type Cluster struct {
 	// A unique identifier for a cluster. The format of this type is undefined and may change but the defined properties will not change. 
 	Id string `json:"id,omitempty"`
-	Licence Licence `json:"licence,omitempty"`
 	// Disables collection of telemetry data across the cluster.
 	DisableTelemetry bool `json:"disableTelemetry,omitempty"`
 	// Disables collection of reports for any fatal crashes across the cluster. 

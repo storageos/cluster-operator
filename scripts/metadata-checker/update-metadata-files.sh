@@ -31,22 +31,22 @@ $yq r deploy/storageos-operators.configmap.yaml \
 # storageoscluster
 $yq r deploy/storageos-operators.configmap.yaml \
     data.customResourceDefinitions | $yq r - [0] | tee \
-    deploy/crds/storageos_v1_storageoscluster_crd.yaml \
+    deploy/crds/storageos.com_storageosclusters_crd.yaml \
     deploy/olm/storageos/storageoscluster.crd.yaml > /dev/null
 # job
 $yq r deploy/storageos-operators.configmap.yaml \
     data.customResourceDefinitions | $yq r - [1] | tee \
-    deploy/crds/storageos_v1_job_crd.yaml \
+    deploy/crds/storageos.com_jobs_crd.yaml \
     deploy/olm/storageos/storageosjob.crd.yaml > /dev/null
 # upgrade
 $yq r deploy/storageos-operators.configmap.yaml \
     data.customResourceDefinitions | $yq r - [2] | tee \
-    deploy/crds/storageos_v1_storageosupgrade_crd.yaml \
+    deploy/crds/storageos.com_storageosupgrades_crd.yaml \
     deploy/olm/storageos/storageosupgrade.crd.yaml > /dev/null
 # nfsserver
 $yq r deploy/storageos-operators.configmap.yaml \
     data.customResourceDefinitions | $yq r - [3] | tee \
-    deploy/crds/storageos_v1_nfsserver_crd.yaml \
+    deploy/crds/storageos.com_nfsservers_crd.yaml \
     deploy/olm/storageos/storageosnfsserver.crd.yaml > /dev/null
 
 # Extract package from configmap, update and write to the final file.

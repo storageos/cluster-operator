@@ -3,6 +3,7 @@
 package e2e
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -69,7 +70,7 @@ func TestClusterCSINodeV2(t *testing.T) {
 	// }
 	// testutil.ClusterStatusCheck(t, testStorageOS.Status, 1)
 
-	daemonset, err := f.KubeClient.AppsV1().DaemonSets(resourceNS).Get("storageos-daemonset", metav1.GetOptions{})
+	daemonset, err := f.KubeClient.AppsV1().DaemonSets(resourceNS).Get(context.TODO(), "storageos-daemonset", metav1.GetOptions{})
 	if err != nil {
 		t.Fatalf("failed to get storageos-daemonset: %v", err)
 	}

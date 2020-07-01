@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -39,7 +41,7 @@ var nfsserversResource = schema.GroupVersionResource{Group: "storageos.com", Ver
 var nfsserversKind = schema.GroupVersionKind{Group: "storageos.com", Version: "v1", Kind: "NFSServer"}
 
 // Get takes name of the nFSServer, and returns the corresponding nFSServer object, and an error if there is any.
-func (c *FakeNFSServers) Get(name string, options v1.GetOptions) (result *storageosv1.NFSServer, err error) {
+func (c *FakeNFSServers) Get(ctx context.Context, name string, options v1.GetOptions) (result *storageosv1.NFSServer, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(nfsserversResource, c.ns, name), &storageosv1.NFSServer{})
 
@@ -50,7 +52,7 @@ func (c *FakeNFSServers) Get(name string, options v1.GetOptions) (result *storag
 }
 
 // List takes label and field selectors, and returns the list of NFSServers that match those selectors.
-func (c *FakeNFSServers) List(opts v1.ListOptions) (result *storageosv1.NFSServerList, err error) {
+func (c *FakeNFSServers) List(ctx context.Context, opts v1.ListOptions) (result *storageosv1.NFSServerList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(nfsserversResource, nfsserversKind, c.ns, opts), &storageosv1.NFSServerList{})
 
@@ -72,14 +74,14 @@ func (c *FakeNFSServers) List(opts v1.ListOptions) (result *storageosv1.NFSServe
 }
 
 // Watch returns a watch.Interface that watches the requested nFSServers.
-func (c *FakeNFSServers) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeNFSServers) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(nfsserversResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a nFSServer and creates it.  Returns the server's representation of the nFSServer, and an error, if there is any.
-func (c *FakeNFSServers) Create(nFSServer *storageosv1.NFSServer) (result *storageosv1.NFSServer, err error) {
+func (c *FakeNFSServers) Create(ctx context.Context, nFSServer *storageosv1.NFSServer, opts v1.CreateOptions) (result *storageosv1.NFSServer, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(nfsserversResource, c.ns, nFSServer), &storageosv1.NFSServer{})
 
@@ -90,7 +92,7 @@ func (c *FakeNFSServers) Create(nFSServer *storageosv1.NFSServer) (result *stora
 }
 
 // Update takes the representation of a nFSServer and updates it. Returns the server's representation of the nFSServer, and an error, if there is any.
-func (c *FakeNFSServers) Update(nFSServer *storageosv1.NFSServer) (result *storageosv1.NFSServer, err error) {
+func (c *FakeNFSServers) Update(ctx context.Context, nFSServer *storageosv1.NFSServer, opts v1.UpdateOptions) (result *storageosv1.NFSServer, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(nfsserversResource, c.ns, nFSServer), &storageosv1.NFSServer{})
 
@@ -102,7 +104,7 @@ func (c *FakeNFSServers) Update(nFSServer *storageosv1.NFSServer) (result *stora
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeNFSServers) UpdateStatus(nFSServer *storageosv1.NFSServer) (*storageosv1.NFSServer, error) {
+func (c *FakeNFSServers) UpdateStatus(ctx context.Context, nFSServer *storageosv1.NFSServer, opts v1.UpdateOptions) (*storageosv1.NFSServer, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceAction(nfsserversResource, "status", c.ns, nFSServer), &storageosv1.NFSServer{})
 
@@ -113,7 +115,7 @@ func (c *FakeNFSServers) UpdateStatus(nFSServer *storageosv1.NFSServer) (*storag
 }
 
 // Delete takes name of the nFSServer and deletes it. Returns an error if one occurs.
-func (c *FakeNFSServers) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeNFSServers) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(nfsserversResource, c.ns, name), &storageosv1.NFSServer{})
 
@@ -121,15 +123,15 @@ func (c *FakeNFSServers) Delete(name string, options *v1.DeleteOptions) error {
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeNFSServers) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(nfsserversResource, c.ns, listOptions)
+func (c *FakeNFSServers) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(nfsserversResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &storageosv1.NFSServerList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched nFSServer.
-func (c *FakeNFSServers) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *storageosv1.NFSServer, err error) {
+func (c *FakeNFSServers) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *storageosv1.NFSServer, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(nfsserversResource, c.ns, name, pt, data, subresources...), &storageosv1.NFSServer{})
 

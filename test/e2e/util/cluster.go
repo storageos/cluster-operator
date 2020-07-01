@@ -1,6 +1,7 @@
 package util
 
 import (
+	"context"
 	goctx "context"
 	"fmt"
 	"os/exec"
@@ -56,7 +57,7 @@ func NewStorageOSCluster(namespace string, clusterSpec storageos.StorageOSCluste
 }
 
 // SetupOperator installs the operator and ensures that the deployment is successful.
-func SetupOperator(t *testing.T, ctx *framework.TestCtx) {
+func SetupOperator(t *testing.T, ctx *framework.Context) {
 	clusterList := &storageos.StorageOSClusterList{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "StorageOSCluster",
@@ -127,7 +128,7 @@ func ClusterStatusCheck(t *testing.T, status storageos.StorageOSClusterStatus, n
 
 // DeployCluster creates a custom resource and checks if the
 // storageos daemonset is deployed successfully.
-func DeployCluster(t *testing.T, ctx *framework.TestCtx, cluster *storageos.StorageOSCluster) error {
+func DeployCluster(t *testing.T, ctx *framework.Context, cluster *storageos.StorageOSCluster) error {
 	f := framework.Global
 
 	clusterSecret := &corev1.Secret{
@@ -184,7 +185,7 @@ func DeployCluster(t *testing.T, ctx *framework.TestCtx, cluster *storageos.Stor
 // WaitForDaemonSet checks and waits for a given daemonset to be in ready.
 func WaitForDaemonSet(t *testing.T, kubeclient kubernetes.Interface, namespace, name string, retryInterval, timeout time.Duration) error {
 	err := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
-		daemonset, err := kubeclient.AppsV1().DaemonSets(namespace).Get(name, metav1.GetOptions{})
+		daemonset, err := kubeclient.AppsV1().DaemonSets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				t.Logf("Waiting for availability of %s daemonset\n", name)
@@ -210,7 +211,7 @@ func WaitForDaemonSet(t *testing.T, kubeclient kubernetes.Interface, namespace, 
 // WaitForStatefulSet checks and waits for a given statefulset to be in ready.
 func WaitForStatefulSet(t *testing.T, kubeclient kubernetes.Interface, namespace, name string, retryInterval, timeout time.Duration) error {
 	err := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
-		statefulset, err := kubeclient.AppsV1().StatefulSets(namespace).Get(name, metav1.GetOptions{})
+		statefulset, err := kubeclient.AppsV1().StatefulSets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				t.Logf("Waiting for availability of %s statefulset\n", name)
@@ -245,7 +246,7 @@ func NodeLabelSyncTest(t *testing.T, kubeclient kubernetes.Interface) {
 	expectedScriptOutput := "0\n"
 
 	// Get the existing node to update its labels.
-	nodes, err := kubeclient.CoreV1().Nodes().List(metav1.ListOptions{})
+	nodes, err := kubeclient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		t.Fatalf("failed to get nodes: %v", err)
 	}
@@ -253,7 +254,7 @@ func NodeLabelSyncTest(t *testing.T, kubeclient kubernetes.Interface) {
 	labels := node.GetLabels()
 	labels[testLabelKey] = testLabelVal
 	node.SetLabels(labels)
-	_, err = kubeclient.CoreV1().Nodes().Update(&node)
+	_, err = kubeclient.CoreV1().Nodes().Update(context.TODO(), &node, metav1.UpdateOptions{})
 	if err != nil {
 		t.Errorf("failed to update node labels: %v", err)
 		return
@@ -262,7 +263,7 @@ func NodeLabelSyncTest(t *testing.T, kubeclient kubernetes.Interface) {
 	// Cleanup - remove the label from k8s node at the end.
 	defer func() {
 		// Get the latest version of node to update.
-		nodes, err = kubeclient.CoreV1().Nodes().List(metav1.ListOptions{})
+		nodes, err = kubeclient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			t.Errorf("failed to get nodes: %v", err)
 			return
@@ -271,7 +272,7 @@ func NodeLabelSyncTest(t *testing.T, kubeclient kubernetes.Interface) {
 		labels = node.GetLabels()
 		delete(labels, testLabelKey)
 		node.SetLabels(labels)
-		_, err = kubeclient.CoreV1().Nodes().Update(&node)
+		_, err = kubeclient.CoreV1().Nodes().Update(context.TODO(), &node, metav1.UpdateOptions{})
 		if err != nil {
 			t.Errorf("failed to cleanup node labels: %v", err)
 			return

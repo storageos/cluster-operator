@@ -45,7 +45,7 @@ func NewNFSServer(namespace string, nfsServerSpec storageos.NFSServerSpec) *stor
 
 // DeployNFSServer creates a custom resource and checks if the NFS Server
 // statefulset is deployed successfully.
-func DeployNFSServer(t *testing.T, ctx *framework.TestCtx, nfsServer *storageos.NFSServer) error {
+func DeployNFSServer(t *testing.T, ctx *framework.Context, nfsServer *storageos.NFSServer) error {
 	f := framework.Global
 
 	err := f.Client.Create(goctx.TODO(), nfsServer, &framework.CleanupOptions{TestContext: ctx, Timeout: CleanupTimeout, RetryInterval: CleanupRetryInterval})
@@ -109,7 +109,7 @@ func DeployNFSServer(t *testing.T, ctx *framework.TestCtx, nfsServer *storageos.
 
 // NFSServerTest creates a new NFSServer resource and checks if the resource is
 // created and ready.
-func NFSServerTest(t *testing.T, ctx *framework.TestCtx) {
+func NFSServerTest(t *testing.T, ctx *framework.Context) {
 	f := framework.Global
 
 	// Create a NFS server spec.
