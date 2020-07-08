@@ -18,7 +18,7 @@ const (
 	DefaultSquash            = "none"
 	DefaultLogLevel          = "DEBUG"
 	DefaultGraceless         = true
-	DefaultFsidDevice        = true
+	DefaultFsidDevice        = false
 )
 
 func createConfig(instance *storageosv1.NFSServer) (string, error) {
@@ -99,6 +99,7 @@ EXPORT {
 	Squash = {{.Squash}};
 	FSAL {
 		Name = VFS;
+		fsid_type = uuid;
 	}
 }`
 	exportConfigData := nfsExportConfig{
