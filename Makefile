@@ -58,13 +58,13 @@ all: lint unittest operator
 
 upgrader:
 	@echo "Building upgrader"
-	$(GO_ENV) $(GO_BUILD_CMD) \
+	$(GO_ENV) $(GO_BUILD_CMD) -mod=vendor \
 		-o $(OUTPUT_DIR)/bin/upgrader \
 		./cmd/upgrader
 
 operator: upgrader ## Build operator binaries.
 	@echo "Building cluster-operator"
-	$(GO_ENV) $(GO_BUILD_CMD) -ldflags "$(LDFLAGS)" \
+	$(GO_ENV) $(GO_BUILD_CMD) -mod=vendor -ldflags "$(LDFLAGS)" \
 		-o $(OUTPUT_DIR)/bin/cluster-operator \
 		./cmd/manager
 
@@ -189,7 +189,7 @@ golangci-lint: ## Install golangci-lint
 .PHONY: unittest scorecard-test
 
 unittest: ## Run all the unit tests.
-	go test -v -race `go list -v ./... | grep -v test/e2e | grep -v olm` -count=1
+	go test -mod=vendor -v -race `go list -v ./... | grep -v test/e2e | grep -v olm` -count=1
 
 # Runs the operator-sdk scorecard tests. Expects the operator to be installed
 # using OLM first.

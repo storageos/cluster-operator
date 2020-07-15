@@ -12,12 +12,12 @@ require (
 	github.com/prometheus/client_golang v1.5.1
 	github.com/storageos/go-api v0.0.0-20200311150117-c68d7a4607f7
 	github.com/storageos/go-api/v2 v2.0.0
-	k8s.io/api v0.18.2
-	k8s.io/apiextensions-apiserver v0.18.2
-	k8s.io/apimachinery v0.18.2
+	k8s.io/api v0.18.4
+	k8s.io/apiextensions-apiserver v0.18.4
+	k8s.io/apimachinery v0.18.4
 	k8s.io/client-go v12.0.0+incompatible
-	k8s.io/kube-openapi v0.0.0-20200121204235-bf4fb3bd569c
-	sigs.k8s.io/controller-runtime v0.6.0
+	k8s.io/kube-openapi v0.0.0-20200410145947-61e04a5be9a6
+	sigs.k8s.io/controller-runtime v0.6.1
 )
 
 replace (

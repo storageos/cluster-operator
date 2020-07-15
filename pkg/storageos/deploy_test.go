@@ -486,6 +486,7 @@ func TestCreateCSIHelper(t *testing.T) {
 	}
 }
 
+// NOTE: Unsupported legacy test.
 func TestDeployLegacy(t *testing.T) {
 	// This test used to work with the controller-runtime fake client. The fake
 	// client has been deprecated and this test fails due to unexpected issues.
@@ -581,19 +582,13 @@ func TestDeployLegacy(t *testing.T) {
 }
 
 func TestDeployCSI(t *testing.T) {
-	// This test used to work with the controller-runtime fake client. The fake
-	// client has been deprecated and this test fails due to unexpected issues.
-	// TODO: Move this test to use envtest
-	// https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.6.0/pkg/envtest?tab=doc.
-	t.Skip("skipping... fails with the controller-runtime fake client")
-
 	const (
 		kubeletPluginsWatcherDriverRegArgsCount = 3
 		containersCount                         = 2
 		volumesCount                            = 10 //Includes ConfigMap volume
 	)
 
-	stosCluster := &api.StorageOSCluster{
+	stosClusterX := &api.StorageOSCluster{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: gvk.GroupVersion().String(),
 			Kind:       gvk.Kind,
@@ -645,6 +640,7 @@ func TestDeployCSI(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			stosCluster := stosClusterX.DeepCopy()
 			c := fake.NewFakeClientWithScheme(testScheme)
 			if err := c.Create(context.Background(), stosCluster); err != nil {
 				t.Fatalf("failed to create storageoscluster object: %v", err)
@@ -706,12 +702,6 @@ func TestDeployCSI(t *testing.T) {
 }
 
 func TestDeployKVBackend(t *testing.T) {
-	// This test used to work with the controller-runtime fake client. The fake
-	// client has been deprecated and this test fails due to unexpected issues.
-	// TODO: Move this test to use envtest
-	// https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.6.0/pkg/envtest?tab=doc.
-	t.Skip("skipping... fails with the controller-runtime fake client")
-
 	testKVAddr := "1.2.3.4:1111,4.3.2.1:0000"
 	testBackend := "etcd"
 
@@ -728,6 +718,9 @@ func TestDeployKVBackend(t *testing.T) {
 			KVBackend: api.StorageOSClusterKVBackend{
 				Address: testKVAddr,
 				Backend: testBackend,
+			},
+			CSI: api.StorageOSClusterCSI{
+				Enable: true,
 			},
 		},
 	}
@@ -792,12 +785,6 @@ func TestDeployKVBackend(t *testing.T) {
 }
 
 func TestDeployDebug(t *testing.T) {
-	// This test used to work with the controller-runtime fake client. The fake
-	// client has been deprecated and this test fails due to unexpected issues.
-	// TODO: Move this test to use envtest
-	// https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.6.0/pkg/envtest?tab=doc.
-	t.Skip("skipping... fails with the controller-runtime fake client")
-
 	stosCluster := &api.StorageOSCluster{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: gvk.GroupVersion().String(),
@@ -809,6 +796,9 @@ func TestDeployDebug(t *testing.T) {
 		},
 		Spec: api.StorageOSClusterSpec{
 			Debug: true,
+			CSI: api.StorageOSClusterCSI{
+				Enable: true,
+			},
 		},
 	}
 
@@ -863,13 +853,7 @@ func TestDeployDebug(t *testing.T) {
 }
 
 func TestDeployNodeAffinity(t *testing.T) {
-	// This test used to work with the controller-runtime fake client. The fake
-	// client has been deprecated and this test fails due to unexpected issues.
-	// TODO: Move this test to use envtest
-	// https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.6.0/pkg/envtest?tab=doc.
-	t.Skip("skipping... fails with the controller-runtime fake client")
-
-	stosCluster := &api.StorageOSCluster{
+	stosClusterX := &api.StorageOSCluster{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: gvk.GroupVersion().String(),
 			Kind:       gvk.Kind,
@@ -913,6 +897,7 @@ func TestDeployNodeAffinity(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			stosCluster := stosClusterX.DeepCopy()
 			stosCluster.Spec.CSI.DeploymentStrategy = tc.csiDeploymentStrategy
 
 			c := fake.NewFakeClientWithScheme(testScheme)
@@ -989,12 +974,6 @@ func TestDeployNodeAffinity(t *testing.T) {
 }
 
 func TestDeployTolerations(t *testing.T) {
-	// This test used to work with the controller-runtime fake client. The fake
-	// client has been deprecated and this test fails due to unexpected issues.
-	// TODO: Move this test to use envtest
-	// https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.6.0/pkg/envtest?tab=doc.
-	t.Skip("skipping... fails with the controller-runtime fake client")
-
 	defaultTolerations := toleration.GetDefaultTolerations()
 
 	testCases := []struct {
@@ -1176,12 +1155,6 @@ func TestDeployTolerations(t *testing.T) {
 }
 
 func TestDeployNodeResources(t *testing.T) {
-	// This test used to work with the controller-runtime fake client. The fake
-	// client has been deprecated and this test fails due to unexpected issues.
-	// TODO: Move this test to use envtest
-	// https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.6.0/pkg/envtest?tab=doc.
-	t.Skip("skipping... fails with the controller-runtime fake client")
-
 	memLimit, _ := resource.ParseQuantity("1Gi")
 	memReq, _ := resource.ParseQuantity("702Mi")
 	stosCluster := &api.StorageOSCluster{
@@ -1194,6 +1167,9 @@ func TestDeployNodeResources(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: api.StorageOSClusterSpec{
+			CSI: api.StorageOSClusterCSI{
+				Enable: true,
+			},
 			Resources: corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
 					corev1.ResourceMemory: memLimit,
@@ -1250,13 +1226,7 @@ func TestDeployNodeResources(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	// This test used to work with the controller-runtime fake client. The fake
-	// client has been deprecated and this test fails due to unexpected issues.
-	// TODO: Move this test to use envtest
-	// https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.6.0/pkg/envtest?tab=doc.
-	t.Skip("skipping... fails with the controller-runtime fake client")
-
-	stosCluster := &api.StorageOSCluster{
+	stosClusterX := &api.StorageOSCluster{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: gvk.GroupVersion().String(),
 			Kind:       gvk.Kind,
@@ -1294,6 +1264,7 @@ func TestDelete(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			stosCluster := stosClusterX.DeepCopy()
 			stosCluster.Spec = tc.spec
 
 			c := fake.NewFakeClientWithScheme(testScheme)
