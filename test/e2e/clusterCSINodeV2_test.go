@@ -10,6 +10,7 @@ import (
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	storageos "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	deploy "github.com/storageos/cluster-operator/pkg/storageos"
@@ -64,11 +65,11 @@ func TestClusterCSINodeV2(t *testing.T) {
 
 	// TODO - Status not confirmed working yet. Assume started after waiting
 	// for the timeout for now.
-	// err = f.Client.Get(goctx.TODO(), types.NamespacedName{Name: testutil.TestClusterCRName, Namespace: namespace}, testStorageOS)
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
-	// testutil.ClusterStatusCheck(t, testStorageOS.Status, 1)
+	err = f.Client.Get(context.TODO(), types.NamespacedName{Name: testutil.TestClusterCRName, Namespace: namespace}, testStorageOS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	testutil.ClusterStatusCheck(t, testStorageOS.Status, 1)
 
 	daemonset, err := f.KubeClient.AppsV1().DaemonSets(resourceNS).Get(context.TODO(), "storageos-daemonset", metav1.GetOptions{})
 	if err != nil {
@@ -98,6 +99,9 @@ func TestClusterCSINodeV2(t *testing.T) {
 
 	// Test CSIDriver resource existence.
 	testutil.CSIDriverResourceTest(t, deploy.StorageOSProvisionerName)
+
+	// Test pod scheduler mutating admission contoller.
+	testutil.PodSchedulerAdmissionControllerTest(t, ctx)
 
 	// Test node label sync.
 	// TODO: Currently relies on v1 CLI.

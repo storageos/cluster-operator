@@ -1,7 +1,7 @@
 OPERATOR_IMAGE ?= storageos/cluster-operator:test
 GO_BUILD_CMD = go build -v
 GO_ENV = GOOS=linux CGO_ENABLED=0
-SDK_VERSION = v0.18.1
+SDK_VERSION = v0.17.2
 MACHINE = $(shell uname -m)
 BUILD_IMAGE = golang:1.14.2
 BASE_IMAGE = storageos/base-image:0.2.1
