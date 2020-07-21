@@ -119,12 +119,6 @@ Parameter | Description | Default
 `images.csiExternalAttacherContainer` | CSI External Attacher Container image |  Varies depending on Kubernetes version
 `images.csiExternalResizerContainer` | CSI External Resizer Container image |  Varies depending on Kubernetes version
 `ìmages.csiLivenessProbeContainer` | CSI Liveness Probe Container Image |  Varies depending on Kubernetes version
-`csi.enable` | Enable CSI setup | `false`
-`csi.enableProvisionCreds` | Enable CSI provision credentials | `false`
-`csi.enableControllerPublishCreds` | Enable CSI controller publish credentials | `false`
-`csi.enableNodePublishCreds` | Enable CSI node publish credentials | `false`
-`csi.enableControllerExpandCreds` | Enable CSI controller expand credentials | `false`
-`csi.deploymentStrategy` | CSI helper deployment strategy (`statefulset` or `deployment`) | `statefulset`
 `service.name` | Name of the Service used by the cluster | `storageos`
 `service.type` | Type of the Service used by the cluster | `ClusterIP`
 `service.externalPort` | External port of the Service used by the cluster | `5705`
@@ -354,52 +348,10 @@ data:
 
 ## CSI
 
-StorageOS also supports the [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec)
+StorageOS supports the [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec)
 to communicate with Kubernetes.
 
-Only versions 1.10+ are supported. CSI ensures forward compatibility with
-future releases of Kubernetes, as vendor-specific drivers will soon be
-deprecated from Kubernetes. However, some functionality is not yet supported.
-
-To enable CSI, set `csi.enable` to `true` in the `StorageOSCluster` resource
-config.
-
-```yaml
-apiVersion: "storageos.com/v1"
-kind: "StorageOSCluster"
-metadata:
-  name: "example-storageos"
-  namespace: "default"
-spec:
-  secretRefName: "storageos-api"
-  secretRefNamespace: "default"
-  csi:
-    enable: true
-```
-
-### CSI Credentials
-
-To enable CSI Credentials, ensure that CSI is enabled by setting `csi.enable` to
-`true`. Based on the type of credentials to enable, set the csi fields to
-`true`:
-
-```yaml
-apiVersion: "storageos.com/v1"
-kind: "StorageOSCluster"
-metadata:
-  name: "example-storageos"
-  namespace: "default"
-spec:
-  ...
-  ...
-  csi:
-    enable: true
-    enableProvisionCreds: true
-    enableControllerPublishCreds: true
-    enableNodePublishCreds: true
-  ...
-```
-
+CSI credentials are required for deploying StorageOS.
 Specify the CSI credentials as part of the storageos secret object as:
 
 ```yaml

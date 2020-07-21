@@ -32,10 +32,6 @@ func TestClusterCSINodeV2(t *testing.T) {
 		SecretRefName:      "storageos-api",
 		SecretRefNamespace: "default",
 		Namespace:          resourceNS,
-		CSI: storageos.StorageOSClusterCSI{
-			Enable:             true,
-			DeploymentStrategy: "deployment",
-		},
 		Tolerations: []corev1.Toleration{
 			{
 				Key:      "key",

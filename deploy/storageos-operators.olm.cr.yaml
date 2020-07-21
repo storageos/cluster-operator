@@ -7,8 +7,6 @@ spec:
   secretRefName: "storageos-api"
   secretRefNamespace: "default"
   namespace: "storageos"
-  csi:
-    enable: true
   kvBackend:
     address: "etcd-client.default.svc.cluster.local:2379"
 ---
