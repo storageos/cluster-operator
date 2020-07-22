@@ -329,22 +329,28 @@ func (r *ReconcileStorageOSCluster) updateSpec(m *storageosv1.StorageOSCluster) 
 		properties[&m.Spec.Images.KubeSchedulerContainer] = m.Spec.GetKubeSchedulerImage(r.k8sVersion)
 	}
 
-	if m.Spec.CSI.Enable {
-		properties[&m.Spec.Images.CSINodeDriverRegistrarContainer] = m.Spec.GetCSINodeDriverRegistrarImage(storageos.CSIV1Supported(r.k8sVersion))
-		if storageos.CSIV1Supported(r.k8sVersion) {
-			properties[&m.Spec.Images.CSIClusterDriverRegistrarContainer] = m.Spec.GetCSIClusterDriverRegistrarImage()
-			properties[&m.Spec.Images.CSILivenessProbeContainer] = m.Spec.GetCSILivenessProbeImage()
-		}
-		properties[&m.Spec.Images.CSIExternalProvisionerContainer] = m.Spec.GetCSIExternalProvisionerImage(storageos.CSIV1Supported(r.k8sVersion), storageos.NodeV2Image(m.Spec.GetNodeContainerImage()))
-		properties[&m.Spec.Images.CSIExternalAttacherContainer] = m.Spec.GetCSIExternalAttacherImage(storageos.CSIV1Supported(r.k8sVersion), storageos.CSIExternalAttacherV2Supported(r.k8sVersion))
-		// Add external resizer image if storageos v2 and supported k8s
-		// version.
-		if storageos.CSIExternalResizerSupported(r.k8sVersion) && storageos.NodeV2Image(m.Spec.GetNodeContainerImage()) {
-			properties[&m.Spec.Images.CSIExternalResizerContainer] = m.Spec.GetCSIExternalResizerImage()
-		}
-		properties[&m.Spec.CSI.DeploymentStrategy] = m.Spec.GetCSIDeploymentStrategy()
+	// CSI related string properties. These must be set always because CSI is
+	// the only supported deployment.
+	properties[&m.Spec.Images.CSINodeDriverRegistrarContainer] = m.Spec.GetCSINodeDriverRegistrarImage(storageos.CSIV1Supported(r.k8sVersion))
+
+	if storageos.CSIV1Supported(r.k8sVersion) {
+		properties[&m.Spec.Images.CSIClusterDriverRegistrarContainer] = m.Spec.GetCSIClusterDriverRegistrarImage()
+		properties[&m.Spec.Images.CSILivenessProbeContainer] = m.Spec.GetCSILivenessProbeImage()
 	}
 
+	properties[&m.Spec.Images.CSIExternalProvisionerContainer] = m.Spec.GetCSIExternalProvisionerImage(storageos.CSIV1Supported(r.k8sVersion), storageos.NodeV2Image(m.Spec.GetNodeContainerImage()))
+
+	properties[&m.Spec.Images.CSIExternalAttacherContainer] = m.Spec.GetCSIExternalAttacherImage(storageos.CSIV1Supported(r.k8sVersion), storageos.CSIExternalAttacherV2Supported(r.k8sVersion))
+
+	// Add external resizer image if storageos v2 and supported k8s
+	// version.
+	if storageos.CSIExternalResizerSupported(r.k8sVersion) && storageos.NodeV2Image(m.Spec.GetNodeContainerImage()) {
+		properties[&m.Spec.Images.CSIExternalResizerContainer] = m.Spec.GetCSIExternalResizerImage()
+	}
+
+	properties[&m.Spec.CSI.DeploymentStrategy] = m.Spec.GetCSIDeploymentStrategy()
+
+	// Ingress related string properties.
 	if m.Spec.Ingress.Enable {
 		properties[&m.Spec.Ingress.Hostname] = m.Spec.GetIngressHostname()
 	}
@@ -364,6 +370,24 @@ func (r *ReconcileStorageOSCluster) updateSpec(m *storageosv1.StorageOSCluster) 
 
 	for k, v := range intProperties {
 		if updateInt(k, v) {
+			needUpdate = true
+		}
+	}
+
+	// Check boolean properties.
+
+	// All the CSI options must be enabled. Non-CSI deployment are not
+	// supported anymore.
+	boolProperties := map[*bool]bool{
+		&m.Spec.CSI.Enable:                       true,
+		&m.Spec.CSI.EnableControllerPublishCreds: true,
+		&m.Spec.CSI.EnableProvisionCreds:         true,
+		&m.Spec.CSI.EnableNodePublishCreds:       true,
+		&m.Spec.CSI.EnableControllerExpandCreds:  true,
+	}
+
+	for k, v := range boolProperties {
+		if updateBool(k, v) {
 			needUpdate = true
 		}
 	}
@@ -394,6 +418,17 @@ func updateString(valA *string, valB string) bool {
 // assigns valB as the value of valA and returns true. If the values are equal,
 // false is returned.
 func updateInt(valA *int, valB int) bool {
+	if *valA != valB {
+		*valA = valB
+		return true
+	}
+	return false
+}
+
+// updateBool compares the bool value of valA with valB and if there's a
+// mismatch, assigns valB as the value of valA and returns true. If the values
+// are equal, false is returned.
+func updateBool(valA *bool, valB bool) bool {
 	if *valA != valB {
 		*valA = valB
 		return true

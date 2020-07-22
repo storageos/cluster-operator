@@ -60,7 +60,7 @@ const (
 	DefaultCSIKubeletRegistrationPath  = "/storageos/csi.sock"
 	DefaultCSIDriverRegistrationMode   = "node-register"
 	DefaultCSIDriverRequiresAttachment = "true"
-	DefaultCSIDeploymentStrategy       = "statefulset"
+	DefaultCSIDeploymentStrategy       = "deployment"
 )
 
 func getDefaultCSIEndpoint(pluginRegistrationPath string) string {

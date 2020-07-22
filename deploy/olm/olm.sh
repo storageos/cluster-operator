@@ -28,7 +28,7 @@ install_storageos_operator() {
     echo
 }
 
-# Install storageos with default CSI helpers(StatefulSet).
+# Install storageos with default CSI helpers.
 install_storageos() {
     echo "Install StorageOS"
 
@@ -41,9 +41,9 @@ install_storageos() {
     until kubectl -n storageos get daemonset storageos-daemonset --no-headers -o go-template='{{.status.numberReady}}' | grep -q 1; do sleep 5; done
     echo "Daemonset ready!"
 
-    echo "Waiting for storageos statefulset to be ready"
-    until kubectl -n storageos get statefulset storageos-statefulset --no-headers -o go-template='{{.status.readyReplicas}}' | grep -q 1; do sleep 5; done
-    echo "Statefulset ready!"
+    echo "Waiting for csi helper deployment to be ready"
+    until kubectl -n storageos get deployment storageos-csi-helper --no-headers -o go-template='{{.status.readyReplicas}}' | grep -q 1; do sleep 5; done
+    echo "CSI Helper Deployment ready!"
 }
 
 uninstall_storageos() {

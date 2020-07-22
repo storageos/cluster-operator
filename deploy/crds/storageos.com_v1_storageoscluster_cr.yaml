@@ -23,8 +23,8 @@ spec:
   #   csiLivenessProbeContainer:
   #   hyperkubeContainer:
   #   nfsContainer:
-  csi:
-    enable: true
+  # csi:
+  #   enable: true
   #   endpoint: /var/lib/kubelet/device-plugins/
   #   registrarSocketDir: /var/lib/kubelet/device-plugins/
   #   kubeletDir: /var/lib/kubelet
@@ -37,7 +37,7 @@ spec:
   #   enableControllerExpandCreds: false
   #   kubeletRegistrationPath: /var/lib/kubelet/plugins/storageos/csi.sock
   #   driverRegisterationMode: node-register
-  #   DriverRequiresAttachment: "true"
+  #   driverRequiresAttachment: "true"
   #   deploymentStrategy: "deployment"
   # service:
   #   name: "storageos"

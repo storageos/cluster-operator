@@ -395,7 +395,7 @@ func TestCreateCSIHelper(t *testing.T) {
 					Enable: true,
 				},
 			},
-			wantHelperDeployment: false,
+			wantHelperDeployment: true,
 		},
 		{
 			name: "CSI helpers statefulset",
