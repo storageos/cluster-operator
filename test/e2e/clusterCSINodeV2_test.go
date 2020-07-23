@@ -57,15 +57,15 @@ func TestClusterCSINodeV2(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	f := framework.Global
-
-	// TODO - Status not confirmed working yet. Assume started after waiting
-	// for the timeout for now.
-	err = f.Client.Get(context.TODO(), types.NamespacedName{Name: testutil.TestClusterCRName, Namespace: namespace}, testStorageOS)
-	if err != nil {
+	namespacedName := types.NamespacedName{
+		Name:      testutil.TestClusterCRName,
+		Namespace: namespace,
+	}
+	if err = testutil.ClusterStatusCheck(t, namespacedName, 1, testutil.RetryInterval, testutil.Timeout); err != nil {
 		t.Fatal(err)
 	}
-	testutil.ClusterStatusCheck(t, testStorageOS.Status, 1)
+
+	f := framework.Global
 
 	daemonset, err := f.KubeClient.AppsV1().DaemonSets(resourceNS).Get(context.TODO(), "storageos-daemonset", metav1.GetOptions{})
 	if err != nil {
