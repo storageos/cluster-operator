@@ -103,27 +103,51 @@ func SetupOperator(t *testing.T, ctx *framework.Context) {
 
 // ClusterStatusCheck checks the values of cluster status based on a given
 // number of nodes.
-func ClusterStatusCheck(t *testing.T, status storageos.StorageOSClusterStatus, nodes int) {
-	if len(status.Nodes) != nodes {
-		t.Errorf("unexpected number of nodes:\n\t(GOT) %d\n\t(WNT) %d", len(status.Nodes), nodes)
-	}
+func ClusterStatusCheck(t *testing.T, nsName types.NamespacedName, nodes int, retryInterval, timeout time.Duration) error {
+	f := framework.Global
 
-	if status.Phase != storageos.ClusterPhaseRunning {
-		t.Errorf("unexpected cluster phase:\n\t(GOT) %s\n\t(WNT) %s", status.Phase, storageos.ClusterPhaseRunning)
-	}
+	err := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
+		cluster := storageos.StorageOSCluster{}
+		err = f.Client.Get(context.TODO(), nsName, &cluster)
+		if err != nil {
+			t.Logf("failed to get the cluster: %v, retrying...", err)
+			return false, nil
+		}
+		status := cluster.Status
 
-	wantReady := fmt.Sprintf("%d/%d", nodes, nodes)
-	if status.Ready != wantReady {
-		t.Errorf("unexpected Ready:\n\t(GOT) %s\n\t(WNT) %s", status.Ready, wantReady)
-	}
+		if len(status.Nodes) != nodes {
+			t.Logf("unexpected number of nodes:\n\t(GOT) %d\n\t(WNT) %d, retrying...", len(status.Nodes), nodes)
+			return false, nil
+		}
 
-	if len(status.Members.Ready) != nodes {
-		t.Errorf("unexpected number of ready members:\n\t(GOT) %d\n\t(WNT) %d", len(status.Members.Ready), nodes)
-	}
+		if status.Phase != storageos.ClusterPhaseRunning {
+			t.Logf("unexpected cluster phase:\n\t(GOT) %s\n\t(WNT) %s, retrying...", status.Phase, storageos.ClusterPhaseRunning)
+			return false, nil
+		}
 
-	if len(status.Members.Unready) != 0 {
-		t.Errorf("unexpected number of unready members:\n\t(GOT) %d\n\t(WNT) %d", len(status.Members.Unready), 0)
+		wantReady := fmt.Sprintf("%d/%d", nodes, nodes)
+		if status.Ready != wantReady {
+			t.Logf("unexpected Ready:\n\t(GOT) %s\n\t(WNT) %s, retrying...", status.Ready, wantReady)
+			return false, nil
+		}
+
+		if len(status.Members.Ready) != nodes {
+			t.Logf("unexpected number of ready members:\n\t(GOT) %d\n\t(WNT) %d, retrying...", len(status.Members.Ready), nodes)
+			return false, nil
+		}
+
+		if len(status.Members.Unready) != 0 {
+			t.Logf("unexpected number of unready members:\n\t(GOT) %d\n\t(WNT) %d, retrying...", len(status.Members.Unready), 0)
+			return false, nil
+		}
+
+		return true, nil
+	})
+	if err != nil {
+		return fmt.Errorf("cluster status check failed: %v", err)
 	}
+	t.Logf("Cluster Status Ready!\n")
+	return nil
 }
 
 // DeployCluster creates a custom resource and checks if the
