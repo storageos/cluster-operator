@@ -266,20 +266,10 @@ main() {
 
     if [ "$1" = "olm" ]; then
         # Lint the OLM CSV bundle.
-        # NOTE: This is disabled for now because the operator-courier check
-        # fails with error:
-        #       ERROR: CSV.spec.crd.owned.version isnot in CRD.spec.versions list [storageos/storageos.clusterserviceversion.yaml]
-        # Operator-courier 2.1.8 fixes the previous versions check error:
-        # https://github.com/operator-framework/operator-courier/issues/163
-        # but introduces another error related to CRD versions. There's a
-        # proposed fix for it in:
-        # https://github.com/operator-framework/operator-courier/pull/189
-        # Enable operator-courier once the issue is resolved.
-        # make olm-lint
+        make olm-lint
 
         # Create and lint the bundle for openshift metadata scanner.
-        # NOTE: Disable operator-courier for the above reason.
-        # make metadata-bundle-lint
+        make metadata-bundle-lint
 
         source ./deploy/olm/olm.sh
         olm_quick_install
