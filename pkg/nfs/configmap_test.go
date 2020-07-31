@@ -55,7 +55,7 @@ NFSv4 {
 	Graceless = true;
 }
 NFS_Core_Param {
-	fsid_device = true;
+	fsid_device = false;
 }
 
 LOG {
@@ -76,6 +76,7 @@ EXPORT {
 	Squash = none;
 	FSAL {
 		Name = VFS;
+		fsid_type = uuid;
 	}
 }`,
 		},
@@ -96,7 +97,7 @@ NFSv4 {
 	Graceless = true;
 }
 NFS_Core_Param {
-	fsid_device = true;
+	fsid_device = false;
 }
 
 LOG {
@@ -117,6 +118,7 @@ EXPORT {
 	Squash = none;
 	FSAL {
 		Name = VFS;
+		fsid_type = uuid;
 	}
 }`,
 		},
@@ -141,7 +143,7 @@ NFSv4 {
 	Graceless = true;
 }
 NFS_Core_Param {
-	fsid_device = true;
+	fsid_device = false;
 }
 
 LOG {
@@ -162,6 +164,7 @@ EXPORT {
 	Squash = test-squash;
 	FSAL {
 		Name = VFS;
+		fsid_type = uuid;
 	}
 }`,
 		},
