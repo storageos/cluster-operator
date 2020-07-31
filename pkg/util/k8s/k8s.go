@@ -3,6 +3,7 @@
 package k8s
 
 import (
+	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
@@ -133,13 +134,19 @@ func (r ResourceManager) CSIDriver(name string, labels map[string]string, spec *
 	return resource.NewCSIDriver(r.client, name, r.combineLabels(labels), spec)
 }
 
+// ServiceMonitor returns a ServiceMonitor object.
+func (r ResourceManager) ServiceMonitor(name, namespace string, labels map[string]string, annotations map[string]string, svc *corev1.Service, spec *monitoringv1.ServiceMonitorSpec) *resource.ServiceMonitor {
+	return resource.NewServiceMonitor(r.client, name, namespace, r.combineLabels(labels), annotations, svc, spec)
+}
+
 func (r ResourceManager) combineLabels(labels map[string]string) map[string]string {
 	// Combine the common labels and resource specific labels.
 	if labels == nil {
-		labels = map[string]string{}
+		return r.labels
 	}
-	for k, v := range r.labels {
-		labels[k] = v
+	outLabels := r.labels
+	for k, v := range labels {
+		outLabels[k] = v
 	}
-	return labels
+	return outLabels
 }

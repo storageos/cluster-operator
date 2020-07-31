@@ -317,12 +317,13 @@ func (r *ReconcileStorageOSCluster) updateSpec(m *storageosv1.StorageOSCluster) 
 	}
 
 	properties := map[*string]string{
-		&m.Spec.Namespace:            m.Spec.GetResourceNS(),
-		&m.Spec.Images.NodeContainer: m.Spec.GetNodeContainerImage(),
-		&m.Spec.Images.InitContainer: m.Spec.GetInitContainerImage(),
-		&m.Spec.Service.Name:         m.Spec.GetServiceName(),
-		&m.Spec.Service.Type:         m.Spec.GetServiceType(),
-		&m.Spec.Join:                 join,
+		&m.Spec.Namespace:                  m.Spec.GetResourceNS(),
+		&m.Spec.Images.NodeContainer:       m.Spec.GetNodeContainerImage(),
+		&m.Spec.Images.InitContainer:       m.Spec.GetInitContainerImage(),
+		&m.Spec.Images.APIManagerContainer: m.Spec.GetAPIManagerImage(),
+		&m.Spec.Service.Name:               m.Spec.GetServiceName(),
+		&m.Spec.Service.Type:               m.Spec.GetServiceType(),
+		&m.Spec.Join:                       join,
 	}
 
 	if !m.Spec.DisableScheduler {

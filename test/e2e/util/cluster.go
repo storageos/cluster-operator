@@ -12,6 +12,7 @@ import (
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -388,5 +389,108 @@ func CSIDriverResourceTest(t *testing.T, driverName string) {
 	err = f.Client.Get(goctx.TODO(), types.NamespacedName{Name: driverName}, csiDriver)
 	if err != nil {
 		t.Errorf("CSIDriver not found: %v", err)
+	}
+}
+
+// APIManagerDeploymentTest checks the api-manager deployment.
+func APIManagerDeploymentTest(t *testing.T, ns string, retryInterval, timeout time.Duration) {
+	f := framework.Global
+	var deployment *appsv1.Deployment
+	err := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
+		deployment, err = f.KubeClient.AppsV1().Deployments(ns).Get(context.TODO(), "storageos-api-manager", metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+		// TODO: wait for available?  It's timing out waiting atm.
+		if deployment.Status.Replicas == 2 {
+			return true, nil
+		}
+		return false, nil
+	})
+	if err != nil {
+		t.Fatalf("timed out waiting for both api-manager replicas to be available: err=%v, status=%v", err, deployment.Status)
+	}
+
+	var pods *corev1.PodList
+	err = wait.Poll(retryInterval, timeout, func() (done bool, err error) {
+		pods, err = f.KubeClient.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{
+			LabelSelector: "app.kubernetes.io/component=storageos-api-manager",
+		})
+		if err != nil {
+			return false, err
+		}
+		if len(pods.Items) == 2 {
+			return true, nil
+		}
+		return false, nil
+	})
+	if err != nil {
+		t.Fatalf("timed out waiting for api-manager pods: %v", err)
+	}
+
+	// check label needed for metrics service.
+	for _, pod := range pods.Items {
+		label := "app.kubernetes.io/component"
+		want := "storageos-api-manager"
+		got, ok := pod.Labels[label]
+		if !ok {
+			t.Errorf("expected label %q not set", label)
+		}
+		if ok && got != want {
+			t.Errorf("expected label %q set to %q, want %q", label, got, want)
+		}
+	}
+}
+
+// APIManagerMetricsServiceTest checks the api-manager metrics service deployment.
+func APIManagerMetricsServiceTest(t *testing.T, ns string, retryInterval, timeout time.Duration) {
+	f := framework.Global
+	var svc *corev1.Service
+	err := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
+		svc, err = f.KubeClient.CoreV1().Services(ns).Get(context.TODO(), "storageos-api-manager-metrics", metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+		if svc.Spec.ClusterIP != "" {
+			return true, nil
+		}
+		return false, nil
+	})
+	if err != nil {
+		t.Fatalf("timed out waiting for api-manager metrics service: %v", err)
+	}
+
+	// Check label needed for ServiceMonitor.
+	label := "app.kubernetes.io/component"
+	want := "storageos-api-manager"
+	got, ok := svc.Labels[label]
+	if !ok {
+		t.Errorf("expected label %q not set", label)
+	}
+	if ok && got != want {
+		t.Errorf("expected label %q set to %q, want %q", label, got, want)
+	}
+}
+
+// APIManagerMetricsServiceMonitorTest checks the api-manager metrics service monitor.
+func APIManagerMetricsServiceMonitorTest(t *testing.T, ns string, retryInterval, timeout time.Duration) {
+	f := framework.Global
+	nn := types.NamespacedName{
+		Name:      "storageos-api-manager-metrics",
+		Namespace: ns,
+	}
+	sm := &monitoringv1.ServiceMonitor{}
+	err := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
+		err = f.Client.Get(context.TODO(), nn, sm)
+		if err != nil {
+			return false, err
+		}
+		if sm != nil {
+			return true, nil
+		}
+		return false, nil
+	})
+	if err != nil {
+		t.Fatalf("timed out waiting for api-manager metrics service monitor: %v", err)
 	}
 }

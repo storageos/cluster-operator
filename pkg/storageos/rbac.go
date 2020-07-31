@@ -10,6 +10,7 @@ const (
 	StatefulsetSA = "storageos-statefulset-sa"
 	CSIHelperSA   = "storageos-csi-helper-sa"
 	SchedulerSA   = "storageos-scheduler-sa"
+	APIManagerSA  = "storageos-api-manager-sa"
 
 	CSIProvisionerClusterRoleName    = "storageos:csi-provisioner"
 	CSIProvisionerClusterBindingName = "storageos:csi-provisioner"
@@ -42,6 +43,9 @@ const (
 
 	InitClusterRoleName    = "storageos:init"
 	InitClusterBindingName = "storageos:init"
+
+	APIManagerClusterRoleName    = "storageos:api-manager"
+	APIManagerClusterBindingName = "storageos:api-manager"
 )
 
 // getCSIHelperServiceAccountName returns the service account name of CSI helper
@@ -73,6 +77,11 @@ func (s *Deployment) createServiceAccountForScheduler() error {
 	return s.k8sResourceManager.ServiceAccount(SchedulerSA, s.stos.Spec.GetResourceNS(), nil).Create()
 }
 
+// createServiceAccountForAPIManager creates a service account for api-manager.
+func (s *Deployment) createServiceAccountForAPIManager() error {
+	return s.k8sResourceManager.ServiceAccount(APIManagerSA, s.stos.Spec.GetResourceNS(), nil).Create()
+}
+
 func (s *Deployment) createRoleForKeyMgmt() error {
 	rules := []rbacv1.PolicyRule{
 		{
@@ -82,6 +91,34 @@ func (s *Deployment) createRoleForKeyMgmt() error {
 		},
 	}
 	return s.k8sResourceManager.Role(KeyManagementRoleName, s.stos.Spec.GetResourceNS(), nil, rules).Create()
+}
+
+// createClusterRoleForAPIManager creates a role with all the permissions for
+// api-manager.
+func (s *Deployment) createClusterRoleForAPIManager() error {
+	rules := []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{""},
+			Resources: []string{
+				"services",
+				"endpoints",
+				"configmaps",
+				"configmaps/status",
+			},
+			Verbs: []string{"get", "list", "watch", "create", "delete", "update", "patch"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"persistentvolumeclaims"},
+			Verbs:     []string{"get", "list", "watch"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"events"},
+			Verbs:     []string{"create"},
+		},
+	}
+	return s.k8sResourceManager.ClusterRole(APIManagerClusterRoleName, nil, rules).Create()
 }
 
 func (s *Deployment) createClusterRoleForFencing() error {
@@ -319,6 +356,23 @@ func (s *Deployment) createRoleBindingForKeyMgmt() error {
 		APIGroup: "rbac.authorization.k8s.io",
 	}
 	return s.k8sResourceManager.RoleBinding(KeyManagementBindingName, s.stos.Spec.GetResourceNS(), nil, subjects, roleRef).Create()
+}
+
+// createClusterRoleBindingForAPIManager creates a role binding for api-manager.
+func (s *Deployment) createClusterRoleBindingForAPIManager() error {
+	subjects := []rbacv1.Subject{
+		{
+			Kind:      "ServiceAccount",
+			Name:      APIManagerSA,
+			Namespace: s.stos.Spec.GetResourceNS(),
+		},
+	}
+	roleRef := &rbacv1.RoleRef{
+		Kind:     "ClusterRole",
+		Name:     APIManagerClusterRoleName,
+		APIGroup: "rbac.authorization.k8s.io",
+	}
+	return s.k8sResourceManager.ClusterRoleBinding(APIManagerClusterBindingName, nil, subjects, roleRef).Create()
 }
 
 func (s *Deployment) createClusterRoleBindingForFencing() error {

@@ -36,10 +36,12 @@ const (
 	statefulsetKind = "statefulset"
 	deploymentKind  = "deployment"
 
-	daemonsetName   = "storageos-daemonset"
-	statefulsetName = "storageos-statefulset"
-	configmapName   = "storageos-node-config"
-	csiHelperName   = "storageos-csi-helper"
+	daemonsetName         = "storageos-daemonset"
+	statefulsetName       = "storageos-statefulset"
+	configmapName         = "storageos-node-config"
+	csiHelperName         = "storageos-csi-helper"
+	apiManagerName        = "storageos-api-manager"
+	apiManagerMetricsName = "storageos-api-manager-metrics"
 
 	// tlsSecretType       = "kubernetes.io/tls"
 	// storageosSecretType = "kubernetes.io/storageos"
@@ -226,6 +228,10 @@ func (s *Deployment) Deploy() error {
 		if err := s.createCSIHelper(); err != nil {
 			return err
 		}
+	}
+
+	if err := s.createAPIManager(); err != nil {
+		return err
 	}
 
 	if !s.stos.Spec.DisableScheduler {

@@ -401,6 +401,15 @@ func (s StorageOSClusterSpec) GetNFSServerImage() string {
 	return image.GetDefaultImage(image.NFSImageEnvVar, image.DefaultNFSContainerImage)
 }
 
+// GetAPIManagerImage returns the API Manager container image used as the
+// default image in the cluster.
+func (s StorageOSClusterSpec) GetAPIManagerImage() string {
+	if s.Images.APIManagerContainer != "" {
+		return s.Images.APIManagerContainer
+	}
+	return image.GetDefaultImage(image.APIManagerEnvVar, image.DefaultAPIManagerImage)
+}
+
 // GetServiceName returns the service name.
 func (s StorageOSClusterSpec) GetServiceName() string {
 	if s.Service.Name != "" {
@@ -571,6 +580,7 @@ type ContainerImages struct {
 	HyperkubeContainer                 string `json:"hyperkubeContainer,omitempty"`
 	KubeSchedulerContainer             string `json:"kubeSchedulerContainer,omitempty"`
 	NFSContainer                       string `json:"nfsContainer,omitempty"`
+	APIManagerContainer                string `json:"apiManagerContainer,omitempty"`
 }
 
 // StorageOSClusterCSI contains CSI configurations.

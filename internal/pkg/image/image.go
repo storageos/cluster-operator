@@ -18,6 +18,7 @@ const (
 	CSIv0ExternalProvisionerContainerImage    = "storageos/csi-provisioner:v0.4.3"
 	CSIv0ExternalAttacherContainerImage       = "quay.io/k8scsi/csi-attacher:v0.4.2"
 	DefaultNFSContainerImage                  = "storageos/nfs:1.0.0"
+	DefaultAPIManagerImage                    = "storageos/api-manager:v0.1.0"
 
 	DefaultHyperkubeContainerRegistry = "gcr.io/google_containers/hyperkube"
 
@@ -43,6 +44,7 @@ const (
 
 	NFSImageEnvVar           = "RELATED_IMAGE_NFS"
 	KubeSchedulerImageEnvVar = "RELATED_IMAGE_KUBE_SCHEDULER"
+	APIManagerEnvVar         = "RELATED_IMAGE_API_MANAGER"
 )
 
 // GetDefaultImage checks the environment variable for an image. If not found,
