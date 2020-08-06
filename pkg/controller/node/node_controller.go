@@ -151,6 +151,10 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 	} else if r.stosClient.client.V2 != nil {
 		node, err := r.stosClient.client.GetNodeV2(instance.Name)
 		if err != nil {
+			if err == storageosclientcommon.ErrUnauthorized {
+				r.stosClient = nil
+				return immediateRetryResult, nil
+			}
 			if err == storageosclientcommon.ErrResourceNotFound {
 				// Not a StorageOS node, skip.
 				return reconcile.Result{}, nil
@@ -162,6 +166,10 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 
 		if updateLabels(node.Labels, instance.Labels) {
 			if err := r.stosClient.client.UpdateNodeV2(node); err != nil {
+				if err == storageosclientcommon.ErrUnauthorized {
+					r.stosClient = nil
+					return immediateRetryResult, nil
+				}
 				log.Info("Failed to sync node labels", "error", err)
 				return reconcileResult, nil
 			}

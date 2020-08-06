@@ -2,6 +2,7 @@ package storageos
 
 import (
 	"context"
+	"net/http"
 
 	storageostypes "github.com/storageos/go-api/types"
 	storageosapiv2 "github.com/storageos/go-api/v2"
@@ -18,9 +19,9 @@ func (c Client) GetNodeV1(name string) (*storageostypes.Node, error) {
 // GetNodeV2 returns StorageOS v2 node.
 func (c Client) GetNodeV2(name string) (*storageosapiv2.Node, error) {
 	// Get a list of all the nodes.
-	nodes, _, err := c.V2.DefaultApi.ListNodes(c.Ctx)
+	nodes, rsp, err := c.V2.DefaultApi.ListNodes(c.Ctx)
 	if err != nil {
-		return nil, v2.GetAPIErrorResponse(err)
+		return nil, statusCodeBasedError(rsp.StatusCode, err)
 	}
 
 	var node storageosapiv2.Node
@@ -68,6 +69,21 @@ func (c Client) UpdateNodeV2(node *storageosapiv2.Node) error {
 		Version: node.Version,
 	}
 
-	_, _, err := c.V2.DefaultApi.UpdateNode(c.Ctx, node.Id, nodeData)
-	return err
+	_, rsp, err := c.V2.DefaultApi.UpdateNode(c.Ctx, node.Id, nodeData)
+	if err != nil {
+		return statusCodeBasedError(rsp.StatusCode, err)
+	}
+
+	return nil
+}
+
+// statusCodeBasedError returns known errors based on the status code or
+// a generic error.
+func statusCodeBasedError(statusCode int, err error) error {
+	if statusCode == http.StatusUnauthorized {
+		return common.ErrUnauthorized
+	}
+
+	// Return generic error.
+	return v2.GetAPIErrorResponse(err)
 }
