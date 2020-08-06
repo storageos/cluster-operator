@@ -2,8 +2,8 @@
 
 set -Eeuxo pipefail
 
-readonly K8S_LATEST="v1.17.0"
-readonly KIND_LINK="https://github.com/kubernetes-sigs/kind/releases/download/v0.6.1/kind-linux-amd64"
+readonly K8S_LATEST="v1.18.6"
+readonly KIND_LINK="https://github.com/kubernetes-sigs/kind/releases/download/v0.8.1/kind-linux-amd64"
 
 OPERATOR_SDK="build/operator-sdk"
 
