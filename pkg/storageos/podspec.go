@@ -3,6 +3,7 @@ package storageos
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/storageos/cluster-operator/pkg/util"
 	corev1 "k8s.io/api/core/v1"
@@ -133,13 +134,19 @@ func (s *Deployment) addCSI(podSpec *corev1.PodSpec) {
 				MountPropagation: &mountPropagationBidirectional,
 			},
 			{
-				Name:      "plugin-dir",
-				MountPath: s.stos.Spec.GetCSIPluginDir(CSIV1Supported(s.k8sVersion)),
-			},
-			{
 				Name:      "device-dir",
 				MountPath: s.stos.Spec.GetCSIDeviceDir(),
 			},
+		}
+		// Only add a mount for the plugin-dir if it's not under the kubelet-dir
+		// mount path, which is now the k8s default.  Overlapping mounts will
+		// cause unmount issues when the container restarts, leaving entries in
+		// /proc/mounts.
+		if !strings.HasPrefix(s.stos.Spec.GetCSIPluginDir(CSIV1Supported(s.k8sVersion)), s.stos.Spec.GetCSIKubeletDir()) {
+			volMnts = append(volMnts, corev1.VolumeMount{
+				Name:      "plugin-dir",
+				MountPath: s.stos.Spec.GetCSIPluginDir(CSIV1Supported(s.k8sVersion)),
+			})
 		}
 
 		// Append volume mounts to the first container, the only container is the node container, at this point.
