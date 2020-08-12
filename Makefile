@@ -12,7 +12,7 @@ GOLANGCI_LINT = $(BUILD_DIR)/golangci-lint
 OUTPUT_DIR = $(BUILD_DIR)/_output
 
 # Set the new version before running the release target.
-NEW_VERSION = v2.0.0
+NEW_VERSION ?= v2.2.0
 
 # Variables to be used when running the make targets in a container.
 CACHE_DIR = $(shell pwd)/.cache
