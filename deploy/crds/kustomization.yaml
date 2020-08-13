@@ -1,0 +1,5 @@
+resources:
+- storageos.com_jobs_crd.yaml
+- storageos.com_nfsservers_crd.yaml
+- storageos.com_storageosclusters_crd.yaml
+- storageos.com_storageosupgrades_crd.yaml
