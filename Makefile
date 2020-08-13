@@ -5,10 +5,11 @@ SDK_VERSION = v0.17.2
 MACHINE = $(shell uname -m)
 BUILD_IMAGE = golang:1.14.2
 BASE_IMAGE = storageos/base-image:0.2.1
-BUILD_DIR = "build"
+BUILD_DIR = "${CURDIR}/build"
 OPERATOR_SDK = $(BUILD_DIR)/operator-sdk
 YQ = $(BUILD_DIR)/yq
 GOLANGCI_LINT = $(BUILD_DIR)/golangci-lint
+KUSTOMIZE = $(BUILD_DIR)/kustomize
 OUTPUT_DIR = $(BUILD_DIR)/_output
 
 # Set the new version before running the release target.
@@ -160,7 +161,7 @@ dev-image: operator-sdk operator-docker ## Build an image quickly for testing (f
 
 ##@ Third-party tools
 
-.PHONY: operator-sdk yq golangci-lint
+.PHONY: operator-sdk yq golangci-lint kustomize
 
 operator-sdk: ## Download operator-sdk.
 	# Download sdk only if it's not available.
@@ -179,6 +180,13 @@ golangci-lint: ## Install golangci-lint
 	@if [ ! -f $(GOLANGCI_LINT) ]; then \
 		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(BUILD_DIR) v1.27.0; \
 	fi
+
+kustomize: ## Install kustomize.
+	@if [ ! -f $(KUSTOMIZE) ]; then \
+		curl -s https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh  | bash && \
+		mv kustomize $(KUSTOMIZE); \
+	fi
+
 
 ##############################
 # Tests                      #
@@ -224,9 +232,12 @@ metadata-zip: ## Generate OLM metadata-zip bundle.
 		deploy/olm/storageos/storageosnfsserver.crd.yaml \
 		deploy/olm/csv-rhel/storageos.v*.clusterserviceversion.yaml
 
+update-image: kustomize
+	cd deploy/ && $(KUSTOMIZE) edit set image storageos/cluster-operator=$(OPERATOR_IMAGE)
+
 # Generates a single manifest for installing the operator.
-install-manifest: yq ## Generate operator install manifest file.
-	bash scripts/create-manifest.sh $(OPERATOR_IMAGE)
+install-manifest: kustomize update-image ## Generate operator install manifest file.
+	$(KUSTOMIZE) build deploy/ > storageos-operator.yaml
 
 
 
