@@ -21,7 +21,7 @@ const (
 
 	DefaultHyperkubeContainerRegistry = "gcr.io/google_containers/hyperkube"
 
-	DefaultKubeSchedulerContainerRegistry = "gcr.io/google-containers/kube-scheduler"
+	DefaultKubeSchedulerContainerRegistry = "k8s.gcr.io/kube-scheduler"
 )
 
 // Environment variables for setting default images.
