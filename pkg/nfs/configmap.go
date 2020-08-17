@@ -99,7 +99,7 @@ EXPORT {
 	Squash = {{.Squash}};
 	FSAL {
 		Name = VFS;
-		fsid_type = uuid;
+		fsid_type = None;
 	}
 }`
 	exportConfigData := nfsExportConfig{
