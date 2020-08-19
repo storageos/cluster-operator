@@ -76,7 +76,7 @@ EXPORT {
 	Squash = none;
 	FSAL {
 		Name = VFS;
-		fsid_type = uuid;
+		fsid_type = None;
 	}
 }`,
 		},
@@ -118,7 +118,7 @@ EXPORT {
 	Squash = none;
 	FSAL {
 		Name = VFS;
-		fsid_type = uuid;
+		fsid_type = None;
 	}
 }`,
 		},
@@ -164,7 +164,7 @@ EXPORT {
 	Squash = test-squash;
 	FSAL {
 		Name = VFS;
-		fsid_type = uuid;
+		fsid_type = None;
 	}
 }`,
 		},
