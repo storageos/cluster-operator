@@ -19,10 +19,16 @@ $yq r deploy/storageos-operators.configmap.yaml \
 
 # Extract CSV from configmap, update with rhel operator changes, removes OLM
 # scorecard proxy container and write to the final CSV file.
+# Also removes CSI v0 and NFS RELATED_IMAGE env vars as Red Hat certification
+# validates that they are set, even though v2 does not use them.
 $yq r deploy/storageos-operators.configmap.yaml \
     data.clusterServiceVersions | $yq r - [0] | \
     $yq w -s deploy/olm/rhel-changes.yaml - | \
-    $yq d - 'spec.install.spec.deployments[0].spec.template.spec.containers[1]' \
+    $yq d - 'spec.install.spec.deployments[0].spec.template.spec.containers[1]' | \
+    $yq d - 'spec.install.spec.deployments[0].spec.template.spec.containers[0].env[12]' | \
+    $yq d - 'spec.install.spec.deployments[0].spec.template.spec.containers[0].env[11]' | \
+    $yq d - 'spec.install.spec.deployments[0].spec.template.spec.containers[0].env[10]' | \
+    $yq d - 'spec.install.spec.deployments[0].spec.template.spec.containers[0].env[9]' \
     > deploy/olm/csv-rhel/storageos.clusterserviceversion.yaml
 
 

@@ -81,6 +81,8 @@ spec.replaces: storageosoperator.$PREV_VERSION
 EOF
 echo
 
+# Load default images for OLM installs into env vars.
+source deploy/olm/default-images.sh
 
 # rhel changes update
 echo "Updating $RHEL_CHANGES_FILE..."
@@ -112,64 +114,25 @@ metadata.annotations.alm-examples: |-
           "deploymentStrategy": "deployment"
         }
       }
-    },
-    {
-      "apiVersion": "storageos.com/v1",
-      "kind": "Job",
-      "metadata": {
-        "name": "example-job",
-        "namespace": "default"
-      },
-      "spec": {
-        "image": "registry.connect.redhat.com/storageos/cluster-operator:latest",
-        "args": ["/var/lib/storageos"],
-        "mountPath": "/var/lib",
-        "hostPath": "/var/lib",
-        "completionWord": "done"
-      }
-    },
-    {
-      "apiVersion": "storageos.com/v1",
-      "kind": "StorageOSUpgrade",
-      "metadata": {
-        "name": "example-upgrade",
-        "namespace": "default"
-      },
-      "spec": {
-        "newImage": "registry.connect.redhat.com/storageos/node:latest"
-      }
-    },
-    {
-      "apiVersion": "storageos.com/v1",
-      "kind": "NFSServer",
-      "metadata": {
-        "name": "example-nfsserver",
-        "namespace": "default"
-      },
-      "spec": {
-        "resources": {
-          "requests": {
-            "storage": "1Gi"
-          }
-        }
-      }
     }
   ]
 
 spec.version: $SEMVER
 spec.install.spec.deployments[0].spec.template.spec.containers[0].image: registry.connect.redhat.com/storageos/cluster-operator:$NEW_VERSION
-spec.install.spec.deployments[0].spec.template.spec.containers[0].env[0].value: ""
-spec.install.spec.deployments[0].spec.template.spec.containers[0].env[1].value: ""
-spec.install.spec.deployments[0].spec.template.spec.containers[0].env[2].value: ""
-spec.install.spec.deployments[0].spec.template.spec.containers[0].env[3].value: ""
-spec.install.spec.deployments[0].spec.template.spec.containers[0].env[4].value: ""
-spec.install.spec.deployments[0].spec.template.spec.containers[0].env[5].value: ""
-spec.install.spec.deployments[0].spec.template.spec.containers[0].env[6].value: ""
-spec.install.spec.deployments[0].spec.template.spec.containers[0].env[7].value: ""
-spec.install.spec.deployments[0].spec.template.spec.containers[0].env[8].value: ""
-spec.install.spec.deployments[0].spec.template.spec.containers[0].env[9].value: ""
-spec.install.spec.deployments[0].spec.template.spec.containers[0].env[10].value: ""
-spec.install.spec.deployments[0].spec.template.spec.containers[0].env[11].value: ""
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[0].value: "${RELATED_IMAGE_STORAGEOS_NODE}"
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[1].value: "${RELATED_IMAGE_STORAGEOS_INIT}"
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[2].value: "${RELATED_IMAGE_CSIV1_CLUSTER_DRIVER_REGISTRAR}"
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[3].value: "${RELATED_IMAGE_CSIV1_NODE_DRIVER_REGISTRAR}"
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[4].value: "${RELATED_IMAGE_CSIV1_EXTERNAL_PROVISIONER}"
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[5].value: "${RELATED_IMAGE_CSIV1_EXTERNAL_ATTACHER}"
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[6].value: "${RELATED_IMAGE_CSIV1_EXTERNAL_ATTACHER_V2}"
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[7].value: "${RELATED_IMAGE_CSIV1_EXTERNAL_RESIZER}"
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[8].value: "${RELATED_IMAGE_CSIV1_LIVENESS_PROBE}"
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[9].value: "${RELATED_IMAGE_CSIV0_DRIVER_REGISTRAR}"
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[10].value: "${RELATED_IMAGE_CSIV0_EXTERNAL_PROVISIONER}"
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[11].value: "${RELATED_IMAGE_CSIV0_EXTERNAL_ATTACHER}"
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[12].value: "${RELATED_IMAGE_NFS}"
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[13].value: "${RELATED_IMAGE_KUBE_SCHEDULER}"
 spec.customresourcedefinitions.owned[2].specDescriptors[0].description: The StorageOS Node image to upgrade to. e.g. \`registry.connect.redhat.com/storageos/node:latest\`
 spec.replaces: storageosoperator.$PREV_VERSION
 EOF

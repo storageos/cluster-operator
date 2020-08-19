@@ -1,0 +1,15 @@
+OPERATOR_IMAGE=registry.connect.redhat.com/storageos/cluster-operator:${NEW_VERSION}
+RELATED_IMAGE_STORAGEOS_NODE=registry.connect.redhat.com/storageos/node:${NEW_VERSION}
+RELATED_IMAGE_STORAGEOS_INIT=registry.connect.redhat.com/storageos/init:v2.0.0
+RELATED_IMAGE_CSIV1_CLUSTER_DRIVER_REGISTRAR=registry.connect.redhat.com/storageos/csi-cluster-driver-registrar:v1.0.1
+RELATED_IMAGE_CSIV1_NODE_DRIVER_REGISTRAR=registry.connect.redhat.com/storageos/csi-node-driver-registrar:v1.2.0
+RELATED_IMAGE_CSIV1_EXTERNAL_PROVISIONER=registry.connect.redhat.com/storageos/csi-provisioner:v1.6.0-patched
+RELATED_IMAGE_CSIV1_EXTERNAL_ATTACHER=registry.connect.redhat.com/storageos/csi-attacher:v1.2.2
+RELATED_IMAGE_CSIV1_EXTERNAL_ATTACHER_V2=registry.connect.redhat.com/storageos/csi-attacher:v1.2.2
+RELATED_IMAGE_CSIV1_EXTERNAL_RESIZER=registry.connect.redhat.com/storageos/csi-resizer:v0.5.0
+RELATED_IMAGE_CSIV1_LIVENESS_PROBE=registry.connect.redhat.com/storageos/csi-livenessprobe:v1.1.0
+RELATED_IMAGE_CSIV0_DRIVER_REGISTRAR=
+RELATED_IMAGE_CSIV0_EXTERNAL_PROVISIONER=
+RELATED_IMAGE_CSIV0_EXTERNAL_ATTACHER=
+RELATED_IMAGE_NFS=
+RELATED_IMAGE_KUBE_SCHEDULER=registry.connect.redhat.com/storageos/kube-scheduler:v1.17.0
