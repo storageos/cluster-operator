@@ -9,7 +9,7 @@ metadata:
     description: Cloud-native, persistent storage for containers.
     containerImage: storageos/cluster-operator:v2.2.0
     repository: https://github.com/storageos/cluster-operator
-    createdAt: "2020-08-19T17:39:33Z"
+    createdAt: "2020-09-01T15:14:45Z"
     support: StorageOS, Inc
     certified: "false"
     operators.operatorframework.io/internal-objects: |-
