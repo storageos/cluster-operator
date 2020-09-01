@@ -42,6 +42,7 @@ fi
 # Add "v" prefix because the versions in OLM CSV spec.version don't contain "v"
 # prefix.
 PREV_VERSION=v$PREV_VERSION_COMMUNITY
+PREV_VERSION=v2.1.0
 
 # Ensure that the new version is not the same as the previous version.
 if [ "$NEW_VERSION" == "$PREV_VERSION" ]; then
@@ -93,7 +94,7 @@ cat << EOF >$RHEL_CHANGES_FILE
 $FILE_HEADER_NOTE
 metadata.name: storageosoperator.$NEW_VERSION
 metadata.namespace: placeholder
-metadata.annotations.containerImage: registry.connect.redhat.com/storageos/cluster-operator:$NEW_VERSION
+metadata.annotations.containerImage: ${OPERATOR_IMAGE}
 metadata.annotations.certified: "true"
 metadata.annotations.alm-examples: |-
   [
@@ -118,7 +119,7 @@ metadata.annotations.alm-examples: |-
   ]
 
 spec.version: $SEMVER
-spec.install.spec.deployments[0].spec.template.spec.containers[0].image: registry.connect.redhat.com/storageos/cluster-operator:$NEW_VERSION
+spec.install.spec.deployments[0].spec.template.spec.containers[0].image: ${OPERATOR_IMAGE}
 spec.install.spec.deployments[0].spec.template.spec.containers[0].env[0].value: "${RELATED_IMAGE_STORAGEOS_NODE}"
 spec.install.spec.deployments[0].spec.template.spec.containers[0].env[1].value: "${RELATED_IMAGE_STORAGEOS_INIT}"
 spec.install.spec.deployments[0].spec.template.spec.containers[0].env[2].value: "${RELATED_IMAGE_CSIV1_CLUSTER_DRIVER_REGISTRAR}"

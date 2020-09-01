@@ -1,4 +1,4 @@
-OPERATOR_IMAGE=registry.connect.redhat.com/storageos/cluster-operator:${NEW_VERSION}
+OPERATOR_IMAGE=registry.connect.redhat.com/storageos/cluster-operator2:${NEW_VERSION}
 RELATED_IMAGE_STORAGEOS_NODE=registry.connect.redhat.com/storageos/node:${NEW_VERSION}
 RELATED_IMAGE_STORAGEOS_INIT=registry.connect.redhat.com/storageos/init:v2.0.0
 RELATED_IMAGE_CSIV1_CLUSTER_DRIVER_REGISTRAR=registry.connect.redhat.com/storageos/csi-cluster-driver-registrar:v1.0.1
