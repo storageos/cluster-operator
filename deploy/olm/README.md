@@ -15,7 +15,6 @@ This script contains helper functions to setup OLM in a cluster, install
 the storageos operator and install storageos. Also includes scripts to
 uninstallation everything it installs.
 
-
-## community-changes.yaml, rhel-changes.yaml, package-changes.yaml
+## community-changes.yaml, rhel-changes.yaml, community-package-changes.yaml, rhel-package-changes.yaml
 
 These files are update scripts for the yaml files used by yq yaml processor.

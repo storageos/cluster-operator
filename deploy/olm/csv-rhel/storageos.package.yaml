@@ -1,0 +1,4 @@
+packageName: storageos2
+channels:
+- name: stable
+  currentCSV: storageosoperator.v2.2.0

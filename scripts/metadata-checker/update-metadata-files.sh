@@ -57,5 +57,8 @@ $yq r deploy/storageos-operators.configmap.yaml \
 
 # Extract package from configmap, update and write to the final file.
 $yq r deploy/storageos-operators.configmap.yaml \
-    data.packages | $yq r - [0] | $yq w -s deploy/olm/package-changes.yaml - > \
+    data.packages | $yq r - [0] | $yq w -s deploy/olm/community-package-changes.yaml - > \
     deploy/olm/storageos/storageos.package.yaml
+$yq r deploy/storageos-operators.configmap.yaml \
+    data.packages | $yq r - [0] | $yq w -s deploy/olm/rhel-package-changes.yaml - > \
+    deploy/olm/csv-rhel/storageos.package.yaml

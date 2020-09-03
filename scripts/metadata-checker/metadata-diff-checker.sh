@@ -121,5 +121,5 @@ packagefile=$TMP_DIR/package.yaml
 targetfile=deploy/olm/storageos/storageos.package.yaml
 $yq r deploy/storageos-operators.configmap.yaml \
     data.packages | $yq r - [0] | \
-    $yq w -s deploy/olm/package-changes.yaml - > $packagefile
+    $yq w -s deploy/olm/community-package-changes.yaml - > $packagefile
 check_diff $targetfile $packagefile

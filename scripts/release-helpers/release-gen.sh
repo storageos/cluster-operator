@@ -42,6 +42,7 @@ fi
 # Add "v" prefix because the versions in OLM CSV spec.version don't contain "v"
 # prefix.
 PREV_VERSION=v$PREV_VERSION_COMMUNITY
+PREV_VERSION=v2.1.0
 
 # Ensure that the new version is not the same as the previous version.
 if [ "$NEW_VERSION" == "$PREV_VERSION" ]; then
@@ -140,16 +141,28 @@ echo
 
 
 # Package changes update
-PACKAGE_CHANGES_FILE=deploy/olm/package-changes.yaml
+COMMUNITY_PACKAGE_CHANGES_FILE=deploy/olm/community-package-changes.yaml
+RHEL_PACKAGE_CHANGES_FILE=deploy/olm/rhel-package-changes.yaml
 
 echo "Updating $PACKAGE_CHANGES_FILE..."
 
-# OLM package file template.
-cat << EOF >$PACKAGE_CHANGES_FILE
+# Community package file template.
+cat << EOF >$COMMUNITY_PACKAGE_CHANGES_FILE
 $FILE_HEADER_NOTE
 channels[0].currentCSV: storageosoperator.$1
 EOF
 echo
+
+echo "Updating $RHEL_PACKAGE_CHANGES_FILE..."
+
+# OLM package file template.
+cat << EOF >$RHEL_PACKAGE_CHANGES_FILE
+$FILE_HEADER_NOTE
+packageName: storageos2
+channels[0].currentCSV: storageosoperator.$1
+EOF
+echo
+
 
 
 # Update creation date of the CSV in configmap.

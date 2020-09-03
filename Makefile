@@ -216,16 +216,16 @@ metadata-zip: ## Generate OLM metadata-zip bundle.
 	mkdir -p $(OUTPUT_DIR)
 	# -j strips the parent directories and adds the files at the root. This is
 	# a requirement for the openshift metadata scanner.
-	# New: Only include v2 CSV files.  v2.0.0 was manually edited to remove the
+	# New: Only include v2.2+ CSV files.  v2.2.0 was manually edited to remove the
 	# "replaces" line to avoid automatic upgrades of v1 operators.  RH Connect
-	# has a new project (storageos/cluster-operator2) for v2-only.
+	# has a new project (storageos/cluster-operator2) for v2.2+ only.
 	zip -j $(OUTPUT_DIR)/$(METADATA_FILE) \
-		deploy/olm/storageos/storageos.package.yaml \
+		deploy/olm/csv-rhel/storageos.package.yaml \
 		deploy/olm/storageos/storageoscluster.crd.yaml \
 		deploy/olm/storageos/storageosjob.crd.yaml \
 		deploy/olm/storageos/storageosupgrade.crd.yaml \
 		deploy/olm/storageos/storageosnfsserver.crd.yaml \
-		deploy/olm/csv-rhel/storageos.v2*.clusterserviceversion.yaml
+		deploy/olm/csv-rhel/storageos.v*.clusterserviceversion.yaml
 
 # Generates a single manifest for installing the operator.
 install-manifest: yq ## Generate operator install manifest file.
