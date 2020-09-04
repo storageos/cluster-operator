@@ -7,7 +7,7 @@ metadata:
     capabilities: Deep Insights
     categories: Storage
     description: Cloud-native, persistent storage for containers.
-    containerImage: registry.connect.redhat.com/storageos/cluster-operator2:v2.2.0
+    containerImage: registry.connect.redhat.com/storageos/cluster-operator2:v2.2.0-4
     repository: https://github.com/storageos/cluster-operator
     createdAt: "2020-09-01T22:31:18Z"
     support: StorageOS, Inc
@@ -333,7 +333,7 @@ spec:
               - name: storageos-operator
                 command:
                 - cluster-operator
-                image: registry.connect.redhat.com/storageos/cluster-operator2:v2.2.0
+                image: registry.connect.redhat.com/storageos/cluster-operator2:v2.2.0-4
                 env:
                 - name: RELATED_IMAGE_STORAGEOS_NODE
                   value: registry.connect.redhat.com/storageos/node:v2.2.0
