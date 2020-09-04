@@ -179,15 +179,11 @@ func (s Deployment) createSchedulerPolicy() error {
 `
 	// Service address format: <service-name>.<namespace>.svc.
 	serviceEndpoint := fmt.Sprintf("%s.%s.svc", s.stos.Spec.GetServiceName(), s.stos.Spec.GetResourceNS())
-	uriPath := uriPathV1
-	if s.nodev2 {
-		uriPath = uriPathV2
-	}
 	policyData := schedulerPolicyTemplate{
 		FilterVerb:     "filter",
 		PrioritizeVerb: "prioritize",
 		EnableHTTPS:    false,
-		URLPrefix:      fmt.Sprintf("http://%s:5705%s", serviceEndpoint, uriPath),
+		URLPrefix:      fmt.Sprintf("http://%s:5705%s", serviceEndpoint, uriPathV2),
 	}
 
 	// Render the policy configuration.

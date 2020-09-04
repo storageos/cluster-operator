@@ -56,17 +56,11 @@ const (
 
 // getNodeUsernameEnvVar returns the env var used to set the bootstrap username.
 func (s *Deployment) getNodeUsernameEnvVar() string {
-	if !s.nodev2 {
-		return adminUsernameEnvVar
-	}
 	return bootstrapUsernameEnvVar
 }
 
 // getNodePasswordEnvVar returns the env var used to set the bootstrap password.
 func (s *Deployment) getNodePasswordEnvVar() string {
-	if !s.nodev2 {
-		return adminPasswordEnvVar
-	}
 	return bootstrapPasswordEnvVar
 }
 
@@ -292,11 +286,6 @@ func (s *Deployment) createDaemonSet() error {
 	s.addTLSEtcdCerts(podSpec)
 
 	s.addNodeAffinity(podSpec)
-
-	// TODO: update when V2 supports health endpoint.
-	if !s.nodev2 {
-		s.addNodeContainerProbes(nodeContainer)
-	}
 
 	if err := s.addTolerationsWithDefaults(podSpec); err != nil {
 		return err

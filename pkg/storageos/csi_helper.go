@@ -110,13 +110,14 @@ func (s Deployment) csiHelperContainers() ([]corev1.Container, error) {
 	privileged := true
 	containers := []corev1.Container{
 		{
-			Image:           s.stos.Spec.GetCSIExternalProvisionerImage(CSIV1Supported(s.k8sVersion), s.nodev2),
+			Image:           s.stos.Spec.GetCSIExternalProvisionerImage(CSIV1Supported(s.k8sVersion)),
 			Name:            "csi-external-provisioner",
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Args: []string{
 				"--v=5",
 				"--provisioner=storageos", // deprecated in v1.1.0, but required for v1.0.0 (CSI v0).
 				"--csi-address=$(ADDRESS)",
+				"--extra-create-metadata",
 			},
 			Env: []corev1.EnvVar{
 				{
@@ -160,39 +161,33 @@ func (s Deployment) csiHelperContainers() ([]corev1.Container, error) {
 		},
 	}
 
-	if s.nodev2 {
-		// v2 provisioner requires additional startup flag.
-		containers[0].Args = append(containers[0].Args, "--extra-create-metadata")
-
-		// v2 supports volume resize.
-		// Add CSI external resizer if it's supported by the version of k8s.
-		if CSIExternalResizerSupported(s.k8sVersion) {
-			resizer := corev1.Container{
-				Image:           s.stos.Spec.GetCSIExternalResizerImage(),
-				Name:            "csi-external-resizer",
-				ImagePullPolicy: corev1.PullIfNotPresent,
-				Args: []string{
-					"--v=5",
-					"--csi-address=$(ADDRESS)",
+	// Add CSI external resizer if it's supported by the version of k8s.
+	if CSIExternalResizerSupported(s.k8sVersion) {
+		resizer := corev1.Container{
+			Image:           s.stos.Spec.GetCSIExternalResizerImage(),
+			Name:            "csi-external-resizer",
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Args: []string{
+				"--v=5",
+				"--csi-address=$(ADDRESS)",
+			},
+			Env: []corev1.EnvVar{
+				{
+					Name:  addressEnvVar,
+					Value: "/csi/csi.sock",
 				},
-				Env: []corev1.EnvVar{
-					{
-						Name:  addressEnvVar,
-						Value: "/csi/csi.sock",
-					},
+			},
+			SecurityContext: &corev1.SecurityContext{
+				Privileged: &privileged,
+			},
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      "plugin-dir",
+					MountPath: "/csi",
 				},
-				SecurityContext: &corev1.SecurityContext{
-					Privileged: &privileged,
-				},
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						Name:      "plugin-dir",
-						MountPath: "/csi",
-					},
-				},
-			}
-			containers = append(containers, resizer)
+			},
 		}
+		containers = append(containers, resizer)
 	}
 
 	// CSI v1 requires running CSI driver registrar to register the driver along

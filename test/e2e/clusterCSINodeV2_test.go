@@ -18,7 +18,7 @@ import (
 )
 
 // TestClusterCSIDeployment test the CSI helper deployment as Deployment.
-func TestClusterCSINodeV2(t *testing.T) {
+func TestClusterCSIDeployment(t *testing.T) {
 	ctx := framework.NewTestCtx(t)
 	defer ctx.Cleanup()
 	resourceNS := "kube-system"
@@ -42,7 +42,7 @@ func TestClusterCSINodeV2(t *testing.T) {
 		},
 		K8sDistro: "openshift",
 		Images: storageos.ContainerImages{
-			NodeContainer: "rotsesgao/node:v2",
+			NodeContainer: "storageos/node:v2.0.0",
 		},
 		KVBackend: storageos.StorageOSClusterKVBackend{
 			Address: "etcd-client.default.svc.cluster.local:2379",

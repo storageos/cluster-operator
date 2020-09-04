@@ -237,17 +237,7 @@ func TestCreateDaemonSet(t *testing.T) {
 			wantK8sDistro: "some-distro-name",
 		},
 		{
-			name: "v1 creds env vars",
-			spec: api.StorageOSClusterSpec{
-				Images: api.ContainerImages{
-					NodeContainer: "storageos/node:1.5.4",
-				},
-			},
-			wantUserNameEnvVar: adminUsernameEnvVar,
-			wantPasswordEnvVar: adminPasswordEnvVar,
-		},
-		{
-			name: "v2 creds env vars",
+			name: "creds env vars",
 			spec: api.StorageOSClusterSpec{
 				Images: api.ContainerImages{
 					NodeContainer: "storageos/node:v2.0.0",
@@ -486,101 +476,6 @@ func TestCreateCSIHelper(t *testing.T) {
 	}
 }
 
-// NOTE: Unsupported legacy test.
-func TestDeployLegacy(t *testing.T) {
-	// This test used to work with the controller-runtime fake client. The fake
-	// client has been deprecated and this test fails due to unexpected issues.
-	// TODO: Move this test to use envtest
-	// https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.6.0/pkg/envtest?tab=doc.
-	t.Skip("skipping... fails with the controller-runtime fake client")
-
-	const (
-		containersCount = 1
-		volumesCount    = 5 // includes ConfigMap volume
-	)
-
-	stosCluster := &api.StorageOSCluster{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: gvk.GroupVersion().String(),
-			Kind:       gvk.Kind,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "teststos",
-			Namespace: "default",
-		},
-	}
-
-	testCases := []struct {
-		name       string
-		k8sVersion string
-	}{
-		{
-			name:       "empty",
-			k8sVersion: "",
-		},
-		{
-			name:       "1.9",
-			k8sVersion: "1.9",
-		},
-		{
-			name:       "1.11.0",
-			k8sVersion: "1.11.0",
-		},
-		{
-			name:       "1.12.2",
-			k8sVersion: "1.12.2",
-		},
-	}
-
-	for _, tc := range testCases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			c := fake.NewFakeClientWithScheme(testScheme)
-			if err := c.Create(context.Background(), stosCluster); err != nil {
-				t.Fatalf("failed to create storageoscluster object: %v", err)
-			}
-
-			dc, err := getFakeDiscoveryClient()
-			if err != nil {
-				t.Fatalf("failed to create discovery client: %v", err)
-			}
-
-			deploy := NewDeployment(c, dc, stosCluster, nil, nil, testScheme, tc.k8sVersion, false)
-			if err := deploy.Deploy(); err != nil {
-				t.Fatalf("failed to deploy cluster: %v", err)
-			}
-
-			createdDaemonset := &appsv1.DaemonSet{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "apps/v1",
-					Kind:       "DaemonSet",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      daemonsetName,
-					Namespace: stosCluster.Spec.GetResourceNS(),
-				},
-			}
-
-			nsName := types.NamespacedName{
-				Name:      daemonsetName,
-				Namespace: defaultNS,
-			}
-
-			if err := c.Get(context.Background(), nsName, createdDaemonset); err != nil {
-				t.Fatal("failed to get the created daemonset", err)
-			}
-
-			if len(createdDaemonset.Spec.Template.Spec.Containers) != containersCount {
-				t.Errorf("unexpected number of containers in the DaemonSet:\n\t(GOT) %d\n\t(WNT) %d", len(createdDaemonset.Spec.Template.Spec.Containers), containersCount)
-			}
-
-			if len(createdDaemonset.Spec.Template.Spec.Volumes) != volumesCount {
-				t.Errorf("unexpected number of volumes in the DaemonSet:\n\t(GOT) %d\n\t(WNT) %d", len(createdDaemonset.Spec.Template.Spec.Volumes), volumesCount)
-			}
-		})
-	}
-}
-
 func TestDeployCSI(t *testing.T) {
 	const (
 		kubeletPluginsWatcherDriverRegArgsCount = 3
@@ -701,7 +596,7 @@ func TestDeployCSI(t *testing.T) {
 	}
 }
 
-func TestDeployKVBackend(t *testing.T) {
+func TestDeployEtcdEndpoints(t *testing.T) {
 	testKVAddr := "1.2.3.4:1111,4.3.2.1:0000"
 	testBackend := "etcd"
 
@@ -758,29 +653,19 @@ func TestDeployKVBackend(t *testing.T) {
 		t.Fatal("failed to get the created configmap", err)
 	}
 
-	foundKVAddr := false
-	foundKVBackend := false
+	foundEndpoints := false
 
 	for k, v := range createdConfigMap.Data {
-		switch k {
-		case kvAddrEnvVar:
-			foundKVAddr = true
+		if k == etcdEndpointsEnvVar {
+			foundEndpoints = true
 			if v != testKVAddr {
 				t.Errorf("unexpected %s value:\n\t(GOT) %s\n\t(WNT) %s", etcdEndpointsEnvVar, v, testKVAddr)
-			}
-		case kvBackendEnvVar:
-			foundKVBackend = true
-			if v != testBackend {
-				t.Errorf("unexpected %s value:\n\t(GOT) %s\n\t(WNT) %s", kvBackendEnvVar, v, testBackend)
 			}
 		}
 	}
 
-	if !foundKVAddr {
-		t.Errorf("expected %s to be in the pod spec env", kvAddrEnvVar)
-	}
-	if !foundKVBackend {
-		t.Errorf("expected %s to be in the pod spec env", kvBackendEnvVar)
+	if !foundEndpoints {
+		t.Errorf("expected %s to be in the pod spec env", etcdEndpointsEnvVar)
 	}
 }
 
@@ -1798,7 +1683,7 @@ func TestContainerImageSelection(t *testing.T) {
 
 	// Given image name, cluster spec and k8s version, return the appropriate
 	// image.
-	getImage := func(name string, spec api.StorageOSClusterSpec, k8sVersion string, nodeV2 bool) string {
+	getImage := func(name string, spec api.StorageOSClusterSpec, k8sVersion string) string {
 		csiV1Supported := CSIV1Supported(k8sVersion)
 		attacherV2Supported := CSIExternalAttacherV2Supported(k8sVersion)
 
@@ -1812,7 +1697,7 @@ func TestContainerImageSelection(t *testing.T) {
 		case csiNodeDriverRegistrarImage:
 			return spec.GetCSINodeDriverRegistrarImage(csiV1Supported)
 		case csiExternalProvisionerImage:
-			return spec.GetCSIExternalProvisionerImage(csiV1Supported, nodeV2)
+			return spec.GetCSIExternalProvisionerImage(csiV1Supported)
 		case csiExternalAttacherImage:
 			return spec.GetCSIExternalAttacherImage(csiV1Supported, attacherV2Supported)
 		case csiLivenessProbeImage:
@@ -1831,7 +1716,6 @@ func TestContainerImageSelection(t *testing.T) {
 		envVars     map[string]string
 		clusterSpec api.StorageOSClusterSpec
 		k8sVersion  string
-		nodev2      bool
 		wantImages  map[string]string
 	}{
 		{
@@ -1902,24 +1786,8 @@ func TestContainerImageSelection(t *testing.T) {
 			},
 		},
 		{
-			name:       "no env vars, no overrides, fallback images - k8s 1.13, node v1",
-			k8sVersion: "1.13.0",
-			wantImages: map[string]string{
-				storageOSNodeImage:             image.DefaultNodeContainerImage,
-				storageOSInitImage:             image.DefaultInitContainerImage,
-				csiClusterDriverRegistrarImage: image.CSIv1ClusterDriverRegistrarContainerImage,
-				csiNodeDriverRegistrarImage:    image.CSIv1NodeDriverRegistrarContainerImage,
-				csiExternalProvisionerImage:    image.CSIv1ExternalProvisionerContainerImageV1,
-				csiExternalAttacherImage:       image.CSIv1ExternalAttacherContainerImage,
-				csiLivenessProbeImage:          image.CSIv1LivenessProbeContainerImage,
-				kubeSchedulerImage:             fmt.Sprintf("%s:%s", image.DefaultKubeSchedulerContainerRegistry, "v1.13.0"),
-				nfsImage:                       image.DefaultNFSContainerImage,
-			},
-		},
-		{
 			name:       "no env vars, no overrides, fallback images - k8s 1.13, node v2",
 			k8sVersion: "1.13.0",
-			nodev2:     true,
 			wantImages: map[string]string{
 				storageOSNodeImage:             image.DefaultNodeContainerImage,
 				storageOSInitImage:             image.DefaultInitContainerImage,
@@ -1976,44 +1844,10 @@ func TestContainerImageSelection(t *testing.T) {
 			}()
 
 			for imgName, wantImg := range tc.wantImages {
-				gotImg := getImage(imgName, tc.clusterSpec, tc.k8sVersion, tc.nodev2)
+				gotImg := getImage(imgName, tc.clusterSpec, tc.k8sVersion)
 				if gotImg != wantImg {
 					t.Errorf("unexpected image selected for %s:\n\t(WNT) %s\n\t(GOT) %s", imgName, wantImg, gotImg)
 				}
-			}
-		})
-	}
-}
-
-func Test_NodeV2Image(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		image string
-		want  bool
-	}{
-		{image: "storageos/node", want: false},
-		{image: "storageos/node:1.0.0", want: false},
-		{image: "storageos/node:1.2.0-alpha1", want: false},
-		{image: "storageos/node:1.5.4-rc2", want: false},
-		{image: "storageos/node:7c46250197bf", want: false},
-		{image: "storageos/node:2.0.0", want: true},
-		{image: "storageos/node:v2.0.0", want: true},
-		{image: "storageos/node:c2", want: true},
-		{image: "storageos/node:v2", want: true},
-		{image: "storageos/node:2.0.0-alpha1", want: true},
-		{image: "storageos/node:c2-7c46250197bf", want: true},
-		{image: "myregistryhost:5000/storageos/node:1.0.0", want: false},
-		{image: "myregistryhost:5000/storageos/node:2.0.0", want: true},
-		{image: "invalidscheme://myregistryhost:5000/storageos/node:2.0.0", want: true},
-		{image: "2.0.0", want: false},
-	}
-	for _, tt := range tests {
-		var tt = tt
-		t.Run(tt.image, func(t *testing.T) {
-			t.Parallel()
-			if got := NodeV2Image(tt.image); got != tt.want {
-				t.Errorf("NodeV2Image(%s) = %v, want %v", tt.image, got, tt.want)
 			}
 		})
 	}

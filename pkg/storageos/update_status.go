@@ -65,10 +65,7 @@ func (s *Deployment) getStorageOSStatus() (*storageosv1.StorageOSClusterStatus, 
 		nodeIPs = strings.Split(s.stos.Spec.Join, ",")
 	}
 
-	if s.nodev2 {
-		return s.getStorageOSV2Status(nodeIPs)
-	}
-	return s.getStorageOSV1Status(nodeIPs)
+	return s.getStorageOSV2Status(nodeIPs)
 }
 
 // getStorageOSV2Status queries health of all the nodes in the cluster and

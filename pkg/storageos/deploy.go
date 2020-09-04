@@ -346,29 +346,6 @@ func CSIExternalResizerSupported(version string) bool {
 	return versionSupported(version, "1.16.0")
 }
 
-// NodeV2Image returns true if the image tag starts with "2." "v2", or "c2".
-func NodeV2Image(image string) bool {
-	parts := strings.Split(image, ":")
-	partsInTaggedImage := 2
-	if len(parts) < partsInTaggedImage {
-		return false
-	}
-
-	// Match current v2 release tags.
-	if strings.HasPrefix(parts[len(parts)-1], "2.") {
-		return true
-	}
-
-	// Allow migrating to release tags prefixed by v2.
-	if strings.HasPrefix(parts[len(parts)-1], "v2") {
-		return true
-	}
-
-	// Temporary dev tag check.  Matches on c2 prefix, which we will stop using soon.
-	// TODO: remove c2 prefix once pipelines updated.
-	return strings.HasPrefix(parts[len(parts)-1], "c2")
-}
-
 // versionSupported takes two versions, current version (haveVersion) and a
 // minimum requirement version (wantVersion) and checks if the current version
 // is supported by comparing it with the minimum requirement.

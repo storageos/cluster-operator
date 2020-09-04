@@ -20,10 +20,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	storageosclientcommon "github.com/storageos/cluster-operator/internal/pkg/client/storageos/common"
-	storageosclientv1 "github.com/storageos/cluster-operator/internal/pkg/client/storageos/v1"
 	storageosclientv2 "github.com/storageos/cluster-operator/internal/pkg/client/storageos/v2"
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
-	storageos "github.com/storageos/cluster-operator/pkg/storageos"
 )
 
 var log = logf.Log.WithName("storageos.node")
@@ -270,18 +268,10 @@ func (r *ReconcileNode) setClientForCluster(cluster *storageosv1.StorageOSCluste
 		clusterUID:        cluster.GetUID(),
 	}
 
-	// Initialize StorageOS client based on the version of StorageOS cluster.
-	if storageos.NodeV2Image(cluster.Spec.GetNodeContainerImage()) {
-		r.stosClient.client.Ctx, r.stosClient.client.V2, err = storageosclientv2.NewClientFromSecret(serviceInstance.Spec.ClusterIP, secretInstance)
-		if err != nil {
-			return fmt.Errorf("failed to create StorageOS v2 client: %v", err)
-		}
-	} else {
-		r.stosClient.client.V1, err = storageosclientv1.NewClientFromSecret(serviceInstance.Spec.ClusterIP, secretInstance)
-		if err != nil {
-			return fmt.Errorf("failed to create StorageOS v1 client: %v", err)
-		}
+	// Initialize StorageOS client.
+	r.stosClient.client.Ctx, r.stosClient.client.V2, err = storageosclientv2.NewClientFromSecret(serviceInstance.Spec.ClusterIP, secretInstance)
+	if err != nil {
+		return fmt.Errorf("failed to create StorageOS v2 client: %v", err)
 	}
-
 	return nil
 }
