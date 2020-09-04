@@ -1,4 +1,4 @@
-FROM storageos/base-image:0.2.1
+FROM storageos/base-image:0.2.2
 WORKDIR /home/operator
 RUN chmod -R g+rwX /home/operator
 COPY LICENSE /licenses/
