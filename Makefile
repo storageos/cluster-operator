@@ -3,7 +3,7 @@ GO_BUILD_CMD = go build -v
 GO_ENV = GOOS=linux CGO_ENABLED=0
 SDK_VERSION = v0.17.2
 MACHINE = $(shell uname -m)
-BUILD_IMAGE = golang:1.14.2
+BUILD_IMAGE = golang:1.15.2
 BASE_IMAGE = storageos/base-image:0.2.1
 BUILD_DIR = "build"
 OPERATOR_SDK = $(BUILD_DIR)/operator-sdk
@@ -18,7 +18,7 @@ NEW_VERSION ?= v2.2.0
 CACHE_DIR = $(shell pwd)/.cache
 PROJECT = github.com/storageos/cluster-operator
 GOARCH ?= amd64
-GO_VERSION = 1.14.2
+GO_VERSION = 1.15.2
 
 # Since go modules don't allow non-go files to be vendored, the code generator
 # scripts needed for updating the generated codes are downloaded in the cache
