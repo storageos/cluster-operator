@@ -3,7 +3,7 @@ sudo: required
 language: go
 
 go:
-  - "1.15.2"
+  - "1.14.2"
 
 env:
   global:
@@ -37,21 +37,21 @@ install: true
 
 jobs:
   include:
-    - go: "1.15"
+    - go: "1.14"
       sudo: required
       env:
         - "INSTALL_METHOD=olm"
       name: OLM on KinD (k8s-1.19)
       script: ./test/e2e.sh $INSTALL_METHOD
     - &base-test
-      go: "1.15"
+      go: "1.14"
       sudo: required
       env:
         - "INSTALL_METHOD=none"
       name: KinD (k8s-1.19)
       script: ./test/e2e.sh $INSTALL_METHOD
     - stage: deploy
-      go: "1.15"
+      go: "1.14"
       sudo: required
       name: Publish Container Image
       script:
