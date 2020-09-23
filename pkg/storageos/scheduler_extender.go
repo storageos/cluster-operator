@@ -13,8 +13,10 @@ import (
 )
 
 const (
-	policyConfigMapName = "storageos-scheduler-policy"
-	policyConfigKey     = "policy.cfg"
+	policyConfigMapName          = "storageos-scheduler-policy"
+	policyConfigKey              = "policy.cfg"
+	schedulerConfigConfigMapName = "storageos-scheduler-config"
+	schedulerConfigKey           = "config.yaml"
 
 	uriPathV1 = "/v1/scheduler"
 	uriPathV2 = "/v2/k8s/scheduler"
@@ -26,6 +28,9 @@ const (
 func (s *Deployment) createSchedulerExtender() error {
 	// Create configmap with scheduler configuration and policy.
 	if err := s.createSchedulerPolicy(); err != nil {
+		return err
+	}
+	if err := s.createSchedulerConfiguration(); err != nil {
 		return err
 	}
 
@@ -63,6 +68,7 @@ func (s Deployment) createSchedulerDeployment(replicas int32) error {
 			Spec: corev1.PodSpec{
 				ServiceAccountName: SchedulerSA,
 				Containers:         s.schedulerContainers(),
+				Volumes:            s.schedulerVolumes(),
 			},
 		},
 	}
@@ -88,12 +94,29 @@ func (s Deployment) schedulerContainers() []corev1.Container {
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Args: []string{
 				"kube-scheduler",
-				"--leader-elect=true",
-				"--scheduler-name=" + SchedulerExtenderName,
-				"--policy-configmap=" + policyConfigMapName,
-				"--policy-configmap-namespace=" + s.stos.Spec.GetResourceNS(),
-				"--lock-object-name=" + SchedulerExtenderName,
+				"--config=/storageos-scheduler/config.yaml",
 				"-v=4",
+			},
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      "storageos-scheduler-config",
+					MountPath: "/storageos-scheduler",
+				},
+			},
+		},
+	}
+}
+
+// schedulerVolumes returns a list of volumes that should be part of the
+// scheduler extender deployment.
+func (s Deployment) schedulerVolumes() []corev1.Volume {
+	return []corev1.Volume{
+		{
+			Name: schedulerConfigConfigMapName,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: schedulerConfigConfigMapName},
+				},
 			},
 		},
 	}
@@ -106,6 +129,9 @@ func (s Deployment) deleteSchedulerExtender() error {
 		return err
 	}
 	if err := s.k8sResourceManager.ConfigMap(policyConfigMapName, namespace, nil, nil).Delete(); err != nil {
+		return err
+	}
+	if err := s.k8sResourceManager.ConfigMap(schedulerConfigConfigMapName, namespace, nil, nil).Delete(); err != nil {
 		return err
 	}
 	if err := s.k8sResourceManager.ClusterRoleBinding(SchedulerClusterBindingName, nil, nil, nil).Delete(); err != nil {
@@ -179,6 +205,56 @@ func (s Deployment) createSchedulerPolicy() error {
 		"policy.cfg": policyConfig.String(),
 	}
 	return s.k8sResourceManager.ConfigMap(policyConfigMapName, s.stos.Spec.GetResourceNS(), nil, data).Create()
+}
+
+// schedulerConfigTemplate contains fields for rendering the scheduler
+// configuration.
+type schedulerConfigTemplate struct {
+	SchedulerName  string
+	PolicyName     string
+	Namespace      string
+	LeaderElection bool
+}
+
+// createSchedulerConfiguration creates a configmap with kube-scheduler
+// configuration.
+func (s Deployment) createSchedulerConfiguration() error {
+	configTemplate := `
+    apiVersion: "kubescheduler.config.k8s.io/v1alpha1"
+    kind: KubeSchedulerConfiguration
+    schedulerName: {{.SchedulerName}}
+    algorithmSource:
+      policy:
+        configMap:
+          namespace: {{.Namespace}}
+          name: {{.PolicyName}}
+    leaderElection:
+      leaderElect: {{.LeaderElection}}
+      lockObjectName: {{.SchedulerName}}
+      lockObjectNamespace: {{.Namespace}}
+`
+	schedConfigData := schedulerConfigTemplate{
+		SchedulerName:  SchedulerExtenderName,
+		PolicyName:     policyConfigMapName,
+		Namespace:      s.stos.Spec.GetResourceNS(),
+		LeaderElection: true,
+	}
+
+	// Render the scheduler configuration.
+	var schedConfig bytes.Buffer
+	tmpl, err := template.New("schedConfig").Parse(configTemplate)
+	if err != nil {
+		return err
+	}
+	if err := tmpl.Execute(&schedConfig, schedConfigData); err != nil {
+		return err
+	}
+
+	// Add the configuration in the configmap.
+	data := map[string]string{
+		"config.yaml": schedConfig.String(),
+	}
+	return s.k8sResourceManager.ConfigMap(schedulerConfigConfigMapName, s.stos.Spec.GetResourceNS(), nil, data).Create()
 }
 
 // podLabelsForScheduler returns labels for the scheduler pod.

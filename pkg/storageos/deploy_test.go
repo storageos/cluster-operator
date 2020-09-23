@@ -1624,6 +1624,26 @@ func TestDeploySchedulerExtender(t *testing.T) {
 		t.Errorf("expected %q to be in scheduler policy configmap data", policyConfigKey)
 	}
 
+	// Get scheduler configuration configmap and check the data.
+	schedConfigcm := &corev1.ConfigMap{}
+	schedConfigNSName := types.NamespacedName{
+		Name:      schedulerConfigConfigMapName,
+		Namespace: defaultNS,
+	}
+
+	if err := c.Get(context.Background(), schedConfigNSName, schedConfigcm); err != nil {
+		t.Fatal("failed to get the created scheduler configuration configmap", err)
+	}
+
+	// Check if the expected key and value exists.
+	if val, exists := schedConfigcm.Data[schedulerConfigKey]; exists {
+		if len(val) == 0 {
+			t.Errorf("%q is empty, expected not to be empty", schedulerConfigKey)
+		}
+	} else {
+		t.Errorf("expected %q to be in scheduler configuration configmap data", schedulerConfigKey)
+	}
+
 	// Check the attributes of the scheduler deployment.
 	schedDeployment := &appsv1.Deployment{}
 	schedDeploymentNSName := types.NamespacedName{
