@@ -42,7 +42,8 @@ func (c *StorageOSCluster) SetDeployment(r *ReconcileStorageOSCluster) {
 	// by any label selectors.
 	labels["app"] = "storageos"
 
-	// Add default resource app labels.
+	// Add default resource app labels.  Component will be set to "cluster" by
+	// default.
 	labels = k8s.AddDefaultAppLabels(c.cluster.Name, labels)
 
 	c.deployment = storageos.NewDeployment(r.client, r.discoveryClient, c.cluster, labels, r.recorder, r.scheme, r.k8sVersion, updateIfExists)

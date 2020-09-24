@@ -316,9 +316,10 @@ func (s *Deployment) createDaemonSet() error {
 func podLabelsForDaemonSet(name string) map[string]string {
 	// Combine DaemonSet specific labels with the default app labels.
 	labels := map[string]string{
-		"app":          appName,
-		"storageos_cr": name,
-		"kind":         daemonsetKind,
+		"app":            appName,
+		"storageos_cr":   name,
+		"kind":           daemonsetKind,
+		k8s.AppComponent: daemonsetName,
 	}
 	return k8s.AddDefaultAppLabels(name, labels)
 }
