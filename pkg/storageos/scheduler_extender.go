@@ -185,9 +185,10 @@ func (s Deployment) createSchedulerPolicy() error {
 func podLabelsForScheduler(name string) map[string]string {
 	// Combine CSI Helper specific labels with the default app labels.
 	labels := map[string]string{
-		"app":          appName,
-		"storageos_cr": name,
-		"kind":         deploymentKind,
+		"app":            appName,
+		"storageos_cr":   name,
+		"kind":           deploymentKind,
+		k8s.AppComponent: SchedulerExtenderName,
 	}
 	return k8s.AddDefaultAppLabels(name, labels)
 }

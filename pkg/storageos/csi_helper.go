@@ -290,9 +290,10 @@ func (s Deployment) deleteCSIHelper() error {
 func podLabelsForCSIHelpers(name, kind string) map[string]string {
 	// Combine CSI Helper specific labels with the default app labels.
 	labels := map[string]string{
-		"app":          appName,
-		"storageos_cr": name,
-		"kind":         kind,
+		"app":            appName,
+		"storageos_cr":   name,
+		"kind":           kind,
+		k8s.AppComponent: csiHelperName,
 	}
 	return k8s.AddDefaultAppLabels(name, labels)
 }
