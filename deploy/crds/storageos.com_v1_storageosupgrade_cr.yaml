@@ -1,6 +1,0 @@
-apiVersion: storageos.com/v1
-kind: StorageOSUpgrade
-metadata:
-  name: example-storageosupgrade
-spec:
-  newImage: storageos/node:1.1.5
