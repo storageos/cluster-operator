@@ -11,6 +11,13 @@ YQ = $(BUILD_DIR)/yq
 GOLANGCI_LINT = $(BUILD_DIR)/golangci-lint
 OUTPUT_DIR = $(BUILD_DIR)/_output
 
+OPERATOR_NAME = storageosoperator
+# Directory for all the operator-metadata bundle files.
+BUNDLE_DIR = $(PWD)/bundle
+# Current bundle version is the next release version.
+# Bundle generation requires the current version number of the operator.
+CURRENT_BUNDLE_VERSION = "2.3.0"
+
 # Set the new version before running the release target.
 NEW_VERSION ?= v2.2.0
 
@@ -209,7 +216,7 @@ release: yq ## Prepare for a new release. Pass NEW_VERSION with the next release
 	bash scripts/release-helpers/release-gen.sh $(NEW_VERSION)
 
 # Generate metadata bundle for openshift metadata scanner.
-metadata-zip: ## Generate OLM metadata-zip bundle.
+metadata-zip: ## Generate OLM metadata-zip bundle (in package manifest format)
 	# Remove any existing metadata bundle.
 	rm -f $(OUTPUT_DIR)/$(METADATA_FILE)
 	# Ensure the target path exists.
@@ -223,6 +230,13 @@ metadata-zip: ## Generate OLM metadata-zip bundle.
 		deploy/olm/storageos/storageosupgrade.crd.yaml \
 		deploy/olm/storageos/storageosnfsserver.crd.yaml \
 		deploy/olm/csv-rhel/storageos.v*.clusterserviceversion.yaml
+
+bundle: operator-sdk ## Generate operator metadata in bundle format.
+	$(OPERATOR_SDK) generate csv \
+		--update-crds \
+		--csv-version=$(CURRENT_BUNDLE_VERSION) \
+		--operator-name=$(OPERATOR_NAME) \
+		--output-dir=$(BUNDLE_DIR)
 
 # Generates a single manifest for installing the operator.
 install-manifest: yq ## Generate operator install manifest file.
