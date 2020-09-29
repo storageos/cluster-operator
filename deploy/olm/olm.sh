@@ -32,7 +32,7 @@ install_storageos_operator() {
 install_storageos() {
     echo "Install StorageOS"
 
-    kubectl apply -f deploy/storageos-operators.olm.cr.yaml
+    kubectl apply -f internal/olm-deploy/storageos-operators.olm.cr.yaml
     sleep 5
 
     kubectl -n storageos get all
@@ -48,7 +48,7 @@ install_storageos() {
 
 uninstall_storageos() {
     echo "Uninstalling StorageOS"
-    kubectl delete -f deploy/storageos-operators.olm.cr.yaml
+    kubectl delete -f internal/olm-deploy/storageos-operators.olm.cr.yaml
     # Allow the resources to be deleted by the operator.
     sleep 10
     # Delete namespace to ensure nothing is left behind.
