@@ -63,7 +63,9 @@ func (s ServiceMonitor) Delete() error {
 	return Delete(s.client, getServiceMonitor(s.Name, s.Namespace, s.labels, s.annotations, s.service))
 }
 
-// getServiceMonitor returns a generic ServiceMonitor object.
+// getServiceMonitor returns a generic ServiceMonitor object.  A service must be
+// provided, which will be set as the owner of the ServiceMonitor.  This ensures
+// that the ServiceMonitor is deleted when the Service is removed.
 func getServiceMonitor(name, namespace string, labels map[string]string, annotations map[string]string, svc *corev1.Service) *monitoringv1.ServiceMonitor {
 	boolTrue := true
 	ownerRef := metav1.OwnerReference{
