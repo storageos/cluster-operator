@@ -50,8 +50,9 @@ func (s *Deployment) createAPIManager() error {
 // createAPIManagerDeployment creates a Deployment for api-manager with
 // the given replicas.
 func (s Deployment) createAPIManagerDeployment(replicas int32) error {
-	// secretMode is set to readable by all, since api-manager runs as non-root user.
-	secretMode := int32(0444)
+	// secretMode is set to readable by root, since api-manager runs as root
+	// within the container.
+	secretMode := int32(0600)
 	podLabels := podLabelsForAPIManager(s.stos.Name)
 	spec := &appsv1.DeploymentSpec{
 		Replicas: &replicas,
