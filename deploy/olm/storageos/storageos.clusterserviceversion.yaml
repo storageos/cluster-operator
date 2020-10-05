@@ -360,6 +360,8 @@ spec:
                   value: ""
                 - name: RELATED_IMAGE_KUBE_SCHEDULER
                   value: ""
+                - name: RELATED_IMAGE_API_MANAGER
+                  value: ""
                 - name: WATCH_NAMESPACE
                   valueFrom:
                     fieldRef:

@@ -124,6 +124,10 @@ func (s *Deployment) Delete() error {
 		}
 	}
 
+	if err := s.deleteAPIManager(); err != nil {
+		return err
+	}
+
 	if !s.stos.Spec.DisableScheduler {
 		if err := s.deleteSchedulerExtender(); err != nil {
 			return err

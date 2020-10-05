@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"testing"
 
+	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -28,6 +29,7 @@ import (
 	"github.com/storageos/cluster-operator/internal/pkg/toleration"
 	storageosapis "github.com/storageos/cluster-operator/pkg/apis"
 	api "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
+	"github.com/storageos/cluster-operator/pkg/util/k8s"
 )
 
 var gvk = schema.GroupVersionKind{
@@ -94,6 +96,9 @@ func testSetup() error {
 		return err
 	}
 	if err := storageosapis.AddToScheme(testScheme); err != nil {
+		return err
+	}
+	if err := monitoringv1.AddToScheme(testScheme); err != nil {
 		return err
 	}
 	return nil
@@ -481,6 +486,111 @@ func TestCreateCSIHelper(t *testing.T) {
 			}
 			if !foundUnreachableTol {
 				t.Errorf("pod toleration %q not found for CSI helper", nodeUnreachableTolKey)
+			}
+		})
+	}
+}
+
+func TestCreateAPIManager(t *testing.T) {
+	clusterName := "my-stos-cluster"
+	stosCluster := &api.StorageOSCluster{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: gvk.GroupVersion().String(),
+			Kind:       gvk.Kind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      clusterName,
+			Namespace: defaultNS,
+		},
+	}
+
+	testcases := []struct {
+		name string
+		spec api.StorageOSClusterSpec
+	}{
+		{
+			name: "api manager default",
+			spec: api.StorageOSClusterSpec{},
+		},
+	}
+
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			c := fake.NewFakeClientWithScheme(testScheme)
+
+			deploy, err := setupFakeDeploymentWithClientAndCluster(c, stosCluster)
+			if err != nil {
+				t.Fatalf("failed to create deployment: %v", err)
+			}
+
+			stosCluster.Spec = tc.spec
+			if err := deploy.createAPIManager(); err != nil {
+				t.Fatal("failed to create apimanager", err)
+			}
+
+			// Get tolerations for pod toleration checks.
+			var tolerations []corev1.Toleration
+
+			// Check for Deployment resource.
+			createdDeployment := &appsv1.Deployment{}
+			nsNameDeployment := types.NamespacedName{
+				Name:      APIManagerName,
+				Namespace: defaultNS,
+			}
+
+			if err := c.Get(context.Background(), nsNameDeployment, createdDeployment); err != nil {
+				t.Fatal("failed to get the created deployment", err)
+			}
+
+			tolerations = createdDeployment.Spec.Template.Spec.Tolerations
+
+			// Check if the recovery tolerations are applied.
+			foundNotReadyTol := false
+			foundUnreachableTol := false
+			for _, toleration := range tolerations {
+				switch toleration.Key {
+				case nodeNotReadyTolKey:
+					foundNotReadyTol = true
+				case nodeUnreachableTolKey:
+					foundUnreachableTol = true
+				}
+			}
+
+			if !foundNotReadyTol {
+				t.Errorf("pod toleration %q not found in api manager", nodeNotReadyTolKey)
+			}
+			if !foundUnreachableTol {
+				t.Errorf("pod toleration %q not found for api manager", nodeUnreachableTolKey)
+			}
+
+			// Check the pod template component label (required for service).
+			got, ok := createdDeployment.Spec.Template.Labels[k8s.AppComponent]
+			if !ok {
+				t.Errorf("expected pod label %q not set", k8s.AppComponent)
+			}
+			if ok && got != APIManagerName {
+				t.Errorf("pod label %q, got %q, want %q", k8s.AppComponent, got, APIManagerName)
+			}
+
+			// Check for metrics service
+			createdService := &corev1.Service{}
+			nsNameService := types.NamespacedName{
+				Name:      APIManagerMetricsName,
+				Namespace: defaultNS,
+			}
+
+			if err := c.Get(context.Background(), nsNameService, createdService); err != nil {
+				t.Fatal("failed to get the created service", err)
+			}
+
+			// Check the service component label (required for service monitor).
+			got, ok = createdService.Labels[k8s.AppComponent]
+			if !ok {
+				t.Errorf("expected svc label %q not set", k8s.AppComponent)
+			}
+			if ok && got != APIManagerName {
+				t.Errorf("svc label %q, got %q, want %q", k8s.AppComponent, got, APIManagerName)
 			}
 		})
 	}
@@ -969,6 +1079,21 @@ func TestDeployNodeAffinity(t *testing.T) {
 			if !reflect.DeepEqual(podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms, stosCluster.Spec.NodeSelectorTerms) {
 				t.Errorf("unexpected StatefulSet NodeSelectorTerms value:\n\t(GOT) %v\n\t(WNT) %v", stosCluster.Spec.NodeSelectorTerms, podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution)
 			}
+
+			// Fetch and check api-manager.
+			createdAPIManagerDeployment := &appsv1.Deployment{}
+			nsNameAPIManager := types.NamespacedName{
+				Name:      APIManagerName,
+				Namespace: defaultNS,
+			}
+			if err := c.Get(context.Background(), nsNameAPIManager, createdAPIManagerDeployment); err != nil {
+				t.Fatal("failed to get the created api-manager deployment", err)
+			}
+			podSpec = createdAPIManagerDeployment.Spec.Template.Spec
+
+			if !reflect.DeepEqual(podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms, stosCluster.Spec.NodeSelectorTerms) {
+				t.Errorf("unexpected API manager NodeSelectorTerms value:\n\t(GOT) %v\n\t(WNT) %v", stosCluster.Spec.NodeSelectorTerms, podSpec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution)
+			}
 		})
 	}
 }
@@ -1118,6 +1243,30 @@ func TestDeployTolerations(t *testing.T) {
 				return result
 			}
 			gotTolerations := removeExtraTolerations(createdCSIHelperDeployment.Spec.Template.Spec.Tolerations)
+
+			if !reflect.DeepEqual(gotTolerations, tc.tolerations) {
+				// Deepequal fails for empty maps. If the maps are empty, don't
+				// fail.
+				if len(gotTolerations) != 0 || len(tc.tolerations) != 0 {
+					t.Errorf("unexpected Tolerations value:\n\t(GOT) %v\n\t(WNT) %v", gotTolerations, tc.tolerations)
+				}
+			}
+
+			// Check api-manager tolerations.
+			createdAPIManagerDeployment := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      APIManagerName,
+					Namespace: stosCluster.Spec.GetResourceNS(),
+				},
+			}
+			nsName = types.NamespacedName{
+				Name:      createdAPIManagerDeployment.Name,
+				Namespace: createdAPIManagerDeployment.Namespace,
+			}
+			if err := c.Get(context.Background(), nsName, createdAPIManagerDeployment); err != nil {
+				t.Fatal("failed to get the created api-manager deployment", err)
+			}
+			gotTolerations = removeExtraTolerations(createdAPIManagerDeployment.Spec.Template.Spec.Tolerations)
 
 			if !reflect.DeepEqual(gotTolerations, tc.tolerations) {
 				// Deepequal fails for empty maps. If the maps are empty, don't
@@ -1324,13 +1473,31 @@ func TestDelete(t *testing.T) {
 			if tc.spec.GetCSIDeploymentStrategy() == "deployment" {
 				createdCSIHelperDeployment = &appsv1.Deployment{}
 				if err := c.Get(context.Background(), nsNameDeployment, createdCSIHelperDeployment); err != nil {
-					t.Fatal("failed to get the created statefulset", err)
+					t.Fatal("failed to get the created csi deployment", err)
 				}
 			} else {
 				createdCSIHelperStatefulSet = &appsv1.StatefulSet{}
 				if err := c.Get(context.Background(), nsNameStatefulSet, createdCSIHelperStatefulSet); err != nil {
-					t.Fatal("failed to get the created statefulset", err)
+					t.Fatal("failed to get the created csi statefulset", err)
 				}
+			}
+
+			// Check API manager was created.
+			createdAPIManagerDeployment := &appsv1.Deployment{}
+			nsNameAPIManagerDeployment := types.NamespacedName{
+				Name:      APIManagerName,
+				Namespace: defaultNS,
+			}
+			if err := c.Get(context.Background(), nsNameAPIManagerDeployment, createdAPIManagerDeployment); err != nil {
+				t.Fatal("failed to get the created api-manager deployment", err)
+			}
+			createdAPIManagerMetricsService := &corev1.Service{}
+			nsNameAPIManagerMetricsService := types.NamespacedName{
+				Name:      APIManagerMetricsName,
+				Namespace: defaultNS,
+			}
+			if err := c.Get(context.Background(), nsNameAPIManagerMetricsService, createdAPIManagerMetricsService); err != nil {
+				t.Fatal("failed to get the created api-manager metrics service", err)
 			}
 
 			// Delete the deployment.
@@ -1352,6 +1519,14 @@ func TestDelete(t *testing.T) {
 				if err := c.Get(context.Background(), nsNameStatefulSet, createdCSIHelperStatefulSet); err == nil {
 					t.Fatal("expected the CSI helper statefulset to be deleted, but it still exists")
 				}
+			}
+
+			// Check API manager deletion.
+			if err := c.Get(context.Background(), nsNameAPIManagerDeployment, createdAPIManagerDeployment); err == nil {
+				t.Fatal("expected the API manager deployment to be deleted, but it still exists")
+			}
+			if err := c.Get(context.Background(), nsNameAPIManagerMetricsService, createdAPIManagerMetricsService); err == nil {
+				t.Fatal("expected the API manager metrics service to be deleted, but it still exists")
 			}
 
 			// The namespace should not be deleted.
@@ -1524,7 +1699,7 @@ func TestDeployPodPriorityClass(t *testing.T) {
 
 			daemonsetPC := createdDaemonset.Spec.Template.Spec.PriorityClassName
 			if tc.wantPriorityClass && daemonsetPC != criticalPriorityClass {
-				t.Errorf("unexpected daemonset pod priodity class:\n\t(GOT) %v \n\t(WNT) %v", daemonsetPC, criticalPriorityClass)
+				t.Errorf("unexpected daemonset pod priority class:\n\t(GOT) %v \n\t(WNT) %v", daemonsetPC, criticalPriorityClass)
 			}
 
 			if !tc.wantPriorityClass && daemonsetPC != "" {
@@ -1561,11 +1736,29 @@ func TestDeployPodPriorityClass(t *testing.T) {
 			}
 
 			if tc.wantPriorityClass && csiHelperPC != criticalPriorityClass {
-				t.Errorf("unexpected CSI helper pod priodity class:\n\t(GOT) %v \n\t(WNT) %v", daemonsetPC, criticalPriorityClass)
+				t.Errorf("unexpected CSI helper pod priority class:\n\t(GOT) %v \n\t(WNT) %v", daemonsetPC, criticalPriorityClass)
 			}
 
 			if !tc.wantPriorityClass && csiHelperPC != "" {
 				t.Errorf("expected CSI helper priority class to be not set")
+			}
+
+			// Check pod priority class for the api-manager.
+			createdAPIManagerDeployment := &appsv1.Deployment{}
+			nsNameAPIManagerDeployment := types.NamespacedName{
+				Name:      APIManagerName,
+				Namespace: stosCluster.Spec.GetResourceNS(),
+			}
+			if err := c.Get(context.Background(), nsNameAPIManagerDeployment, createdAPIManagerDeployment); err != nil {
+				t.Fatal("failed to get the created api-manager deployment", err)
+			}
+			apiManagerPC := createdAPIManagerDeployment.Spec.Template.Spec.PriorityClassName
+			if tc.wantPriorityClass && apiManagerPC != criticalPriorityClass {
+				t.Errorf("unexpected api-manager pod priority class:\n\t(GOT) %v \n\t(WNT) %v", apiManagerPC, criticalPriorityClass)
+			}
+
+			if !tc.wantPriorityClass && apiManagerPC != "" {
+				t.Errorf("expected api-manager priority class to be not set")
 			}
 		})
 	}

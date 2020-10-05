@@ -228,6 +228,10 @@ func (s *Deployment) Deploy() error {
 		}
 	}
 
+	if err := s.createAPIManager(); err != nil {
+		return err
+	}
+
 	if !s.stos.Spec.DisableScheduler {
 		if err := s.createSchedulerExtender(); err != nil {
 			return err

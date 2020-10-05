@@ -4,14 +4,17 @@ import (
 	"context"
 	"testing"
 
+	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
+	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/storageos/cluster-operator/pkg/util/k8s/resource"
@@ -174,24 +177,41 @@ func TestResourceManager(t *testing.T) {
 			},
 			wantResource: &corev1.PersistentVolumeClaim{},
 		},
-		// Testing this results in invalid kind even when a custom scheme is
-		// passed to the fake client. The default client-go scheme doesn't
-		// include CSIDriver.
-		// {
-		// 	name: resource.CSIDriverKind,
-		// 	create: func(rm *ResourceManager, nsName types.NamespacedName) error {
-		// 		return rm.CSIDriver(nsName.Name, nil, &storagev1beta1.CSIDriverSpec{}).Create()
-		// 	},
-		// 	delete: func(rm *ResourceManager, nsName types.NamespacedName) error {
-		// 		return rm.CSIDriver(nsName.Name, nil, nil).Delete()
-		// 	},
-		// },
+		{
+			name: resource.CSIDriverKind,
+			create: func(rm *ResourceManager, nsName types.NamespacedName) error {
+				return rm.CSIDriver(nsName.Name, nil, &storagev1beta1.CSIDriverSpec{}).Create()
+			},
+			delete: func(rm *ResourceManager, nsName types.NamespacedName) error {
+				return rm.CSIDriver(nsName.Name, nil, nil).Delete()
+			},
+			wantResource: &storagev1beta1.CSIDriver{},
+		},
+		{
+			name: resource.ServiceMonitorKind,
+			create: func(rm *ResourceManager, nsName types.NamespacedName) error {
+				return rm.ServiceMonitor(nsName.Name, nsName.Namespace, map[string]string{}, map[string]string{}, &corev1.Service{}, &monitoringv1.ServiceMonitorSpec{}).Create()
+			},
+			delete: func(rm *ResourceManager, nsName types.NamespacedName) error {
+				return rm.ServiceMonitor(nsName.Name, nsName.Namespace, nil, nil, &corev1.Service{}, nil).Delete()
+			},
+			wantResource: &monitoringv1.ServiceMonitor{},
+		},
 	}
 
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			client := fake.NewFakeClient()
+			s := scheme.Scheme
+			for _, f := range []func(*runtime.Scheme) error{
+				monitoringv1.AddToScheme,
+				storagev1beta1.AddToScheme,
+			} {
+				if err := f(s); err != nil {
+					t.Fatalf("failed to add to scheme: %s", err)
+				}
+			}
+			client := fake.NewFakeClientWithScheme(s)
 
 			labels := map[string]string{"app": "testapp"}
 			rm := NewResourceManager(client).SetLabels(labels)

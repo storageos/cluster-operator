@@ -99,6 +99,11 @@ func TestClusterCSINodeV2(t *testing.T) {
 	// Test pod scheduler mutating admission contoller.
 	testutil.PodSchedulerAdmissionControllerTest(t, ctx)
 
+	// API Manager tests.
+	testutil.APIManagerDeploymentTest(t, resourceNS, testutil.RetryInterval, testutil.Timeout)
+	testutil.APIManagerMetricsServiceTest(t, resourceNS, testutil.RetryInterval, testutil.Timeout)
+	testutil.APIManagerMetricsServiceMonitorTest(t, resourceNS, testutil.RetryInterval, testutil.Timeout)
+
 	// Test node label sync.
 	// TODO: Currently relies on v1 CLI.
 	// testutil.NodeLabelSyncTest(t, f.KubeClient)

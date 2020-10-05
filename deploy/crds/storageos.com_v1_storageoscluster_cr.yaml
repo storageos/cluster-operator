@@ -23,6 +23,7 @@ spec:
   #   csiLivenessProbeContainer:
   #   hyperkubeContainer:
   #   nfsContainer:
+  #   apiControllerContainer:
   # csi:
   #   enable: true
   #   endpoint: /var/lib/kubelet/device-plugins/
