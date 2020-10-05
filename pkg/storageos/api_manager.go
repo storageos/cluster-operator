@@ -18,6 +18,11 @@ import (
 )
 
 const (
+	// APIManagerName is the name used for the api manager deployment.
+	APIManagerName = "storageos-api-manager"
+	// APIManagerMetricsName name is the name used for the api manager metrics service.
+	APIManagerMetricsName = "storageos-api-manager-metrics"
+
 	apiManagerMetricsPortName = "metrics"
 	apiManagerMetricsPort     = int32(8080)
 	createTimeout             = 5 * time.Second
@@ -62,7 +67,7 @@ func (s Deployment) createAPIManagerDeployment(replicas int32) error {
 				Containers: []corev1.Container{
 					{
 						Image:           s.stos.Spec.GetAPIManagerImage(),
-						Name:            "storageos-api-manager",
+						Name:            "api-manager",
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						Command: []string{
 							"/manager",
@@ -104,17 +109,17 @@ func (s Deployment) createAPIManagerDeployment(replicas int32) error {
 		return err
 	}
 
-	return s.k8sResourceManager.Deployment(apiManagerName, s.stos.Spec.GetResourceNS(), nil, spec).Create()
+	return s.k8sResourceManager.Deployment(APIManagerName, s.stos.Spec.GetResourceNS(), nil, spec).Create()
 }
 
 // deleteAPIManager deletes the API Manager deployment and all the associated
 // resources.
 func (s Deployment) deleteAPIManager() error {
 	ns := s.stos.Spec.GetResourceNS()
-	if err := s.k8sResourceManager.Service(apiManagerMetricsName, ns, nil, nil, nil).Delete(); err != nil {
+	if err := s.k8sResourceManager.Service(APIManagerMetricsName, ns, nil, nil, nil).Delete(); err != nil {
 		return err
 	}
-	if err := s.k8sResourceManager.Deployment(apiManagerName, ns, nil, nil).Delete(); err != nil {
+	if err := s.k8sResourceManager.Deployment(APIManagerName, ns, nil, nil).Delete(); err != nil {
 		return err
 	}
 	if err := s.k8sResourceManager.ClusterRoleBinding(APIManagerClusterBindingName, nil, nil, nil).Delete(); err != nil {
@@ -135,7 +140,7 @@ func podLabelsForAPIManager(name string) map[string]string {
 	labels := map[string]string{
 		"app":            appName,
 		"storageos_cr":   name,
-		k8s.AppComponent: apiManagerName,
+		k8s.AppComponent: APIManagerName,
 	}
 	return k8s.AddDefaultAppLabels(name, labels)
 }
@@ -152,15 +157,15 @@ func (s Deployment) createAPIManagerMetrics() error {
 			},
 		},
 		Selector: map[string]string{
-			k8s.AppComponent: apiManagerName,
+			k8s.AppComponent: APIManagerName,
 		},
 	}
 
 	labels := podLabelsForAPIManager(s.stos.Name)
 	svcLabels := labels
-	svcLabels[k8s.ServiceFor] = apiManagerName
+	svcLabels[k8s.ServiceFor] = APIManagerName
 
-	if err := s.k8sResourceManager.Service(apiManagerMetricsName, ns, svcLabels, nil, svcSpec).Create(); err != nil {
+	if err := s.k8sResourceManager.Service(APIManagerMetricsName, ns, svcLabels, nil, svcSpec).Create(); err != nil {
 		return err
 	}
 
@@ -177,7 +182,7 @@ func (s Deployment) createAPIManagerMetrics() error {
 	// Wait for service creation.
 	var svc *corev1.Service
 	err = wait.Poll(createPoll, createTimeout, func() (bool, error) {
-		svc, err = s.k8sResourceManager.Service(apiManagerMetricsName, ns, svcLabels, nil, svcSpec).Get()
+		svc, err = s.k8sResourceManager.Service(APIManagerMetricsName, ns, svcLabels, nil, svcSpec).Get()
 		if client.IgnoreNotFound(err) != nil {
 			return false, err
 		}
@@ -194,12 +199,12 @@ func (s Deployment) createAPIManagerMetrics() error {
 	smSpec := &monitoringv1.ServiceMonitorSpec{
 		Selector: metav1.LabelSelector{
 			MatchLabels: map[string]string{
-				k8s.AppComponent: apiManagerName,
+				k8s.AppComponent: APIManagerName,
 			},
 		},
 		Endpoints: endpoints,
 	}
 
 	// Create ServiceMonitor resources, but don't error if Prometheus not installed.
-	return s.k8sResourceManager.ServiceMonitor(apiManagerMetricsName, ns, labels, nil, svc, smSpec).Create()
+	return s.k8sResourceManager.ServiceMonitor(APIManagerMetricsName, ns, labels, nil, svc, smSpec).Create()
 }

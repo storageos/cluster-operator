@@ -24,6 +24,8 @@ import (
 
 	"github.com/storageos/cluster-operator/pkg/apis"
 	storageos "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
+	deploy "github.com/storageos/cluster-operator/pkg/storageos"
+	"github.com/storageos/cluster-operator/pkg/util/k8s"
 	"github.com/storageos/cluster-operator/pkg/util/k8sutil"
 )
 
@@ -397,7 +399,7 @@ func APIManagerDeploymentTest(t *testing.T, ns string, retryInterval, timeout ti
 	f := framework.Global
 	var deployment *appsv1.Deployment
 	err := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
-		deployment, err = f.KubeClient.AppsV1().Deployments(ns).Get(context.TODO(), "storageos-api-manager", metav1.GetOptions{})
+		deployment, err = f.KubeClient.AppsV1().Deployments(ns).Get(context.TODO(), deploy.APIManagerName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -414,7 +416,7 @@ func APIManagerDeploymentTest(t *testing.T, ns string, retryInterval, timeout ti
 	var pods *corev1.PodList
 	err = wait.Poll(retryInterval, timeout, func() (done bool, err error) {
 		pods, err = f.KubeClient.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{
-			LabelSelector: "app.kubernetes.io/component=storageos-api-manager",
+			LabelSelector: fmt.Sprintf("%s=%s", k8s.AppComponent, deploy.APIManagerName),
 		})
 		if err != nil {
 			return false, err
@@ -430,14 +432,12 @@ func APIManagerDeploymentTest(t *testing.T, ns string, retryInterval, timeout ti
 
 	// check label needed for metrics service.
 	for _, pod := range pods.Items {
-		label := "app.kubernetes.io/component"
-		want := "storageos-api-manager"
-		got, ok := pod.Labels[label]
+		got, ok := pod.Labels[k8s.AppComponent]
 		if !ok {
-			t.Errorf("expected label %q not set", label)
+			t.Errorf("expected label %q not set", k8s.AppComponent)
 		}
-		if ok && got != want {
-			t.Errorf("expected label %q set to %q, want %q", label, got, want)
+		if ok && got != deploy.APIManagerName {
+			t.Errorf("expected label %q set to %q, want %q", k8s.AppComponent, got, deploy.APIManagerName)
 		}
 	}
 }
@@ -447,7 +447,7 @@ func APIManagerMetricsServiceTest(t *testing.T, ns string, retryInterval, timeou
 	f := framework.Global
 	var svc *corev1.Service
 	err := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
-		svc, err = f.KubeClient.CoreV1().Services(ns).Get(context.TODO(), "storageos-api-manager-metrics", metav1.GetOptions{})
+		svc, err = f.KubeClient.CoreV1().Services(ns).Get(context.TODO(), deploy.APIManagerMetricsName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -461,14 +461,12 @@ func APIManagerMetricsServiceTest(t *testing.T, ns string, retryInterval, timeou
 	}
 
 	// Check label needed for ServiceMonitor.
-	label := "app.kubernetes.io/component"
-	want := "storageos-api-manager"
-	got, ok := svc.Labels[label]
+	got, ok := svc.Labels[k8s.AppComponent]
 	if !ok {
-		t.Errorf("expected label %q not set", label)
+		t.Errorf("expected label %q not set", k8s.AppComponent)
 	}
-	if ok && got != want {
-		t.Errorf("expected label %q set to %q, want %q", label, got, want)
+	if ok && got != deploy.APIManagerName {
+		t.Errorf("expected label %q set to %q, want %q", k8s.AppComponent, got, deploy.APIManagerName)
 	}
 }
 
@@ -476,7 +474,7 @@ func APIManagerMetricsServiceTest(t *testing.T, ns string, retryInterval, timeou
 func APIManagerMetricsServiceMonitorTest(t *testing.T, ns string, retryInterval, timeout time.Duration) {
 	f := framework.Global
 	nn := types.NamespacedName{
-		Name:      "storageos-api-manager-metrics",
+		Name:      deploy.APIManagerMetricsName,
 		Namespace: ns,
 	}
 	sm := &monitoringv1.ServiceMonitor{}

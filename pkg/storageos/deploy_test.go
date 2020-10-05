@@ -29,6 +29,7 @@ import (
 	"github.com/storageos/cluster-operator/internal/pkg/toleration"
 	storageosapis "github.com/storageos/cluster-operator/pkg/apis"
 	api "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
+	"github.com/storageos/cluster-operator/pkg/util/k8s"
 )
 
 var gvk = schema.GroupVersionKind{
@@ -534,7 +535,7 @@ func TestCreateAPIManager(t *testing.T) {
 			// Check for Deployment resource.
 			createdDeployment := &appsv1.Deployment{}
 			nsNameDeployment := types.NamespacedName{
-				Name:      apiManagerName,
+				Name:      APIManagerName,
 				Namespace: defaultNS,
 			}
 
@@ -564,20 +565,18 @@ func TestCreateAPIManager(t *testing.T) {
 			}
 
 			// Check the pod template component label (required for service).
-			label := "app.kubernetes.io/component"
-			want := "storageos-api-manager"
-			got, ok := createdDeployment.Spec.Template.Labels[label]
+			got, ok := createdDeployment.Spec.Template.Labels[k8s.AppComponent]
 			if !ok {
-				t.Errorf("expected pod label %q not set", label)
+				t.Errorf("expected pod label %q not set", k8s.AppComponent)
 			}
-			if ok && got != want {
-				t.Errorf("expected pod label %q set to %q, want %q", label, got, want)
+			if ok && got != APIManagerName {
+				t.Errorf("pod label %q, got %q, want %q", k8s.AppComponent, got, APIManagerName)
 			}
 
 			// Check for metrics service
 			createdService := &corev1.Service{}
 			nsNameService := types.NamespacedName{
-				Name:      fmt.Sprintf("%s-metrics", apiManagerName),
+				Name:      APIManagerMetricsName,
 				Namespace: defaultNS,
 			}
 
@@ -586,12 +585,12 @@ func TestCreateAPIManager(t *testing.T) {
 			}
 
 			// Check the service component label (required for service monitor).
-			got, ok = createdService.Labels[label]
+			got, ok = createdService.Labels[k8s.AppComponent]
 			if !ok {
-				t.Errorf("expected svc label %q not set", label)
+				t.Errorf("expected svc label %q not set", k8s.AppComponent)
 			}
-			if ok && got != want {
-				t.Errorf("expected svc label %q set to %q, want %q", label, got, want)
+			if ok && got != APIManagerName {
+				t.Errorf("svc label %q, got %q, want %q", k8s.AppComponent, got, APIManagerName)
 			}
 		})
 	}
@@ -1084,7 +1083,7 @@ func TestDeployNodeAffinity(t *testing.T) {
 			// Fetch and check api-manager.
 			createdAPIManagerDeployment := &appsv1.Deployment{}
 			nsNameAPIManager := types.NamespacedName{
-				Name:      apiManagerName,
+				Name:      APIManagerName,
 				Namespace: defaultNS,
 			}
 			if err := c.Get(context.Background(), nsNameAPIManager, createdAPIManagerDeployment); err != nil {
@@ -1256,7 +1255,7 @@ func TestDeployTolerations(t *testing.T) {
 			// Check api-manager tolerations.
 			createdAPIManagerDeployment := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      apiManagerName,
+					Name:      APIManagerName,
 					Namespace: stosCluster.Spec.GetResourceNS(),
 				},
 			}
@@ -1486,7 +1485,7 @@ func TestDelete(t *testing.T) {
 			// Check API manager was created.
 			createdAPIManagerDeployment := &appsv1.Deployment{}
 			nsNameAPIManagerDeployment := types.NamespacedName{
-				Name:      apiManagerName,
+				Name:      APIManagerName,
 				Namespace: defaultNS,
 			}
 			if err := c.Get(context.Background(), nsNameAPIManagerDeployment, createdAPIManagerDeployment); err != nil {
@@ -1494,7 +1493,7 @@ func TestDelete(t *testing.T) {
 			}
 			createdAPIManagerMetricsService := &corev1.Service{}
 			nsNameAPIManagerMetricsService := types.NamespacedName{
-				Name:      fmt.Sprintf("%s-metrics", apiManagerName),
+				Name:      APIManagerMetricsName,
 				Namespace: defaultNS,
 			}
 			if err := c.Get(context.Background(), nsNameAPIManagerMetricsService, createdAPIManagerMetricsService); err != nil {
@@ -1747,7 +1746,7 @@ func TestDeployPodPriorityClass(t *testing.T) {
 			// Check pod priority class for the api-manager.
 			createdAPIManagerDeployment := &appsv1.Deployment{}
 			nsNameAPIManagerDeployment := types.NamespacedName{
-				Name:      apiManagerName,
+				Name:      APIManagerName,
 				Namespace: stosCluster.Spec.GetResourceNS(),
 			}
 			if err := c.Get(context.Background(), nsNameAPIManagerDeployment, createdAPIManagerDeployment); err != nil {

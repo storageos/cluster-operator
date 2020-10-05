@@ -36,12 +36,10 @@ const (
 	statefulsetKind = "statefulset"
 	deploymentKind  = "deployment"
 
-	daemonsetName         = "storageos-daemonset"
-	statefulsetName       = "storageos-statefulset"
-	configmapName         = "storageos-node-config"
-	csiHelperName         = "storageos-csi-helper"
-	apiManagerName        = "storageos-api-manager"
-	apiManagerMetricsName = "storageos-api-manager-metrics"
+	daemonsetName   = "storageos-daemonset"
+	statefulsetName = "storageos-statefulset"
+	configmapName   = "storageos-node-config"
+	csiHelperName   = "storageos-csi-helper"
 
 	// tlsSecretType       = "kubernetes.io/tls"
 	// storageosSecretType = "kubernetes.io/storageos"
