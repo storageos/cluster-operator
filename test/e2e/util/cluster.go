@@ -12,7 +12,6 @@ import (
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -397,20 +396,9 @@ func CSIDriverResourceTest(t *testing.T, driverName string) {
 // APIManagerDeploymentTest checks the api-manager deployment.
 func APIManagerDeploymentTest(t *testing.T, ns string, retryInterval, timeout time.Duration) {
 	f := framework.Global
-	var deployment *appsv1.Deployment
-	err := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
-		deployment, err = f.KubeClient.AppsV1().Deployments(ns).Get(context.TODO(), deploy.APIManagerName, metav1.GetOptions{})
-		if err != nil {
-			return false, err
-		}
-		// TODO: wait for available?  It's timing out waiting atm.
-		if deployment.Status.Replicas == 2 {
-			return true, nil
-		}
-		return false, nil
-	})
+	err := e2eutil.WaitForDeployment(t, f.KubeClient, ns, deploy.APIManagerName, 2, retryInterval, timeout)
 	if err != nil {
-		t.Fatalf("timed out waiting for both api-manager replicas to be available: err=%v, status=%v", err, deployment.Status)
+		t.Fatalf("timed out waiting for api-manager deployment: err=%v", err)
 	}
 
 	var pods *corev1.PodList
