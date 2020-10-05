@@ -185,6 +185,7 @@ func TestResourceManager(t *testing.T) {
 			delete: func(rm *ResourceManager, nsName types.NamespacedName) error {
 				return rm.CSIDriver(nsName.Name, nil, nil).Delete()
 			},
+			wantResource: &storagev1beta1.CSIDriver{},
 		},
 		{
 			name: resource.ServiceMonitorKind,
