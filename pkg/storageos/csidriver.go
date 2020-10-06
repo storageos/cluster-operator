@@ -18,13 +18,7 @@ func (s *Deployment) createCSIDriver() error {
 		AttachRequired: &attachRequired,
 		PodInfoOnMount: &podInfoRequired,
 	}
-
-	driverName := CSIProvisionerName
-	if s.nodev2 {
-		driverName = StorageOSProvisionerName
-	}
-
-	return k8sresource.NewCSIDriver(s.client, driverName, nil, spec).Create()
+	return k8sresource.NewCSIDriver(s.client, StorageOSProvisionerName, nil, spec).Create()
 }
 
 // deleteCSIDriver deletes the StorageOS CSIDriver resource.

@@ -35,38 +35,17 @@ const (
 	sysAdminCap = "SYS_ADMIN"
 	debugVal    = "xdebug"
 
-	// V1 Only
-	adminUsernameEnvVar                 = "ADMIN_USERNAME"
-	adminPasswordEnvVar                 = "ADMIN_PASSWORD"
-	csiRequireCredsCreateEnvVar         = "CSI_REQUIRE_CREDS_CREATE_VOL"
-	csiRequireCredsDeleteEnvVar         = "CSI_REQUIRE_CREDS_DELETE_VOL"
-	csiProvisionCredsUsernameEnvVar     = "CSI_PROVISION_CREDS_USERNAME"
-	csiProvisionCredsPasswordEnvVar     = "CSI_PROVISION_CREDS_PASSWORD"
-	csiRequireCredsCtrlPubEnvVar        = "CSI_REQUIRE_CREDS_CTRL_PUB_VOL"
-	csiRequireCredsCtrlUnpubEnvVar      = "CSI_REQUIRE_CREDS_CTRL_UNPUB_VOL"
-	csiControllerPubCredsUsernameEnvVar = "CSI_CTRL_PUB_CREDS_USERNAME"
-	csiControllerPubCredsPasswordEnvVar = "CSI_CTRL_PUB_CREDS_PASSWORD"
-	csiRequireCredsNodePubEnvVar        = "CSI_REQUIRE_CREDS_NODE_PUB_VOL"
-	csiNodePubCredsUsernameEnvVar       = "CSI_NODE_PUB_CREDS_USERNAME"
-	csiNodePubCredsPasswordEnvVar       = "CSI_NODE_PUB_CREDS_PASSWORD"
-
 	// Configmap file mode.
 	cmFileMode os.FileMode = 0600
 )
 
 // getNodeUsernameEnvVar returns the env var used to set the bootstrap username.
 func (s *Deployment) getNodeUsernameEnvVar() string {
-	if !s.nodev2 {
-		return adminUsernameEnvVar
-	}
 	return bootstrapUsernameEnvVar
 }
 
 // getNodePasswordEnvVar returns the env var used to set the bootstrap password.
 func (s *Deployment) getNodePasswordEnvVar() string {
-	if !s.nodev2 {
-		return adminPasswordEnvVar
-	}
 	return bootstrapPasswordEnvVar
 }
 
@@ -292,11 +271,6 @@ func (s *Deployment) createDaemonSet() error {
 	s.addTLSEtcdCerts(podSpec)
 
 	s.addNodeAffinity(podSpec)
-
-	// TODO: update when V2 supports health endpoint.
-	if !s.nodev2 {
-		s.addNodeContainerProbes(nodeContainer)
-	}
 
 	if err := s.addTolerationsWithDefaults(podSpec); err != nil {
 		return err

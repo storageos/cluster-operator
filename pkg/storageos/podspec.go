@@ -136,61 +136,6 @@ func (s *Deployment) addCSI(podSpec *corev1.PodSpec) {
 		// Append volume mounts to the first container, the only container is the node container, at this point.
 		nodeContainer.VolumeMounts = append(nodeContainer.VolumeMounts, volMnts...)
 
-		// V1 passes CSI credentials as env vars.  In V2, CSI credentials are
-		// set in the StorageClass.
-		envVar := []corev1.EnvVar{}
-		if !s.nodev2 {
-			// Append CSI Provision Creds env var if enabled.
-			if s.stos.Spec.CSI.EnableProvisionCreds {
-				envVar = append(
-					envVar,
-					corev1.EnvVar{
-						Name:  csiRequireCredsCreateEnvVar,
-						Value: "true",
-					},
-					corev1.EnvVar{
-						Name:  csiRequireCredsDeleteEnvVar,
-						Value: "true",
-					},
-					getCSICredsEnvVar(csiProvisionCredsUsernameEnvVar, csiProvisionerSecretName, "username"),
-					getCSICredsEnvVar(csiProvisionCredsPasswordEnvVar, csiProvisionerSecretName, "password"),
-				)
-			}
-
-			// Append CSI Controller Publish env var if enabled.
-			if s.stos.Spec.CSI.EnableControllerPublishCreds {
-				envVar = append(
-					envVar,
-					corev1.EnvVar{
-						Name:  csiRequireCredsCtrlPubEnvVar,
-						Value: "true",
-					},
-					corev1.EnvVar{
-						Name:  csiRequireCredsCtrlUnpubEnvVar,
-						Value: "true",
-					},
-					getCSICredsEnvVar(csiControllerPubCredsUsernameEnvVar, csiControllerPublishSecretName, "username"),
-					getCSICredsEnvVar(csiControllerPubCredsPasswordEnvVar, csiControllerPublishSecretName, "password"),
-				)
-			}
-
-			// Append CSI Node Publish env var if enabled.
-			if s.stos.Spec.CSI.EnableNodePublishCreds {
-				envVar = append(
-					envVar,
-					corev1.EnvVar{
-						Name:  csiRequireCredsNodePubEnvVar,
-						Value: "true",
-					},
-					getCSICredsEnvVar(csiNodePubCredsUsernameEnvVar, csiNodePublishSecretName, "username"),
-					getCSICredsEnvVar(csiNodePubCredsPasswordEnvVar, csiNodePublishSecretName, "password"),
-				)
-			}
-		}
-
-		// Append env vars to the first container, node container.
-		nodeContainer.Env = append(nodeContainer.Env, envVar...)
-
 		driverReg := corev1.Container{
 			Image:           s.stos.Spec.GetCSINodeDriverRegistrarImage(CSIV1Supported(s.k8sVersion)),
 			Name:            "csi-driver-registrar",
