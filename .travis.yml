@@ -37,12 +37,14 @@ install: true
 
 jobs:
   include:
-    - go: "1.14"
-      sudo: required
-      env:
-        - "INSTALL_METHOD=olm"
-      name: OLM on KinD (k8s-1.19)
-      script: ./test/e2e.sh $INSTALL_METHOD
+    # Temporary disable until:
+    # https://github.com/operator-framework/operator-registry/pull/466
+    # - go: "1.14"
+    #   sudo: required
+    #   env:
+    #     - "INSTALL_METHOD=olm"
+    #   name: OLM on KinD (k8s-1.19)
+    #   script: ./test/e2e.sh $INSTALL_METHOD
     - &base-test
       go: "1.14"
       sudo: required
