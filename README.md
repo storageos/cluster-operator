@@ -112,7 +112,7 @@ Parameter | Description | Default
 `secretRefNamespace` | Namespace of storageos secret |
 `namespace` | Namespace where storageos cluster resources are created | `storageos`
 `images.nodeContainer` | StorageOS node container image | `storageos/node:v2.2.0`
-`images.initContainer` | StorageOS init container image | `storageos/init:v2.0.0`
+`images.initContainer` | StorageOS init container image | `storageos/init:v2.1.0`
 `images.csiNodeDriverRegistrarContainer` | CSI Node Driver Registrar Container image | Varies depending on Kubernetes version
 `images.csiClusterDriverRegistrarContainer` | CSI Cluster Driver Registrar Container image |  Varies depending on Kubernetes version
 `images.csiExternalProvisionerContainer` | CSI External Provisioner Container image |  Varies depending on Kubernetes version

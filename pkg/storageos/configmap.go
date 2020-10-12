@@ -99,6 +99,11 @@ const (
 	// Logger format: default or json.
 	logFormatEnvVar = "LOG_FORMAT"
 
+	// recommendedPidLimitEnvVar sets the minimum max_pids limit recommended by
+	// StorageOS. The init container detects the effective limit and will warn
+	// if not met.
+	recommendedPidLimitEnvVar = "RECOMMENDED_MAX_PIDS_LIMIT"
+
 	// Tracing configuration.  Intended for internal development use only and
 	// should not be documented externally.
 	jaegerEndpointEnvVar    = "JAEGER_ENDPOINT"
@@ -190,6 +195,9 @@ func configFromSpec(spec storageosv1.StorageOSClusterSpec, csiv1 bool) map[strin
 	if spec.Debug {
 		config[logLevelEnvVar] = debugVal
 	}
+
+	// Always set max_pids recommendation.
+	config[recommendedPidLimitEnvVar] = fmt.Sprint(recommendedPidLimit)
 
 	// Set Jaeger configuration, only if set as an env var in the operator. We
 	// do this because we don't want to publish configuration options in the CRD

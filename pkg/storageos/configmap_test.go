@@ -21,6 +21,7 @@ func Test_configFromSpec(t *testing.T) {
 		namespaceEnvVar:             "kube-system",
 		logFormatEnvVar:             "json",
 		logLevelEnvVar:              "info",
+		recommendedPidLimitEnvVar:   "32768",
 		// disableFencingEnvVar:        "false",
 	}
 
