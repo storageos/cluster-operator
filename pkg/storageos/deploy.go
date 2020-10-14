@@ -82,6 +82,10 @@ const (
 	defaultUsername = "storageos"
 	defaultPassword = "storageos"
 
+	// recommendedPidLimit is passed to the init container to warn if a lower
+	// limit is set.  It can't be overridden.
+	recommendedPidLimit = "32768"
+
 	// k8s distribution vendor specific keywords.
 
 	// K8SDistroOpenShift is k8s distribution name for OpenShift.
