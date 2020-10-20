@@ -38,10 +38,10 @@ OPERATOR_MANIFEST=deploy/operator-generated.yaml
 cp deploy/operator.yaml $OPERATOR_MANIFEST
 
 if [ -n "$JAEGER_ENDPOINT" ]; then
-    build/yq w -i $OPERATOR_MANIFEST spec.template.spec.containers[0].env[19].value $JAEGER_ENDPOINT
+    build/yq w -i $OPERATOR_MANIFEST spec.template.spec.containers[0].env[20].value $JAEGER_ENDPOINT
 fi
 if [ -n "$JAEGER_SERVICE_NAME" ]; then
-    build/yq w -i $OPERATOR_MANIFEST spec.template.spec.containers[0].env[20].value $JAEGER_SERVICE_NAME
+    build/yq w -i $OPERATOR_MANIFEST spec.template.spec.containers[0].env[21].value $JAEGER_SERVICE_NAME
 fi
 
 # Write the operator manifest with the proper container image tag.
