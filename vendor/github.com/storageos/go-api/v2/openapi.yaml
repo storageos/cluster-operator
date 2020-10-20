@@ -1,7 +1,7 @@
 openapi: "3.0.2"
 info:
     title: "StorageOS API"
-    version: "2.0.0"
+    version: "2.3.0"
     contact:
         name: StorageOS
         url: https://storageos.com
@@ -127,6 +127,19 @@ components:
             description: >
                 The file system type of a volume. "block" is a raw block device (no filesystem).
             example: "ext4"
+            
+        AttachType:
+            type: string
+            readOnly: true
+            enum:
+                - "unknown"
+                - "detached"
+                - "nfs"
+                - "host"
+            description: >
+                The attachment type of a volume. "host" indicates that the
+                volume is consumed by the node it is attached to.
+            example: "host"
 
         NodeHealth:
             type: string
@@ -166,7 +179,7 @@ components:
             description: >
                 The operational health of a volume replica deployment
             example: "ready"
-
+            
         SyncProgress:
             type: object
             readOnly: true
@@ -194,7 +207,7 @@ components:
                     example: 5
             description: >
                 The progress report for an ongoing sync. 
-
+      
         CapacityStats:
             type: object
             properties:
@@ -216,7 +229,124 @@ components:
                     description: >
                        Byte value available to an unprivileged user
                     example: 42
+        NfsAcl:
+            type: object
+            properties:
+              identity:
+                type: object
+                properties:
+                    identityType:
+                        type: string
+                        enum:
+                            - "cidr"
+                            - "hostname"
+                            - "netgroup"
+                        description: >
+                            The identity type used to identify the nfs client.
+                        example: "hostname"
+                    matcher:
+                        type: string
+                        description: >
+                            NFS identity matcher.
 
+                            For "cidr", this should be a valid CIDR block string
+                            such as "10.0.0.0/8".
+
+                            For "hostname", this must be the hostname sent by the
+                            client, with ? and * wildcard characters.
+
+                            For netgroup, this must be in the form of
+                            "@netgroup" with ? and * wildcard characters.
+                        example: "*.prod.storageos.com"
+              squashConfig:
+                type: object
+                properties:
+                    uid:
+                        type: int64
+                    gid:
+                        type: int64
+                    squash:
+                        type: string
+                        enum:
+                            - "none"
+                            - "root"
+                            - "rootuid"
+                            - "all"
+                        description: >
+                            SquashConfig defines the root squashing behaviour. 
+                            
+                            When a client creates a file, it sends the user UID
+                            from the client. If the client is running as root,
+                            this sends uid=0. Root squashing allows the NFS
+                            administrator to prevent the client from writing as
+                            "root" to the NFS share, instead mapping the client
+                            to a new UID/GID (usually nfsnobody, -2).
+
+                            "none" performs no UID/GID alterations, using the
+                            values sent by the client.
+
+                            "root" mapps UID & GID 0 to the values specified.
+
+                            "rootuid" maps UID 0 and a GID of any value to the
+                            value specified.
+
+                            "all" maps changes all UID and GID values to those
+                            specified.
+
+                        example: "root"
+              accessLevel:
+                type: string
+                enum:
+                    - "ro"
+                    - "rw"
+                description: >
+                    The access level this ACL grants - read-only, or read-write.
+                example: "rw"
+                    
+        NfsExportConfig:
+            type: object
+            properties:
+                exportID:
+                    type: uint64
+                    default: 0
+                    description: >
+                        ID for this export
+                    example: 42
+                path:
+                    type: string
+                    default: ""
+                    description: >
+                        The path relative to the volume root to serve as the export root
+                    example: "/very/important/files/"
+                pseudoPath:
+                    type: string
+                    default: ""
+                    description: >
+                        The configured pseudo path in the NFS virtual filesystem.
+                        This is the path clients will see when traversing to this
+                        export on the NFS share.
+                    example: "/very/important/files/somewhere/else"
+                acls:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/NfsAcl"
+        NFSConfig:
+            type: object
+            properties:
+                exports:
+                    nullable: true
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/NfsExportConfig"
+                serviceEndpoint:
+                    type: string
+                    readOnly: true
+                    nullable: true
+                    default: ""
+                    description: >
+                        The address to which the NFS server is bound.
+                
+                        
         Labels:
             type: object
             description: >
@@ -443,6 +573,10 @@ components:
                     readOnly: true
                     allOf:
                         - $ref: "#/components/schemas/NodeID"
+                nfs:
+                    readOnly: true
+                    nullable: true
+                    $ref: "#/components/schemas/NFSConfig"
                 namespaceID:
                     readOnly: true
                     allOf:
@@ -451,6 +585,9 @@ components:
                     $ref: "#/components/schemas/Labels"
                 fsType:
                     $ref: "#/components/schemas/FsType"
+                attachmentType:
+                    readOnly: true
+                    $ref: "#/components/schemas/AttachType"
                 master:
                     readOnly: true
                     allOf:
@@ -466,8 +603,8 @@ components:
                     type: uint64
                     description: >
                         A volume's size in bytes
-                    minimum: 0
-                    example: 5000
+                    minimum: 1073742000
+                    example: 5368709000
                 createdAt:
                     $ref: "#/components/schemas/CreatedAt"
                 updatedAt:
@@ -692,6 +829,14 @@ components:
                     description: >
                         A user friendly reference to the customer
                     example: "Desmond"
+                features:
+                    type: array
+                    items:
+                        type: string
+                    nullable: true
+                    description: >
+                        A list of product features which are enabled by the 
+                        licence, subject to the installed version.
                 version:
                     $ref: "#/components/schemas/Version"
             description: >
@@ -735,8 +880,8 @@ components:
             name: version
             in: query
             description: >
-                This value is used to perform a conditional delete of the
-                entity.
+                This value is used to perform a conditional delete or update of
+                the entity.
 
                 If the entity has been modified since the version token was
                 obtained, the request will fail with a HTTP 409 Conflict.
@@ -874,7 +1019,8 @@ components:
 
         InsufficientStorage:
             description: >
-                Available storage is not enough to handle the request.
+                Available storage is not enough to handle the request or
+                target node has reached maximum number of attached volumes.
             content:
                 application/json:
                     schema:
@@ -930,6 +1076,17 @@ components:
                         $ref: "#/components/schemas/Error"
                     example:
                         error: in use
+
+        Locked:
+            description: >
+                A lock is held for the target entity, preventing the operation
+                to be carried out safely.
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/Error"
+                    example:
+                        error: entity locked
 
         Accepted:
             description: >
@@ -1042,7 +1199,9 @@ paths:
         post:
             summary: Create a new user
             operationId: createUser
-            description: Create a new user in the cluster - only administrators can create new users.
+            description: >
+                Create a new user in the cluster - only administrators can
+                create new users.
             security:
                 - jwt: []
             requestBody:
@@ -1195,6 +1354,8 @@ paths:
                 endpoint for this purpose.
             security:
                 - jwt: []
+            parameters:
+                - $ref: "#/components/parameters/IgnoreVersion"
             requestBody:
                 description: The new User data to store.
                 required: true
@@ -1389,6 +1550,8 @@ paths:
             description: Update the authenticated user.
             security:
                 - jwt: []
+            parameters:
+                - $ref: "#/components/parameters/IgnoreVersion"
             requestBody:
                 description: The new authenticated user's data.
                 required: true
@@ -1506,7 +1669,9 @@ paths:
         post:
             summary: Create a new namespace
             operationId: createNamespace
-            description: Create a new namespace in the cluster - only administrators can create new namespaces.
+            description: >
+                Create a new namespace in the cluster - only administrators can
+                create new namespaces.
             security:
                 - jwt: []
             requestBody:
@@ -1625,6 +1790,8 @@ paths:
             description: Update the namespace identified by id.
             security:
                 - jwt: []
+            parameters:
+                - $ref: "#/components/parameters/IgnoreVersion"
             requestBody:
                 description: The new namespace data to store.
                 required: true
@@ -1776,6 +1943,8 @@ paths:
             description: Update the node identified by id.
             security:
                 - jwt: []
+            parameters:
+                - $ref: "#/components/parameters/IgnoreVersion"
             requestBody:
                 description: The new node data to store.
                 required: true
@@ -1824,7 +1993,8 @@ paths:
             description: >
                 Remove the node identified by id.
 
-                A node can only be deleted if it is currently offline.
+                A node can only be deleted if it is currently offline and does
+                not host any master deployments.
             security:
                 - jwt: []
             parameters:
@@ -1853,18 +2023,13 @@ paths:
                     $ref: "#/components/responses/NotFound"
 
                 "409":
-                    description: >
-                        The request attempted to delete a node that is not
-                        currently offline.
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/Error"
-                            example:
-                                error: node not offline
+                    $ref: "#/components/responses/InUse"
 
                 "412":
                     $ref: "#/components/responses/StaleWrite"
+
+                "423":
+                    $ref: "#/components/responses/Locked"
 
                 "500":
                     $ref: "#/components/responses/ServerError"
@@ -2029,6 +2194,8 @@ paths:
             description: Update the policy group identified by id.
             security:
                 - jwt: []
+            parameters:
+                - $ref: "#/components/parameters/IgnoreVersion"
             requestBody:
                 description: The new policy group data to store.
                 required: true
@@ -2296,6 +2463,67 @@ paths:
 
                 "503":
                     $ref: "#/components/responses/StoreError"
+        put:
+            summary: Update a volume
+            operationId: updateVolume
+            description: >
+                Update the description and non-storageos labels configured for
+                the volume identified by id.
+            security:
+                - jwt: []
+            parameters:
+                - $ref: "#/components/parameters/IgnoreVersion"
+                - $ref: "#/components/parameters/AsyncHeader"
+                - $ref: "#/components/parameters/AsyncParam"
+            requestBody:
+                description: >
+                    Update the volume description and label configuration to the
+                    desired state. Alterations of StorageOS labels are rejected.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            title: UpdateVolumeData
+                            properties:
+                                labels:
+                                    $ref: "#/components/schemas/Labels"
+                                description:
+                                    type: string
+                                    example: "This volume contains the data for my app"
+                                version:
+                                    $ref: "#/components/schemas/Version"
+            responses:
+                "200":
+                    description: The volume was successfully updated
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Volume"
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "412":
+                    $ref: "#/components/responses/StaleWrite"
+
+                "451":
+                    $ref: "#/components/responses/LicenceRestricted"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
 
         delete:
             summary: Delete a volume
@@ -2309,6 +2537,24 @@ paths:
 
                 - $ref: "#/components/parameters/AsyncHeader"
                 - $ref: "#/components/parameters/AsyncParam"
+
+                - name: offline-delete
+                  in: query
+                  description: >
+                    If set to true, enables deletion of a volume when all 
+                    deployments are offline, bypassing the host nodes which
+                    cannot be reached.
+
+                    An offline delete request will be rejected when either
+                    a) there are online deployments for the target volume or
+                    b) there is evidence that an unreachable node still has
+                    the volume master
+                  required: false
+                  schema:
+                      type: boolean
+                      default: false
+                      example: true
+
             responses:
                 "200":
                     description: The volume was successfully deleted.
@@ -2337,6 +2583,9 @@ paths:
                 "422":
                     $ref: "#/components/responses/InvalidStateTransition"
 
+                "423":
+                    $ref: "#/components/responses/Locked"
+
                 "500":
                     $ref: "#/components/responses/ServerError"
 
@@ -2360,7 +2609,9 @@ paths:
         post:
             summary: Attach a volume to the given node
             operationId: attachVolume
-            description: Attach the volume identified by id to the node identified in the request's body.
+            description: >
+                Attach the volume identified by id to the node identified in the
+                request's body.
             security:
                 - jwt: []
             requestBody:
@@ -2398,6 +2649,10 @@ paths:
 
                 "500":
                     $ref: "#/components/responses/ServerError"
+
+                "507":
+                    $ref: "#/components/responses/InsufficientStorage"
+
         delete:
             summary: Detach the given volume
             operationId: detachVolume
@@ -2407,6 +2662,8 @@ paths:
             parameters:
                 - $ref: "#/components/parameters/ObjectVersion"
                 - $ref: "#/components/parameters/IgnoreVersion"
+                - $ref: "#/components/parameters/AsyncHeader"
+                - $ref: "#/components/parameters/AsyncParam"
             responses:
                 "200":
                     description: The volume was successfully detached.
@@ -2437,12 +2694,379 @@ paths:
 
                 "503":
                     $ref: "#/components/responses/StoreError"
+    /namespaces/{namespaceID}/volumes/{id}/nfs/attach:
+        parameters:
+            - name: namespaceID
+              in: path
+              description: ID of a Namespace
+              required: true
+              schema:
+                  $ref: "#/components/schemas/NamespaceID"
+            - name: id
+              in: path
+              description: ID of a Volume
+              required: true
+              schema:
+                  $ref: "#/components/schemas/VolumeID"
+
+        post:
+            summary: attach and share the volume using NFS
+            operationId: attachNFSVolume
+            description: >
+                Attach the given volume as an NFS volume.
+                
+                If no export configuration has been set via the
+                /nfs/export-config endpoint, the nfs service will start with
+                defaults settings (sharing the volume at its root).
+            security:
+                - jwt: []
+            parameters:
+                - $ref: "#/components/parameters/IgnoreVersion"
+                - $ref: "#/components/parameters/AsyncHeader"
+                - $ref: "#/components/parameters/AsyncParam"
+            requestBody:
+                description: NFS volume configuration. The version is the corresponding volume's version.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            title: AttachNFSVolumeData
+                            properties:
+                                version:
+                                    $ref: "#/components/schemas/Version"
+
+            responses:
+                "200":
+                    description: The volume was successfully attached.
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "409":
+                    $ref: "#/components/responses/InUse"
+
+                "412":
+                    $ref: "#/components/responses/StaleWrite"
+
+                "422":
+                    $ref: "#/components/responses/InvalidStateTransition"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+                    
+    /namespaces/{namespaceID}/volumes/{id}/nfs/mount-endpoint:
+        parameters:
+            - name: namespaceID
+              in: path
+              description: ID of a Namespace
+              required: true
+              schema:
+                  $ref: "#/components/schemas/NamespaceID"
+            - name: id
+              in: path
+              description: ID of a Volume
+              required: true
+              schema:
+                  $ref: "#/components/schemas/VolumeID"
+
+        put:
+            summary: Update an nfs volume's mount endpoint
+            operationId: updateNFSVolumeMountEndpoint
+            description: >
+                Update the NFS volume's mount endpoint
+            security:
+                - jwt: []
+            parameters:
+                - $ref: "#/components/parameters/IgnoreVersion"
+                - $ref: "#/components/parameters/AsyncHeader"
+                - $ref: "#/components/parameters/AsyncParam"
+            requestBody:
+                description: >
+                  Update an existing NFS volume's mount endpoint
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            title: NFSVolumeMountEndpoint
+                            properties:
+                                mountEndpoint:
+                                    type: string
+                                    default: ""
+                                    description: >
+                                        The address to which the NFS server is bound.
+                                version:
+                                    $ref: "#/components/schemas/Version"
+
+            responses:
+                "200":
+                    description: The volume's mount endpoint was successfully updated.
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "409":
+                    $ref: "#/components/responses/InUse"
+
+                "412":
+                    $ref: "#/components/responses/StaleWrite"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+    /namespaces/{namespaceID}/volumes/{id}/nfs/export-config:
+        parameters:
+            - name: namespaceID
+              in: path
+              description: ID of a Namespace
+              required: true
+              schema:
+                  $ref: "#/components/schemas/NamespaceID"
+            - name: id
+              in: path
+              description: ID of a Volume
+              required: true
+              schema:
+                  $ref: "#/components/schemas/VolumeID"
+
+        put:
+            summary: Update an nfs volume's export configuration
+            operationId: updateNFSVolumeExports
+            description: >
+                Update the NFS volume's export configuration
+            security:
+                - jwt: []
+            parameters:
+                - $ref: "#/components/parameters/IgnoreVersion"
+                - $ref: "#/components/parameters/AsyncHeader"
+                - $ref: "#/components/parameters/AsyncParam"
+            requestBody:
+                description: >
+                    Updates an existing volume's NFS export configuration.
+
+                    The volume will use the given export configuration once
+                    attached.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            title: NFSVolumeExports
+                            properties:
+                                exports:
+                                    type: array
+                                    items:
+                                        $ref: "#/components/schemas/NfsExportConfig"
+                                version:
+                                    $ref: "#/components/schemas/Version"
+
+            responses:
+                "200":
+                    description: The volume's NFS export configuration was successfully updated.
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "409":
+                    $ref: "#/components/responses/InUse"
+
+                "412":
+                    $ref: "#/components/responses/StaleWrite"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+    /namespaces/{namespaceID}/volumes/{id}/replicas:
+        parameters:
+            - name: namespaceID
+              in: path
+              description: ID of a Namespace
+              required: true
+              schema:
+                  $ref: "#/components/schemas/NamespaceID"
+            - name: id
+              in: path
+              description: ID of a Volume
+              required: true
+              schema:
+                  $ref: "#/components/schemas/VolumeID"
+        put:
+            summary: Set the number of replicas to maintain for the volume.
+            operationId: setReplicas
+            description: > 
+                Set the number of replicas for the volume identified by id to
+                the number specified in the request's body. This modifies the
+                protected StorageOS system label "storageos.com/replicas".
+
+                This request changes the desired replica count, and returns an
+                error if changing the desired replica count failed. StorageOS
+                satisfies the new replica configuration asynchronously.
+            security:
+                - jwt: []
+            parameters:
+                - $ref: "#/components/parameters/IgnoreVersion"
+            requestBody:
+                description: Number of replicas
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            title: SetReplicasRequest
+                            properties:
+                                replicas:
+                                    type: uint64
+                                    default: 0
+                                    minimum: 0
+                                    maximum: 5
+                                    description: >
+                                        The number of replicas desired.
+                                    example: 2
+                                version:
+                                    $ref: "#/components/schemas/Version"
+            responses:
+                "202":
+                    $ref: "#/components/responses/Accepted"
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "412":
+                    $ref: "#/components/responses/StaleWrite"
+
+                "422":
+                    $ref: "#/components/responses/InvalidStateTransition"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+    
+    /namespaces/{namespaceID}/volumes/{id}/size:
+        parameters:
+            - name: namespaceID
+              in: path
+              description: ID of a Namespace
+              required: true
+              schema:
+                  $ref: "#/components/schemas/NamespaceID"
+            - name: id
+              in: path
+              description: ID of a Volume
+              required: true
+              schema:
+                  $ref: "#/components/schemas/VolumeID"
+
+        put:
+            summary: Increase the size of a volume.
+            operationId: resizeVolume
+            description: > 
+                Resize the volume identified by id in the namespace identified
+                by namespaceID. A volume's size cannot be reduced.
+            security:
+                - jwt: []
+            parameters:
+                - $ref: "#/components/parameters/AsyncHeader"
+                - $ref: "#/components/parameters/AsyncParam"
+                - $ref: "#/components/parameters/IgnoreVersion"
+            requestBody:
+                description: The new size to give the volume
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            title: ResizeVolumeRequest
+                            properties:
+                                sizeBytes:
+                                    type: uint64
+                                    description: >
+                                        The desired new size for the volume in 
+                                        bytes. This value cannot be less than 
+                                        the current size of the volume.
+                                    minimum: 1073742000
+                                    example: 5368709000
+                                version:
+                                    $ref: "#/components/schemas/Version"
+            responses:
+                "200":
+                  description: The volume was resized successfully.
+                  content: 
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/Volume"
+                "202":
+                    $ref: "#/components/responses/Accepted"
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "412":
+                    $ref: "#/components/responses/StaleWrite"
+
+                "422":
+                    $ref: "#/components/responses/InvalidStateTransition"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
 
     /cluster:
         get:
             summary: Retrieves the cluster's global configuration settings
             operationId: getCluster
-            description: Retrieves the current global configuration settings in use by the cluster.
+            description: >
+                Retrieves the current global configuration settings in use by
+                the cluster.
             security:
                 - jwt: []
             responses:
@@ -2471,6 +3095,8 @@ paths:
             description: Update the global configuration settings to use for the cluster.
             security:
                 - jwt: []
+            parameters:
+                - $ref: "#/components/parameters/IgnoreVersion"
             requestBody:
                 description: The new cluster-wide configuration settings to apply.
                 required: true
@@ -2568,6 +3194,8 @@ paths:
             description: Update the cluster's licence.
             security:
                 - jwt: []
+            parameters:
+                - $ref: "#/components/parameters/IgnoreVersion"
             requestBody:
                 description: >
                     A StorageOS product licence key, used to
@@ -2652,6 +3280,21 @@ paths:
 
                 "500":
                     $ref: "#/components/responses/ServerError"
+
+                "502":
+                    description: >
+                        The server is returning an incomplete diagnostic bundle.
+
+                        A bundle may contain partial information if one or more
+                        nodes failed to respond, or some other error occured
+                        during the collection process.
+
+                        The returned bundle is still valid and should be sent to
+                        StorageOS.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
 
                 "503":
                     $ref: "#/components/responses/StoreError"
