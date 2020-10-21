@@ -184,7 +184,7 @@ github.com/storageos/go-api
 github.com/storageos/go-api/netutil
 github.com/storageos/go-api/serror
 github.com/storageos/go-api/types
-# github.com/storageos/go-api/v2 v2.0.0
+# github.com/storageos/go-api/v2 v2.3.0
 ## explicit
 github.com/storageos/go-api/v2
 # go.uber.org/atomic v1.6.0

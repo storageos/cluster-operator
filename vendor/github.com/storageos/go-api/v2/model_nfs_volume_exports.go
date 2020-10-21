@@ -9,10 +9,9 @@
  */
 
 package api
-// UpdatePolicyGroupData struct for UpdatePolicyGroupData
-type UpdatePolicyGroupData struct {
-	// A set of authorisation policies to apply to the policy group.
-	Specs *[]PoliciesIdSpecs `json:"specs,omitempty"`
+// NfsVolumeExports struct for NfsVolumeExports
+type NfsVolumeExports struct {
+	Exports []NfsExportConfig `json:"exports,omitempty"`
 	// An opaque representation of an entity version at the time it was obtained from the API. All operations that mutate the entity must include this version field in the request unchanged. The format of this type is undefined and may change but the defined properties will not change. 
 	Version string `json:"version,omitempty"`
 }

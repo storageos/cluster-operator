@@ -69,7 +69,7 @@ func (c Client) UpdateNodeV2(node *storageosapiv2.Node) error {
 		Version: node.Version,
 	}
 
-	_, rsp, err := c.V2.DefaultApi.UpdateNode(c.Ctx, node.Id, nodeData)
+	_, rsp, err := c.V2.DefaultApi.UpdateNode(c.Ctx, node.Id, nodeData, nil)
 	if err != nil {
 		return statusCodeBasedError(rsp.StatusCode, err)
 	}
