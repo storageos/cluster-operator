@@ -237,6 +237,11 @@ func createPVC(name, namespace, storageClassName string, betaAnnotation bool) *c
 		},
 	}
 
+	// Don't set storage class name if using default storage class.
+	if storageClassName == "" {
+		return pvc
+	}
+
 	if betaAnnotation {
 		pvc.ObjectMeta.Annotations[pvcStorageClassKey] = storageClassName
 	} else {

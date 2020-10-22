@@ -56,57 +56,113 @@ func TestPodSchedulerSetter_IsManagedVolume(t *testing.T) {
 		Provisioner: "foo-provisioner",
 	}
 
+	// StorageOS StorageClass set as default.
+	stosSCdefault := &storagev1.StorageClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "fast",
+			Annotations: map[string]string{
+				"storageclass.kubernetes.io/is-default-class": "true",
+			},
+		},
+		Provisioner: storageosCSIProvisioner,
+	}
+
+	// Non-StorageOS StorageClass.
+	fooSCdefault := &storagev1.StorageClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "slow",
+			Annotations: map[string]string{
+				"storageclass.kubernetes.io/is-default-class": "true",
+			},
+		},
+		Provisioner: "foo-provisioner",
+	}
+
 	testNamespace := "default"
 
 	tests := []struct {
-		name    string
-		pvc     *corev1.PersistentVolumeClaim
-		volume  *corev1.Volume
-		want    bool
-		wantErr bool
+		name           string
+		storageClasses []*storagev1.StorageClass
+		pvc            *corev1.PersistentVolumeClaim
+		volume         *corev1.Volume
+		want           bool
+		wantErr        bool
 	}{
 		{
-			name:   "storageos volume",
-			pvc:    createPVC("pv1", testNamespace, stosSC.Name, false),
-			volume: createVolume("pv1"),
-			want:   true,
+			name:           "storageos volume",
+			storageClasses: []*storagev1.StorageClass{stosSC, stosNativeSC, fooSC},
+			pvc:            createPVC("pv1", testNamespace, stosSC.Name, false),
+			volume:         createVolume("pv1"),
+			want:           true,
 		},
 		{
-			name:   "storageos volume, beta annotation",
-			pvc:    createPVC("pv1", testNamespace, stosSC.Name, true),
-			volume: createVolume("pv1"),
-			want:   true,
+			name:           "storageos volume, beta annotation",
+			storageClasses: []*storagev1.StorageClass{stosSC, stosNativeSC, fooSC},
+			pvc:            createPVC("pv1", testNamespace, stosSC.Name, true),
+			volume:         createVolume("pv1"),
+			want:           true,
 		},
 		{
-			name:   "storageos native driver volume",
-			pvc:    createPVC("pv1", testNamespace, stosNativeSC.Name, false),
-			volume: createVolume("pv1"),
-			want:   true,
+			name:           "storageos native driver volume",
+			storageClasses: []*storagev1.StorageClass{stosSC, stosNativeSC, fooSC},
+			pvc:            createPVC("pv1", testNamespace, stosNativeSC.Name, false),
+			volume:         createVolume("pv1"),
+			want:           true,
 		},
 		{
-			name:   "storageos native driver volume, beta annotation",
-			pvc:    createPVC("pv1", testNamespace, stosNativeSC.Name, true),
-			volume: createVolume("pv1"),
-			want:   true,
+			name:           "storageos native driver volume, beta annotation",
+			storageClasses: []*storagev1.StorageClass{stosSC, stosNativeSC, fooSC},
+			pvc:            createPVC("pv1", testNamespace, stosNativeSC.Name, true),
+			volume:         createVolume("pv1"),
+			want:           true,
 		},
 		{
-			name:   "non-storageos volume",
-			pvc:    createPVC("pv1", testNamespace, fooSC.Name, false),
-			volume: createVolume("pv1"),
-			want:   false,
+			name:           "storageos volume, default storage class",
+			storageClasses: []*storagev1.StorageClass{stosSCdefault, fooSC},
+			pvc:            createPVC("pv1", testNamespace, "", false),
+			volume:         createVolume("pv1"),
+			want:           true,
 		},
 		{
-			name:   "non-storageos volume, beta annotation",
-			pvc:    createPVC("pv1", testNamespace, fooSC.Name, true),
-			volume: createVolume("pv1"),
-			want:   false,
+			name:           "non-storageos volume",
+			storageClasses: []*storagev1.StorageClass{stosSC, stosNativeSC, fooSC},
+			pvc:            createPVC("pv1", testNamespace, fooSC.Name, false),
+			volume:         createVolume("pv1"),
+			want:           false,
+		},
+		{
+			name:           "non-storageos volume, beta annotation",
+			storageClasses: []*storagev1.StorageClass{stosSC, stosNativeSC, fooSC},
+			pvc:            createPVC("pv1", testNamespace, fooSC.Name, true),
+			volume:         createVolume("pv1"),
+			want:           false,
+		},
+		{
+			name:           "non-storageos volume, default storage class",
+			storageClasses: []*storagev1.StorageClass{stosSC, stosNativeSC, fooSCdefault},
+			pvc:            createPVC("pv1", testNamespace, "", true),
+			volume:         createVolume("pv1"),
+			want:           false,
+		},
+		{
+			name:           "non-storageos volume, no storage classes",
+			storageClasses: []*storagev1.StorageClass{},
+			pvc:            createPVC("pv1", testNamespace, "", true),
+			volume:         createVolume("pv1"),
+			want:           false,
+			wantErr:        true,
 		},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			// Create all the above resources and get a k8s client.
-			client := fake.NewFakeClientWithScheme(scheme, stosSC, stosNativeSC, fooSC, tt.pvc)
+			var objects []runtime.Object
+			for _, sc := range tt.storageClasses {
+				objects = append(objects, sc)
+			}
+			objects = append(objects, tt.pvc)
+			client := fake.NewFakeClientWithScheme(scheme, objects...)
 
 			// Create a PodSchedulerSetter instance with the fake client.
 			podSchedulerSetter := PodSchedulerSetter{
