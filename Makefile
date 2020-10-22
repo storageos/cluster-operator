@@ -8,6 +8,7 @@ BASE_IMAGE = storageos/base-image:0.2.1
 BUILD_DIR = "build"
 OPERATOR_SDK = $(BUILD_DIR)/operator-sdk
 YQ = $(BUILD_DIR)/yq
+YQ3 = $(BUILD_DIR)/yq3
 GOLANGCI_LINT = $(BUILD_DIR)/golangci-lint
 OUTPUT_DIR = $(BUILD_DIR)/_output
 
@@ -167,7 +168,7 @@ dev-image: operator-sdk operator-docker ## Build an image quickly for testing (f
 
 ##@ Third-party tools
 
-.PHONY: operator-sdk yq golangci-lint
+.PHONY: operator-sdk yq yq3 golangci-lint
 
 operator-sdk: ## Download operator-sdk.
 	# Download sdk only if it's not available.
@@ -180,6 +181,12 @@ yq: ## Install yq.
 	@if [ ! -f $(YQ) ]; then \
 		curl -Lo $(YQ) https://github.com/mikefarah/yq/releases/download/2.3.0/yq_linux_amd64 && \
 		chmod +x $(YQ); \
+	fi
+
+yq3: ## Install yq3.
+	@if [ ! -f $(YQ3) ]; then \
+		curl -Lo $(YQ3) https://github.com/mikefarah/yq/releases/download/3.4.1/yq_linux_amd64 && \
+		chmod +x $(YQ3); \
 	fi
 
 golangci-lint: ## Install golangci-lint
@@ -239,7 +246,7 @@ bundle: operator-sdk ## Generate operator metadata in bundle format.
 		--output-dir=$(BUNDLE_DIR)
 
 # Generates a single manifest for installing the operator.
-install-manifest: yq ## Generate operator install manifest file.
+install-manifest: yq3 ## Generate operator install manifest file.
 	bash scripts/create-manifest.sh $(OPERATOR_IMAGE)
 
 
