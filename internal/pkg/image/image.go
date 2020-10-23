@@ -4,7 +4,7 @@ import "os"
 
 // Default image constant variables.
 const (
-	DefaultNodeContainerImage                 = "storageos/node:v2.2.0"
+	DefaultNodeContainerImage                 = "storageos/node:v2.3.0"
 	DefaultInitContainerImage                 = "storageos/init:v2.1.0"
 	CSIv1ClusterDriverRegistrarContainerImage = "quay.io/k8scsi/csi-cluster-driver-registrar:v1.0.1"
 	CSIv1NodeDriverRegistrarContainerImage    = "quay.io/k8scsi/csi-node-driver-registrar:v1.2.0"
@@ -18,7 +18,7 @@ const (
 	CSIv0ExternalProvisionerContainerImage    = "storageos/csi-provisioner:v0.4.3"
 	CSIv0ExternalAttacherContainerImage       = "quay.io/k8scsi/csi-attacher:v0.4.2"
 	DefaultNFSContainerImage                  = "storageos/nfs:1.0.0"
-	DefaultAPIManagerImage                    = "storageos/api-manager:develop"
+	DefaultAPIManagerImage                    = "storageos/api-manager:v1.0.0"
 
 	DefaultHyperkubeContainerRegistry = "gcr.io/google_containers/hyperkube"
 
