@@ -6,7 +6,9 @@ metadata:
 spec:
   secretRefName: "storageos-api"
   secretRefNamespace: "default"
-  namespace: "kube-system"
+  kvBackend:
+    address: "http://etcd-node-address:2379"
+  # namespace: "kube-system"
   # k8sDistro: openshift
   # storageClassName: fast
   # tlsEtcdSecretRefName:

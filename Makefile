@@ -8,8 +8,16 @@ BASE_IMAGE = storageos/base-image:0.2.1
 BUILD_DIR = "build"
 OPERATOR_SDK = $(BUILD_DIR)/operator-sdk
 YQ = $(BUILD_DIR)/yq
+YQ3 = $(BUILD_DIR)/yq3
 GOLANGCI_LINT = $(BUILD_DIR)/golangci-lint
 OUTPUT_DIR = $(BUILD_DIR)/_output
+
+OPERATOR_NAME = storageosoperator
+# Directory for all the operator-metadata bundle files.
+BUNDLE_DIR = $(PWD)/bundle
+# Current bundle version is the next release version.
+# Bundle generation requires the current version number of the operator.
+CURRENT_BUNDLE_VERSION = "2.3.0"
 
 # Set the new version before running the release target.
 NEW_VERSION ?= v2.2.0
@@ -160,7 +168,7 @@ dev-image: operator-sdk operator-docker ## Build an image quickly for testing (f
 
 ##@ Third-party tools
 
-.PHONY: operator-sdk yq golangci-lint
+.PHONY: operator-sdk yq yq3 golangci-lint
 
 operator-sdk: ## Download operator-sdk.
 	# Download sdk only if it's not available.
@@ -173,6 +181,12 @@ yq: ## Install yq.
 	@if [ ! -f $(YQ) ]; then \
 		curl -Lo $(YQ) https://github.com/mikefarah/yq/releases/download/2.3.0/yq_linux_amd64 && \
 		chmod +x $(YQ); \
+	fi
+
+yq3: ## Install yq3.
+	@if [ ! -f $(YQ3) ]; then \
+		curl -Lo $(YQ3) https://github.com/mikefarah/yq/releases/download/3.4.1/yq_linux_amd64 && \
+		chmod +x $(YQ3); \
 	fi
 
 golangci-lint: ## Install golangci-lint
@@ -209,7 +223,7 @@ release: yq ## Prepare for a new release. Pass NEW_VERSION with the next release
 	bash scripts/release-helpers/release-gen.sh $(NEW_VERSION)
 
 # Generate metadata bundle for openshift metadata scanner.
-metadata-zip: ## Generate OLM metadata-zip bundle.
+metadata-zip: ## Generate OLM metadata-zip bundle (in package manifest format)
 	# Remove any existing metadata bundle.
 	rm -f $(OUTPUT_DIR)/$(METADATA_FILE)
 	# Ensure the target path exists.
@@ -224,8 +238,15 @@ metadata-zip: ## Generate OLM metadata-zip bundle.
 		deploy/olm/storageos/storageosnfsserver.crd.yaml \
 		deploy/olm/csv-rhel/storageos.v*.clusterserviceversion.yaml
 
+bundle: operator-sdk ## Generate operator metadata in bundle format.
+	$(OPERATOR_SDK) generate csv \
+		--update-crds \
+		--csv-version=$(CURRENT_BUNDLE_VERSION) \
+		--operator-name=$(OPERATOR_NAME) \
+		--output-dir=$(BUNDLE_DIR)
+
 # Generates a single manifest for installing the operator.
-install-manifest: yq ## Generate operator install manifest file.
+install-manifest: yq3 ## Generate operator install manifest file.
 	bash scripts/create-manifest.sh $(OPERATOR_IMAGE)
 
 
