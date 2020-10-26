@@ -20,7 +20,7 @@ BUNDLE_DIR = $(PWD)/bundle
 CURRENT_BUNDLE_VERSION = "2.3.0"
 
 # Set the new version before running the release target.
-NEW_VERSION ?= v2.2.0
+NEW_VERSION ?= v2.3.0
 
 # Variables to be used when running the make targets in a container.
 CACHE_DIR = $(shell pwd)/.cache
