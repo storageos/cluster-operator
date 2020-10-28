@@ -273,7 +273,7 @@ spec:
 
     * **Delta Sync** - replicas out of sync due to transient failures only transfer changed blocks.
 
-    * **Multiple AccessModes**- dynamically provision ReadWriteOnce or ReadWriteMany volumes.
+    * **Multiple AccessModes** - dynamically provision ReadWriteOnce or ReadWriteMany volumes.
 
     * **Scalability** - disaggregated consensus means no single scheduling point of failure.
 
