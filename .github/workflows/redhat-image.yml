@@ -1,0 +1,34 @@
+name: Publish image to redhat registry
+
+on:
+  workflow_dispatch:
+    # Enable manual trigger of this action.
+    inputs:
+      gitRef:
+        description: The git branch, tag or SHA to build the image from.
+        required: true
+      imageTag:
+        description: Image tag, e.g. `v1.0.0-3`.
+        required: true
+
+jobs:
+  publish-image:
+    runs-on: ubuntu-latest
+    name: Publish container image
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.inputs.gitRef }}
+      - name: Login to redhat container registry
+        uses: docker/login-action@v1
+        with:
+          registry: scan.connect.redhat.com
+          username: ${{ secrets.RH_USERNAME }}
+          password: ${{ secrets.RH_TOKEN }}
+      - name: Set image env var
+        run: echo "OPERATOR_IMAGE=scan.connect.redhat.com/${{ secrets.OSPID }}/cluster-operator2:${{ github.event.inputs.imageTag }}" >> $GITHUB_ENV
+      - name: Build container image
+        run: make operator-image
+      - name: Push container image
+        run: docker push ${{ env.OPERATOR_IMAGE }}
