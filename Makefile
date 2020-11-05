@@ -18,6 +18,9 @@ BUNDLE_DIR = $(PWD)/bundle
 # Current bundle version is the next release version.
 # Bundle generation requires the current version number of the operator.
 CURRENT_BUNDLE_VERSION = "2.4.0"
+SERVICE_ACCOUNT_NAME = $(shell $(YQ3) r deploy/operator.yaml spec.template.spec.serviceAccountName)
+SERVICE_ACCOUNT_PATH = "spec.install.spec.clusterPermissions[0].serviceAccountName"
+CSV_FILE = "bundle/manifests/storageosoperator.clusterserviceversion.yaml"
 
 # Set the new version before running the release target.
 NEW_VERSION ?= v2.3.0
@@ -238,12 +241,18 @@ metadata-zip: ## Generate OLM metadata-zip bundle (in package manifest format)
 		deploy/olm/storageos/storageosnfsserver.crd.yaml \
 		deploy/olm/csv-rhel/storageos.v*.clusterserviceversion.yaml
 
-bundle: operator-sdk ## Generate operator metadata in bundle format.
+bundle: operator-sdk yq3 ## Generate operator metadata in bundle format.
 	$(OPERATOR_SDK) generate csv \
 		--update-crds \
 		--csv-version=$(CURRENT_BUNDLE_VERSION) \
 		--operator-name=$(OPERATOR_NAME) \
 		--output-dir=$(BUNDLE_DIR)
+	# Fix the cluster permission service account name in the generated
+	# bundle.
+	# Refer: https://github.com/operator-framework/operator-sdk/pull/3610
+	# The fix isn't available for operator-sdk < v0.19.0.
+	$(YQ3) w -i $(CSV_FILE) $(SERVICE_ACCOUNT_PATH) $(SERVICE_ACCOUNT_NAME)
+
 
 # Generates a single manifest for installing the operator.
 install-manifest: yq3 ## Generate operator install manifest file.

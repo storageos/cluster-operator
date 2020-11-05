@@ -3,6 +3,7 @@ build/_output
 build/_test
 build/operator-sdk
 build/yq
+build/yq3
 build/golangci-lint
 deploy/test
 /olm
