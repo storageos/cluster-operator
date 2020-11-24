@@ -1,5 +1,5 @@
 ARG BUILD_IMAGE=golang:1.15.2
-ARG BASE_IMAGE=storageos/base-image:0.2.1
+ARG BASE_IMAGE=storageos/base-image:0.2.3
 ARG OPERATOR_IMAGE=storageos/cluster-operator:test
 
 FROM ${BUILD_IMAGE} AS build
