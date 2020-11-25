@@ -35,7 +35,7 @@ const (
 	statefulsetKind = "statefulset"
 	deploymentKind  = "deployment"
 
-	daemonsetName   = "storageos-daemonset"
+	DaemonSetName   = "storageos-daemonset"
 	statefulsetName = "storageos-statefulset"
 	configmapName   = "storageos-node-config"
 	csiHelperName   = "storageos-csi-helper"

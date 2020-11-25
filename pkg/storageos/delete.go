@@ -23,7 +23,7 @@ func (s *Deployment) Delete() error {
 		return err
 	}
 
-	if err := s.k8sResourceManager.DaemonSet(daemonsetName, namespace, nil, nil).Delete(); err != nil {
+	if err := s.k8sResourceManager.DaemonSet(DaemonSetName, namespace, nil, nil).Delete(); err != nil {
 		return err
 	}
 

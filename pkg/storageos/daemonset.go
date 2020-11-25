@@ -37,6 +37,16 @@ const (
 
 	// Configmap file mode.
 	cmFileMode os.FileMode = 0600
+
+	// DefaultLogsContainerAnnotationName is an annotation name that can be used
+	// to preselect the interesting container from a pod when running kubectl
+	// logs.
+	DefaultLogsContainerAnnotationName = "kubectl.kubernetes.io/default-logs-container"
+
+	// NodeContainerName is the name of the node container.
+	NodeContainerName = "storageos"
+	// InitContainerName is the name of the init container.
+	InitContainerName = "storageos-init"
 )
 
 // getNodeUsernameEnvVar returns the env var used to set the bootstrap username.
@@ -64,6 +74,9 @@ func (s *Deployment) createDaemonSet() error {
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: ls,
+				Annotations: map[string]string{
+					DefaultLogsContainerAnnotationName: NodeContainerName,
+				},
 			},
 			Spec: corev1.PodSpec{
 				ServiceAccountName: DaemonsetSA,
@@ -72,7 +85,7 @@ func (s *Deployment) createDaemonSet() error {
 				DNSPolicy:          corev1.DNSClusterFirstWithHostNet,
 				InitContainers: []corev1.Container{
 					{
-						Name:  "storageos-init",
+						Name:  InitContainerName,
 						Image: s.stos.Spec.GetInitContainerImage(),
 						EnvFrom: []corev1.EnvFromSource{
 							{
@@ -90,7 +103,7 @@ func (s *Deployment) createDaemonSet() error {
 							// current StorageOS node container image.
 							{
 								Name:  daemonSetNameEnvVar,
-								Value: daemonsetName,
+								Value: DaemonSetName,
 							},
 							{
 								Name:  daemonSetNamespaceEnvVar,
@@ -125,7 +138,7 @@ func (s *Deployment) createDaemonSet() error {
 				Containers: []corev1.Container{
 					{
 						Image: s.stos.Spec.GetNodeContainerImage(),
-						Name:  "storageos",
+						Name:  NodeContainerName,
 						Args:  []string{"server"},
 						Ports: []corev1.ContainerPort{{
 							ContainerPort: stosv1.DefaultServiceInternalPort,
@@ -282,7 +295,7 @@ func (s *Deployment) createDaemonSet() error {
 
 	s.addCSI(podSpec)
 
-	return s.k8sResourceManager.DaemonSet(daemonsetName, s.stos.Spec.GetResourceNS(), nil, spec).Create()
+	return s.k8sResourceManager.DaemonSet(DaemonSetName, s.stos.Spec.GetResourceNS(), nil, spec).Create()
 }
 
 // podLabelsForDaemonSet takes the name of a cluster custom resource and returns
@@ -293,7 +306,7 @@ func podLabelsForDaemonSet(name string) map[string]string {
 		"app":            appName,
 		"storageos_cr":   name,
 		"kind":           daemonsetKind,
-		k8s.AppComponent: daemonsetName,
+		k8s.AppComponent: DaemonSetName,
 	}
 	return k8s.AddDefaultAppLabels(name, labels)
 }

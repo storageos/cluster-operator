@@ -480,3 +480,29 @@ func APIManagerMetricsServiceMonitorTest(t *testing.T, ns string, retryInterval,
 		t.Fatalf("timed out waiting for api-manager metrics service monitor: %v", err)
 	}
 }
+
+// DaemonSetDefaultLogAnnotationTest checks that the deployed DS Pods have the
+// default logging container set.
+func DaemonSetDefaultLogAnnotationTest(t *testing.T, kubeclient kubernetes.Interface, ns string) {
+	// DaemonSet will have already started, no need to wait.
+	pods, err := kubeclient.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=%s", k8s.AppComponent, deploy.DaemonSetName),
+	})
+	if err != nil {
+		t.Fatalf("failed to get nodes: %v", err)
+	}
+	if len(pods.Items) == 0 {
+		t.Fatal("expected StorageOS pods")
+	}
+
+	// Check the default log container annotation is set on all pods.
+	for _, pod := range pods.Items {
+		got, ok := pod.Annotations[deploy.DefaultLogsContainerAnnotationName]
+		if !ok {
+			t.Errorf("expected annotation %q not set on pod %q", deploy.DefaultLogsContainerAnnotationName, pod.Name)
+		}
+		if ok && got != deploy.NodeContainerName {
+			t.Errorf("expected annotation %q set to %q on pod %q, want %q", deploy.DefaultLogsContainerAnnotationName, got, pod.Name, deploy.NodeContainerName)
+		}
+	}
+}
