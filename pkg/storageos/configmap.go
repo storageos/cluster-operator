@@ -123,7 +123,7 @@ const (
 
 // createService creates a ConfigMap to store the node container configuration.
 func (s *Deployment) createConfigMap() error {
-	config := configFromSpec(s.stos.Spec, CSIV1Supported(s.k8sVersion))
+	config := configFromSpec(s.stos.Spec)
 
 	labels := make(map[string]string)
 
@@ -140,7 +140,7 @@ func (s *Deployment) createConfigMap() error {
 //       - HOSTNAME (reads from spec.nodeName)
 //       - ADVERTISE_IP (reads from status.podIP)
 //       - BOOTSTRAP_USERNAME, BOOTSTRAP_PASSWORD (reads from secret)
-func configFromSpec(spec storageosv1.StorageOSClusterSpec, csiv1 bool) map[string]string {
+func configFromSpec(spec storageosv1.StorageOSClusterSpec) map[string]string {
 	config := make(map[string]string)
 
 	// ETCD_ENDPOINTS must be set to a comma separated list of endpoints.
@@ -176,9 +176,9 @@ func configFromSpec(spec storageosv1.StorageOSClusterSpec, csiv1 bool) map[strin
 		config[k8sDistroEnvVar] = spec.K8sDistro
 	}
 
-	// CSI is always enabled.
-	config[csiEndpointEnvVar] = spec.GetCSIEndpoint(true)
-	config[csiVersionEnvVar] = spec.GetCSIVersion(true)
+	// CSI v1 is always enabled.
+	config[csiEndpointEnvVar] = spec.GetCSIEndpoint()
+	config[csiVersionEnvVar] = spec.GetCSIVersion()
 
 	// Since we're running in k8s, always listen on the the scheduler extender
 	// api endpoints.  The feature can be disabled with the operator.  This

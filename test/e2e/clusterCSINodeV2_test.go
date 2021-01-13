@@ -4,7 +4,6 @@ package e2e
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
@@ -79,23 +78,10 @@ func TestClusterCSINodeV2(t *testing.T) {
 		t.Fatalf("failed to get storageos-daemonset: %v", err)
 	}
 
-	info, err := f.KubeClient.Discovery().ServerVersion()
-	if err != nil {
-		t.Fatalf("failed to get version info: %v", err)
-	}
-
-	version := strings.TrimLeft(info.String(), "v")
-
 	t.Run("CSIHelperCountTest", func(t *testing.T) {
 		//Check the number of containers in daemonset pod spec.
-		if deploy.CSIV1Supported(version) {
-			if len(daemonset.Spec.Template.Spec.Containers) != 3 {
-				t.Errorf("unexpected number of daemonset pod containers:\n\t(GOT) %d\n\t(WNT) %d", len(daemonset.Spec.Template.Spec.Containers), 3)
-			}
-		} else {
-			if len(daemonset.Spec.Template.Spec.Containers) != 2 {
-				t.Errorf("unexpected number of daemonset pod containers:\n\t(GOT) %d\n\t(WNT) %d", len(daemonset.Spec.Template.Spec.Containers), 2)
-			}
+		if len(daemonset.Spec.Template.Spec.Containers) != 3 {
+			t.Errorf("unexpected number of daemonset pod containers:\n\t(GOT) %d\n\t(WNT) %d", len(daemonset.Spec.Template.Spec.Containers), 3)
 		}
 	})
 

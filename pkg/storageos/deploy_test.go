@@ -163,7 +163,6 @@ func TestCreateDaemonSet(t *testing.T) {
 	testcases := []struct {
 		name                 string
 		spec                 api.StorageOSClusterSpec
-		wantEnableCSI        bool
 		wantSharedDir        string
 		wantDisableTelemetry bool
 		wantDisableFencing   bool
@@ -175,14 +174,7 @@ func TestCreateDaemonSet(t *testing.T) {
 		wantPasswordEnvVar   string
 	}{
 		{
-			name: "legacy-daemonset",
-			spec: api.StorageOSClusterSpec{
-				SecretRefName:      "foo-secret",
-				SecretRefNamespace: "default",
-			},
-		},
-		{
-			name: "csi-daemonset",
+			name: "daemonset",
 			spec: api.StorageOSClusterSpec{
 				SecretRefName:      "foo-secret",
 				SecretRefNamespace: "default",
@@ -190,7 +182,23 @@ func TestCreateDaemonSet(t *testing.T) {
 					Enable: true,
 				},
 			},
-			wantEnableCSI: true,
+		},
+		{
+			name: "csi enabled by default",
+			spec: api.StorageOSClusterSpec{
+				SecretRefName:      "foo-secret",
+				SecretRefNamespace: "default",
+			},
+		},
+		{
+			name: "csi can't be disabled",
+			spec: api.StorageOSClusterSpec{
+				SecretRefName:      "foo-secret",
+				SecretRefNamespace: "default",
+				CSI: api.StorageOSClusterCSI{
+					Enable: false,
+				},
+			},
 		},
 		{
 			name: "shared-dir",
@@ -255,123 +263,115 @@ func TestCreateDaemonSet(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		// Create fake client with pre-existing resources.
-		c := fake.NewFakeClientWithScheme(testScheme, etcdSecret)
+		var tc = tc
 
-		stosCluster.Spec = tc.spec
-		deploy, err := setupFakeDeploymentWithClientAndCluster(c, stosCluster)
-		if err != nil {
-			t.Fatalf("failed to create deployment: %v", err)
-		}
-		if err := deploy.createDaemonSet(); err != nil {
-			t.Fatal("failed to create daemonset", err)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			// Create fake client with pre-existing resources.
+			c := fake.NewFakeClientWithScheme(testScheme, etcdSecret)
 
-		nsName := types.NamespacedName{
-			Name:      DaemonSetName,
-			Namespace: defaultNS,
-		}
-		createdDaemonset := &appsv1.DaemonSet{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "apps/v1",
-				Kind:       "DaemonSet",
-			},
-			ObjectMeta: metav1.ObjectMeta{
+			stosCluster.Spec = tc.spec
+			deploy, err := setupFakeDeploymentWithClientAndCluster(c, stosCluster)
+			if err != nil {
+				t.Fatalf("failed to create deployment: %v", err)
+			}
+			if err := deploy.createDaemonSet(); err != nil {
+				t.Fatal("failed to create daemonset", err)
+			}
+
+			nsName := types.NamespacedName{
 				Name:      DaemonSetName,
 				Namespace: defaultNS,
-			},
-		}
-		if err := c.Get(context.Background(), nsName, createdDaemonset); err != nil {
-			t.Fatal("failed to get the created object", err)
-		}
-
-		// Check if default container for logging is set.
-		got, ok := createdDaemonset.Spec.Template.Annotations[DefaultLogsContainerAnnotationName]
-		if !ok {
-			t.Errorf("expected annotation %q not set", DefaultLogsContainerAnnotationName)
-		}
-		if ok && got != NodeContainerName {
-			t.Errorf("expected annotation %q set to %q, want %q", DefaultLogsContainerAnnotationName, got, NodeContainerName)
-		}
-
-		if tc.wantEnableCSI {
-			if len(createdDaemonset.Spec.Template.Spec.Containers) != 2 {
-				t.Errorf("unexpected number of containers in daemonset:\n\t(WNT) %d\n\t(GOT): %d", len(createdDaemonset.Spec.Template.Spec.Containers), 2)
 			}
-		} else {
-			if len(createdDaemonset.Spec.Template.Spec.Containers) != 1 {
-				t.Errorf("unexpected number of containers in daemonset:\n\t(WNT) %d\n\t(GOT): %d", len(createdDaemonset.Spec.Template.Spec.Containers), 1)
+			createdDaemonset := &appsv1.DaemonSet{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "apps/v1",
+					Kind:       "DaemonSet",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      DaemonSetName,
+					Namespace: defaultNS,
+				},
 			}
-		}
+			if err := c.Get(context.Background(), nsName, createdDaemonset); err != nil {
+				t.Fatal("failed to get the created object", err)
+			}
 
-		if tc.wantSharedDir != "" {
-			sharedDirVolFound := false
-			for _, vol := range createdDaemonset.Spec.Template.Spec.Volumes {
-				if vol.Name == "shared" {
-					sharedDirVolFound = true
-					if vol.HostPath.Path != tc.wantSharedDir {
-						t.Errorf("unexpected sharedDir path:\n\t(WNT) %s\n\t(GOT) %s", tc.wantSharedDir, vol.HostPath.Path)
+			if len(createdDaemonset.Spec.Template.Spec.Containers) != 3 {
+				for _, c := range createdDaemonset.Spec.Template.Spec.Containers {
+					fmt.Printf("XXX: %s: %s\n", c.Name, c.Image)
+				}
+				t.Errorf("unexpected number of containers in daemonset:\n\t(WNT) %d\n\t(GOT): %d", 3, len(createdDaemonset.Spec.Template.Spec.Containers))
+			}
+
+			if tc.wantSharedDir != "" {
+				sharedDirVolFound := false
+				for _, vol := range createdDaemonset.Spec.Template.Spec.Volumes {
+					if vol.Name == "shared" {
+						sharedDirVolFound = true
+						if vol.HostPath.Path != tc.wantSharedDir {
+							t.Errorf("unexpected sharedDir path:\n\t(WNT) %s\n\t(GOT) %s", tc.wantSharedDir, vol.HostPath.Path)
+						}
+						break
 					}
-					break
+				}
+				if !sharedDirVolFound {
+					t.Errorf("expected shared volume, but not found")
 				}
 			}
-			if !sharedDirVolFound {
-				t.Errorf("expected shared volume, but not found")
-			}
-		}
 
-		if tc.wantTLSEtcd {
-			// Check if the TLS certs volume exists in the spec.
-			volumeFound := false
-			for _, vol := range createdDaemonset.Spec.Template.Spec.Volumes {
-				if vol.Name == tlsEtcdCertsVolume {
-					volumeFound = true
+			if tc.wantTLSEtcd {
+				// Check if the TLS certs volume exists in the spec.
+				volumeFound := false
+				for _, vol := range createdDaemonset.Spec.Template.Spec.Volumes {
+					if vol.Name == tlsEtcdCertsVolume {
+						volumeFound = true
+					}
+				}
+				if !volumeFound {
+					t.Error("TLS etcd certs volume not found in daemonset spec")
+				}
+
+				// Check if TLS certs volume mount exists in the node container.
+				volumeMountFound := false
+				for _, volMount := range createdDaemonset.Spec.Template.Spec.Containers[0].VolumeMounts {
+					if volMount.Name == tlsEtcdCertsVolume &&
+						volMount.MountPath == tlsEtcdRootPath {
+						volumeMountFound = true
+					}
+				}
+				if !volumeMountFound {
+					t.Error("TLS etcd certs volume mount not found in the node container")
 				}
 			}
-			if !volumeFound {
-				t.Error("TLS etcd certs volume not found in daemonset spec")
-			}
 
-			// Check if TLS certs volume mount exists in the node container.
-			volumeMountFound := false
-			for _, volMount := range createdDaemonset.Spec.Template.Spec.Containers[0].VolumeMounts {
-				if volMount.Name == tlsEtcdCertsVolume &&
-					volMount.MountPath == tlsEtcdRootPath {
-					volumeMountFound = true
+			// Check the username and password env vars only when wanted username
+			// and passwords are provided.
+			if tc.wantUserNameEnvVar != "" && tc.wantPasswordEnvVar != "" {
+				// First container is the node container.
+				nodeEnvs := createdDaemonset.Spec.Template.Spec.Containers[0].Env
+
+				// 2nd env var is the username.
+				usernameEnvVar := nodeEnvs[1].Name
+				// 3rd env var is the password.
+				passwordEnvVar := nodeEnvs[2].Name
+
+				if usernameEnvVar != tc.wantUserNameEnvVar {
+					t.Errorf("unexpected username env var name:\n\t(WNT) %q\n\t(GOT) %q", tc.wantUserNameEnvVar, usernameEnvVar)
+				}
+
+				if passwordEnvVar != tc.wantPasswordEnvVar {
+					t.Errorf("unexpected password env var name:\n\t(WNT) %q\n\t(GOT) %q", tc.wantPasswordEnvVar, passwordEnvVar)
 				}
 			}
-			if !volumeMountFound {
-				t.Error("TLS etcd certs volume mount not found in the node container")
+
+			stosCluster.Spec = api.StorageOSClusterSpec{}
+			if err := c.Delete(context.Background(), createdDaemonset); err != nil {
+				t.Error(err)
 			}
-		}
-
-		// Check the username and password env vars only when wanted username
-		// and passwords are provided.
-		if tc.wantUserNameEnvVar != "" && tc.wantPasswordEnvVar != "" {
-			// First container is the node container.
-			nodeEnvs := createdDaemonset.Spec.Template.Spec.Containers[0].Env
-
-			// 2nd env var is the username.
-			usernameEnvVar := nodeEnvs[1].Name
-			// 3rd env var is the password.
-			passwordEnvVar := nodeEnvs[2].Name
-
-			if usernameEnvVar != tc.wantUserNameEnvVar {
-				t.Errorf("unexpected username env var name:\n\t(WNT) %q\n\t(GOT) %q", tc.wantUserNameEnvVar, usernameEnvVar)
+			if err := c.Get(context.Background(), nsName, createdDaemonset); err == nil {
+				t.Fatal("failed to delete the created object", err)
 			}
-
-			if passwordEnvVar != tc.wantPasswordEnvVar {
-				t.Errorf("unexpected password env var name:\n\t(WNT) %q\n\t(GOT) %q", tc.wantPasswordEnvVar, passwordEnvVar)
-			}
-		}
-
-		stosCluster.Spec = api.StorageOSClusterSpec{}
-		if err := c.Delete(context.Background(), createdDaemonset); err != nil {
-			t.Error(err)
-		}
-		if err := c.Get(context.Background(), nsName, createdDaemonset); err == nil {
-			t.Fatal("failed to delete the created object", err)
-		}
+		})
 	}
 }
 
@@ -599,7 +599,7 @@ func TestCreateAPIManager(t *testing.T) {
 func TestDeployCSI(t *testing.T) {
 	const (
 		kubeletPluginsWatcherDriverRegArgsCount = 3
-		containersCount                         = 2
+		containersCount                         = 3  // node, cs-driver-registrar, csi-liveness-probe
 		volumesCount                            = 10 //Includes ConfigMap volume
 	)
 
@@ -620,31 +620,24 @@ func TestDeployCSI(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name                          string
-		k8sVersion                    string
-		supportsKubeletPluginsWatcher bool
+		name       string
+		k8sVersion string
 	}{
 		{
 			name:       "empty",
 			k8sVersion: "",
 		},
 		{
-			name:       "1.9.0",
-			k8sVersion: "1.9.0",
+			name:       "1.15.0",
+			k8sVersion: "1.15.0",
 		},
 		{
-			name:       "1.11.0",
-			k8sVersion: "1.11.0",
+			name:       "1.20.0",
+			k8sVersion: "1.20.0",
 		},
 		{
-			name:                          "1.12.0",
-			k8sVersion:                    "1.12.0",
-			supportsKubeletPluginsWatcher: true,
-		},
-		{
-			name:                          "1.12.2",
-			k8sVersion:                    "1.12.2",
-			supportsKubeletPluginsWatcher: true,
+			name:       "1.20.2",
+			k8sVersion: "1.20.2",
 		},
 		{
 			name:       "1.9.1+a0ce1bc657",
@@ -697,20 +690,6 @@ func TestDeployCSI(t *testing.T) {
 
 			if len(createdDaemonset.Spec.Template.Spec.Volumes) != volumesCount {
 				t.Errorf("unexpected number of volumes in the DaemonSet:\n\t(GOT) %d\n\t(WNT) %d", len(createdDaemonset.Spec.Template.Spec.Volumes), volumesCount)
-			}
-
-			// KubeletPluginsWatcher support is only on k8s 1.12.0+.
-			if kubeletPluginsWatcherSupported(tc.k8sVersion) != tc.supportsKubeletPluginsWatcher {
-				t.Errorf("expected KubeletPluginsWatcherSupported to be %t", tc.supportsKubeletPluginsWatcher)
-			}
-
-			// When KubeletPluginsWatcher is supported, some extra arguments are
-			// passed to set the proper registration mode.
-			if kubeletPluginsWatcherSupported(tc.k8sVersion) {
-				driverReg := createdDaemonset.Spec.Template.Spec.Containers[1]
-				if len(driverReg.Args) != kubeletPluginsWatcherDriverRegArgsCount {
-					t.Errorf("unexpected number of args for DriverRegistration container:\n\t(GOT) %d\n\t(WNT) %d", len(driverReg.Args), kubeletPluginsWatcherDriverRegArgsCount)
-				}
 			}
 		})
 	}
@@ -1950,43 +1929,33 @@ func TestGetNodeIPs(t *testing.T) {
 func TestContainerImageSelection(t *testing.T) {
 	// Constants to be used to associate image with their get image function.
 	const (
-		storageOSNodeImage             = "StorageOSNode"
-		storageOSInitImage             = "StorageOSInit"
-		csiNodeDriverRegistrarImage    = "CSINodeDriverRegistrar"
-		csiClusterDriverRegistrarImage = "CSIClusterDriverRegistrar"
-		csiExternalProvisionerImage    = "CSIExternalProvisioner"
-		csiExternalAttacherImage       = "CSIExternalAttacher"
-		csiLivenessProbeImage          = "CSILivenessProbe"
-		kubeSchedulerImage             = "KubeScheduler"
-		nfsImage                       = "NFS"
+		storageOSNodeImage          = "StorageOSNode"
+		storageOSInitImage          = "StorageOSInit"
+		csiNodeDriverRegistrarImage = "CSINodeDriverRegistrar"
+		csiExternalProvisionerImage = "CSIExternalProvisioner"
+		csiExternalAttacherImage    = "CSIExternalAttacher"
+		csiLivenessProbeImage       = "CSILivenessProbe"
+		kubeSchedulerImage          = "KubeScheduler"
 	)
 
 	// Given image name, cluster spec and k8s version, return the appropriate
 	// image.
 	getImage := func(name string, spec api.StorageOSClusterSpec, k8sVersion string) string {
-		csiV1Supported := CSIV1Supported(k8sVersion)
-		attacherV2Supported := CSIExternalAttacherV2Supported(k8sVersion)
-		attacherV3Supported := CSIExternalAttacherV3Supported(k8sVersion)
-
 		switch name {
 		case storageOSNodeImage:
 			return spec.GetNodeContainerImage()
 		case storageOSInitImage:
 			return spec.GetInitContainerImage()
-		case csiClusterDriverRegistrarImage:
-			return spec.GetCSIClusterDriverRegistrarImage()
 		case csiNodeDriverRegistrarImage:
-			return spec.GetCSINodeDriverRegistrarImage(csiV1Supported)
+			return spec.GetCSINodeDriverRegistrarImage()
 		case csiExternalProvisionerImage:
-			return spec.GetCSIExternalProvisionerImage(csiV1Supported)
+			return spec.GetCSIExternalProvisionerImage()
 		case csiExternalAttacherImage:
-			return spec.GetCSIExternalAttacherImage(csiV1Supported, attacherV2Supported, attacherV3Supported)
+			return spec.GetCSIExternalAttacherImage()
 		case csiLivenessProbeImage:
 			return spec.GetCSILivenessProbeImage()
 		case kubeSchedulerImage:
 			return spec.GetKubeSchedulerImage(k8sVersion)
-		case nfsImage:
-			return spec.GetNFSServerImage()
 		default:
 			return ""
 		}
@@ -2002,90 +1971,64 @@ func TestContainerImageSelection(t *testing.T) {
 		{
 			name: "images from env var - k8s 1.13",
 			envVars: map[string]string{
-				image.StorageOSNodeImageEnvVar:               "foo/node:1",
-				image.StorageOSInitImageEnvVar:               "foo/init:1",
-				image.CSIv1ClusterDriverRegistrarImageEnvVar: "foo/cdr:1",
-				image.CSIv1NodeDriverRegistrarImageEnvVar:    "foo/ndr:1",
-				image.CSIv1ExternalProvisionerImageEnvVar:    "foo/ep:1",
+				image.StorageOSNodeImageEnvVar:          "foo/node:1",
+				image.StorageOSInitImageEnvVar:          "foo/init:1",
+				image.CSINodeDriverRegistrarImageEnvVar: "foo/ndr:1",
+				image.CSIExternalProvisionerImageEnvVar: "foo/ep:1",
 				// k8s 1.13 supports CSI external attacher v1 only.
-				image.CSIv1ExternalAttacherImageEnvVar: "foo/ea:1",
-				image.CSIv1LivenessProbeImageEnvVar:    "foo/lp:1",
-				image.KubeSchedulerImageEnvVar:         "foo/ks:1",
-				image.NFSImageEnvVar:                   "foo/nfs:1",
+				image.CSIExternalAttacherImageEnvVar: "foo/ea:1",
+				image.CSILivenessProbeImageEnvVar:    "foo/lp:1",
+				image.KubeSchedulerImageEnvVar:       "foo/ks:1",
 			},
 			k8sVersion: "1.13.0",
 			wantImages: map[string]string{
-				storageOSNodeImage:             "foo/node:1",
-				storageOSInitImage:             "foo/init:1",
-				csiClusterDriverRegistrarImage: "foo/cdr:1",
-				csiNodeDriverRegistrarImage:    "foo/ndr:1",
-				csiExternalProvisionerImage:    "foo/ep:1",
-				csiExternalAttacherImage:       "foo/ea:1",
-				csiLivenessProbeImage:          "foo/lp:1",
-				kubeSchedulerImage:             "foo/ks:1",
-				nfsImage:                       "foo/nfs:1",
+				storageOSNodeImage:          "foo/node:1",
+				storageOSInitImage:          "foo/init:1",
+				csiNodeDriverRegistrarImage: "foo/ndr:1",
+				csiExternalProvisionerImage: "foo/ep:1",
+				csiExternalAttacherImage:    "foo/ea:1",
+				csiLivenessProbeImage:       "foo/lp:1",
+				kubeSchedulerImage:          "foo/ks:1",
 			},
 		},
 		{
 			name: "images override from cluster spec - k8s 1.13",
 			envVars: map[string]string{
-				image.StorageOSNodeImageEnvVar:               "foo/node:1",
-				image.StorageOSInitImageEnvVar:               "foo/init:1",
-				image.CSIv1ClusterDriverRegistrarImageEnvVar: "foo/cdr:1",
-				image.CSIv1NodeDriverRegistrarImageEnvVar:    "foo/ndr:1",
-				image.CSIv1ExternalProvisionerImageEnvVar:    "foo/ep:1",
+				image.StorageOSNodeImageEnvVar:          "foo/node:1",
+				image.StorageOSInitImageEnvVar:          "foo/init:1",
+				image.CSINodeDriverRegistrarImageEnvVar: "foo/ndr:1",
+				image.CSIExternalProvisionerImageEnvVar: "foo/ep:1",
 				// k8s 1.13 supports CSI external attacher v1 only.
-				image.CSIv1ExternalAttacherImageEnvVar: "foo/ea:1",
-				image.CSIv1LivenessProbeImageEnvVar:    "foo/lp:1",
-				image.KubeSchedulerImageEnvVar:         "foo/ks:1",
-				image.NFSImageEnvVar:                   "foo/nfs:1",
+				image.CSIExternalAttacherImageEnvVar: "foo/ea:1",
+				image.CSILivenessProbeImageEnvVar:    "foo/lp:1",
+				image.KubeSchedulerImageEnvVar:       "foo/ks:1",
 			},
 			clusterSpec: api.StorageOSClusterSpec{
 				Images: api.ContainerImages{
-					NodeContainer:                      "zoo/node:1",
-					InitContainer:                      "zoo/init:1",
-					CSIClusterDriverRegistrarContainer: "zoo/cdr:1",
-					CSINodeDriverRegistrarContainer:    "zoo/ndr:1",
-					CSIExternalProvisionerContainer:    "zoo/ep:1",
-					CSIExternalAttacherContainer:       "zoo/ea:1",
-					CSILivenessProbeContainer:          "zoo/lp:1",
-					KubeSchedulerContainer:             "zoo/ks:1",
-					NFSContainer:                       "zoo/nfs:1",
+					NodeContainer:                   "zoo/node:1",
+					InitContainer:                   "zoo/init:1",
+					CSINodeDriverRegistrarContainer: "zoo/ndr:1",
+					CSIExternalProvisionerContainer: "zoo/ep:1",
+					CSIExternalAttacherContainer:    "zoo/ea:1",
+					CSILivenessProbeContainer:       "zoo/lp:1",
+					KubeSchedulerContainer:          "zoo/ks:1",
 				},
 			},
 			k8sVersion: "1.13.0",
 			wantImages: map[string]string{
-				storageOSNodeImage:             "zoo/node:1",
-				storageOSInitImage:             "zoo/init:1",
-				csiClusterDriverRegistrarImage: "zoo/cdr:1",
-				csiNodeDriverRegistrarImage:    "zoo/ndr:1",
-				csiExternalProvisionerImage:    "zoo/ep:1",
-				csiExternalAttacherImage:       "zoo/ea:1",
-				csiLivenessProbeImage:          "zoo/lp:1",
-				kubeSchedulerImage:             "zoo/ks:1",
-				nfsImage:                       "zoo/nfs:1",
-			},
-		},
-		{
-			name: "env var images - k8s 1.12 - CSIv0",
-			envVars: map[string]string{
-				image.CSIv0DriverRegistrarImageEnvVar:     "foo/dr:1",
-				image.CSIv0ExternalProvisionerImageEnvVar: "foo/ep:1",
-				image.CSIv0ExternalAttacherImageEnvVar:    "foo/ea:1",
-			},
-			k8sVersion: "1.12.0",
-			// Only relevant images.
-			// Use CSI v0 helper images.
-			wantImages: map[string]string{
-				csiNodeDriverRegistrarImage: "foo/dr:1",
-				csiExternalProvisionerImage: "foo/ep:1",
-				csiExternalAttacherImage:    "foo/ea:1",
+				storageOSNodeImage:          "zoo/node:1",
+				storageOSInitImage:          "zoo/init:1",
+				csiNodeDriverRegistrarImage: "zoo/ndr:1",
+				csiExternalProvisionerImage: "zoo/ep:1",
+				csiExternalAttacherImage:    "zoo/ea:1",
+				csiLivenessProbeImage:       "zoo/lp:1",
+				kubeSchedulerImage:          "zoo/ks:1",
 			},
 		},
 		{
 			name: "env var images - k8s 1.14 - CSIv1",
 			envVars: map[string]string{
-				image.CSIv1ExternalAttacherv2ImageEnvVar: "foo/ea:2",
+				image.CSIExternalAttacherImageEnvVar: "foo/ea:2",
 			},
 			k8sVersion: "1.14.0",
 			// Only relevant images.
@@ -2098,60 +2041,52 @@ func TestContainerImageSelection(t *testing.T) {
 			name:       "defaults - k8s 1.13",
 			k8sVersion: "1.13.0",
 			wantImages: map[string]string{
-				storageOSNodeImage:             image.DefaultNodeContainerImage,
-				storageOSInitImage:             image.DefaultInitContainerImage,
-				csiClusterDriverRegistrarImage: image.CSIv1ClusterDriverRegistrarContainerImage,
-				csiNodeDriverRegistrarImage:    image.CSIv1NodeDriverRegistrarContainerImage,
-				csiExternalProvisionerImage:    image.CSIv1ExternalProvisionerContainerImageV2,
-				csiExternalAttacherImage:       image.CSIv1ExternalAttacherContainerImage,
-				csiLivenessProbeImage:          image.CSIv1LivenessProbeContainerImage,
-				kubeSchedulerImage:             fmt.Sprintf("%s:%s", image.DefaultKubeSchedulerContainerRegistry, "v1.13.0"),
-				nfsImage:                       image.DefaultNFSContainerImage,
+				storageOSNodeImage:          image.DefaultNodeContainerImage,
+				storageOSInitImage:          image.DefaultInitContainerImage,
+				csiNodeDriverRegistrarImage: image.CSINodeDriverRegistrarContainerImage,
+				csiExternalProvisionerImage: image.CSIExternalProvisionerContainerImage,
+				csiExternalAttacherImage:    image.CSIExternalAttacherContainerImage,
+				csiLivenessProbeImage:       image.CSILivenessProbeContainerImage,
+				kubeSchedulerImage:          fmt.Sprintf("%s:%s", image.DefaultKubeSchedulerContainerRegistry, "v1.13.0"),
 			},
 		},
 		{
 			name:       "defaults - k8s 1.14",
 			k8sVersion: "1.14.0",
 			wantImages: map[string]string{
-				storageOSNodeImage:             image.DefaultNodeContainerImage,
-				storageOSInitImage:             image.DefaultInitContainerImage,
-				csiClusterDriverRegistrarImage: image.CSIv1ClusterDriverRegistrarContainerImage,
-				csiNodeDriverRegistrarImage:    image.CSIv1NodeDriverRegistrarContainerImage,
-				csiExternalProvisionerImage:    image.CSIv1ExternalProvisionerContainerImageV2,
-				csiExternalAttacherImage:       image.CSIv1ExternalAttacherContainerImageV2,
-				csiLivenessProbeImage:          image.CSIv1LivenessProbeContainerImage,
-				kubeSchedulerImage:             fmt.Sprintf("%s:%s", image.DefaultKubeSchedulerContainerRegistry, "v1.14.0"),
-				nfsImage:                       image.DefaultNFSContainerImage,
+				storageOSNodeImage:          image.DefaultNodeContainerImage,
+				storageOSInitImage:          image.DefaultInitContainerImage,
+				csiNodeDriverRegistrarImage: image.CSINodeDriverRegistrarContainerImage,
+				csiExternalProvisionerImage: image.CSIExternalProvisionerContainerImage,
+				csiExternalAttacherImage:    image.CSIExternalAttacherContainerImage,
+				csiLivenessProbeImage:       image.CSILivenessProbeContainerImage,
+				kubeSchedulerImage:          fmt.Sprintf("%s:%s", image.DefaultKubeSchedulerContainerRegistry, "v1.14.0"),
 			},
 		},
 		{
 			name:       "defaults - k8s 1.16",
 			k8sVersion: "1.16.0",
 			wantImages: map[string]string{
-				storageOSNodeImage:             image.DefaultNodeContainerImage,
-				storageOSInitImage:             image.DefaultInitContainerImage,
-				csiClusterDriverRegistrarImage: image.CSIv1ClusterDriverRegistrarContainerImage,
-				csiNodeDriverRegistrarImage:    image.CSIv1NodeDriverRegistrarContainerImage,
-				csiExternalProvisionerImage:    image.CSIv1ExternalProvisionerContainerImageV2,
-				csiExternalAttacherImage:       image.CSIv1ExternalAttacherContainerImageV2,
-				csiLivenessProbeImage:          image.CSIv1LivenessProbeContainerImage,
-				kubeSchedulerImage:             fmt.Sprintf("%s:%s", image.DefaultKubeSchedulerContainerRegistry, "v1.16.0"),
-				nfsImage:                       image.DefaultNFSContainerImage,
+				storageOSNodeImage:          image.DefaultNodeContainerImage,
+				storageOSInitImage:          image.DefaultInitContainerImage,
+				csiNodeDriverRegistrarImage: image.CSINodeDriverRegistrarContainerImage,
+				csiExternalProvisionerImage: image.CSIExternalProvisionerContainerImage,
+				csiExternalAttacherImage:    image.CSIExternalAttacherContainerImage,
+				csiLivenessProbeImage:       image.CSILivenessProbeContainerImage,
+				kubeSchedulerImage:          fmt.Sprintf("%s:%s", image.DefaultKubeSchedulerContainerRegistry, "v1.16.0"),
 			},
 		},
 		{
 			name:       "defaults - k8s 1.17",
 			k8sVersion: "1.17.0",
 			wantImages: map[string]string{
-				storageOSNodeImage:             image.DefaultNodeContainerImage,
-				storageOSInitImage:             image.DefaultInitContainerImage,
-				csiClusterDriverRegistrarImage: image.CSIv1ClusterDriverRegistrarContainerImage,
-				csiNodeDriverRegistrarImage:    image.CSIv1NodeDriverRegistrarContainerImage,
-				csiExternalProvisionerImage:    image.CSIv1ExternalProvisionerContainerImageV2,
-				csiExternalAttacherImage:       image.CSIv1ExternalAttacherContainerImageV3,
-				csiLivenessProbeImage:          image.CSIv1LivenessProbeContainerImage,
-				kubeSchedulerImage:             fmt.Sprintf("%s:%s", image.DefaultKubeSchedulerContainerRegistry, "v1.17.0"),
-				nfsImage:                       image.DefaultNFSContainerImage,
+				storageOSNodeImage:          image.DefaultNodeContainerImage,
+				storageOSInitImage:          image.DefaultInitContainerImage,
+				csiNodeDriverRegistrarImage: image.CSINodeDriverRegistrarContainerImage,
+				csiExternalProvisionerImage: image.CSIExternalProvisionerContainerImage,
+				csiExternalAttacherImage:    image.CSIExternalAttacherContainerImage,
+				csiLivenessProbeImage:       image.CSILivenessProbeContainerImage,
+				kubeSchedulerImage:          fmt.Sprintf("%s:%s", image.DefaultKubeSchedulerContainerRegistry, "v1.17.0"),
 			},
 		},
 	}
