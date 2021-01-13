@@ -49,7 +49,6 @@ const (
 	DefaultIngressHostname = "storageos.local"
 
 	DefaultPluginRegistrationPath = "/var/lib/kubelet/plugins_registry"
-	OldPluginRegistrationPath     = "/var/lib/kubelet/plugins"
 
 	DefaultCSIEndpoint                 = "/storageos/csi.sock"
 	DefaultCSIRegistrarSocketDir       = "/var/lib/kubelet/device-plugins/"
@@ -292,50 +291,28 @@ func (s StorageOSClusterSpec) GetInitContainerImage() string {
 }
 
 // GetCSINodeDriverRegistrarImage returns CSI node driver registrar container image.
-func (s StorageOSClusterSpec) GetCSINodeDriverRegistrarImage(csiv1 bool) string {
+func (s StorageOSClusterSpec) GetCSINodeDriverRegistrarImage() string {
 	if s.Images.CSINodeDriverRegistrarContainer != "" {
 		return s.Images.CSINodeDriverRegistrarContainer
 	}
-	if csiv1 {
-		return image.GetDefaultImage(image.CSIv1NodeDriverRegistrarImageEnvVar, image.CSIv1NodeDriverRegistrarContainerImage)
-	}
-	return image.GetDefaultImage(image.CSIv0DriverRegistrarImageEnvVar, image.CSIv0DriverRegistrarContainerImage)
-}
-
-// GetCSIClusterDriverRegistrarImage returns CSI cluster driver registrar
-// container image.
-func (s StorageOSClusterSpec) GetCSIClusterDriverRegistrarImage() string {
-	if s.Images.CSIClusterDriverRegistrarContainer != "" {
-		return s.Images.CSIClusterDriverRegistrarContainer
-	}
-	return image.GetDefaultImage(image.CSIv1ClusterDriverRegistrarImageEnvVar, image.CSIv1ClusterDriverRegistrarContainerImage)
+	return image.GetDefaultImage(image.CSINodeDriverRegistrarImageEnvVar, image.CSINodeDriverRegistrarContainerImage)
 }
 
 // GetCSIExternalProvisionerImage returns CSI external provisioner container image.
-func (s StorageOSClusterSpec) GetCSIExternalProvisionerImage(csiv1 bool) string {
+func (s StorageOSClusterSpec) GetCSIExternalProvisionerImage() string {
 	if s.Images.CSIExternalProvisionerContainer != "" {
 		return s.Images.CSIExternalProvisionerContainer
 	}
-	if csiv1 {
-		return image.GetDefaultImage(image.CSIv1ExternalProvisionerImageEnvVar, image.CSIv1ExternalProvisionerContainerImageV2)
-	}
-	return image.GetDefaultImage(image.CSIv0ExternalProvisionerImageEnvVar, image.CSIv0ExternalProvisionerContainerImage)
+	return image.GetDefaultImage(image.CSIExternalProvisionerImageEnvVar, image.CSIExternalProvisionerContainerImage)
 }
 
 // GetCSIExternalAttacherImage returns CSI external attacher container image.
-// CSI v0, CSI v1 on k8s 1.13 and CSI v1 on k8s 1.14+ require different versions
-// of external attacher.
-func (s StorageOSClusterSpec) GetCSIExternalAttacherImage(csiv1 bool, attacherv2Supported bool) string {
+// Require different versions of external attacher.
+func (s StorageOSClusterSpec) GetCSIExternalAttacherImage() string {
 	if s.Images.CSIExternalAttacherContainer != "" {
 		return s.Images.CSIExternalAttacherContainer
 	}
-	if csiv1 {
-		if attacherv2Supported {
-			return image.GetDefaultImage(image.CSIv1ExternalAttacherv2ImageEnvVar, image.CSIv1ExternalAttacherv2ContainerImage)
-		}
-		return image.GetDefaultImage(image.CSIv1ExternalAttacherImageEnvVar, image.CSIv1ExternalAttacherContainerImage)
-	}
-	return image.GetDefaultImage(image.CSIv0ExternalAttacherImageEnvVar, image.CSIv0ExternalAttacherContainerImage)
+	return image.GetDefaultImage(image.CSIExternalAttacherImageEnvVar, image.CSIExternalAttacherContainerImage)
 }
 
 // GetCSIExternalResizerImage returns CSI external resizer container image.
@@ -343,7 +320,7 @@ func (s StorageOSClusterSpec) GetCSIExternalResizerImage() string {
 	if s.Images.CSIExternalResizerContainer != "" {
 		return s.Images.CSIExternalResizerContainer
 	}
-	return image.GetDefaultImage(image.CSIv1ExternalResizerContainerImageEnvVar, image.CSIv1ExternalResizerContainerImage)
+	return image.GetDefaultImage(image.CSIExternalResizerContainerImageEnvVar, image.CSIExternalResizerContainerImage)
 }
 
 // GetCSILivenessProbeImage returns CSI liveness probe container image.
@@ -351,21 +328,7 @@ func (s StorageOSClusterSpec) GetCSILivenessProbeImage() string {
 	if s.Images.CSILivenessProbeContainer != "" {
 		return s.Images.CSILivenessProbeContainer
 	}
-	return image.GetDefaultImage(image.CSIv1LivenessProbeImageEnvVar, image.CSIv1LivenessProbeContainerImage)
-}
-
-// GetHyperkubeImage returns hyperkube container image for a given k8s version.
-// If an image is set explicitly in the cluster configuration, that image is
-// returned.
-func (s StorageOSClusterSpec) GetHyperkubeImage(k8sVersion string) string {
-	if s.Images.HyperkubeContainer != "" {
-		return s.Images.HyperkubeContainer
-	}
-
-	// NOTE: Hyperkube is not being used anywhere for now. Hyperkube image is
-	// not available to be set via environment variable.
-	// Add version prefix "v" in the tag.
-	return fmt.Sprintf("%s:v%s", image.DefaultHyperkubeContainerRegistry, k8sVersion)
+	return image.GetDefaultImage(image.CSILivenessProbeImageEnvVar, image.CSILivenessProbeContainerImage)
 }
 
 // GetKubeSchedulerImage returns kube-scheduler container image for a given k8s
@@ -385,15 +348,6 @@ func (s StorageOSClusterSpec) GetKubeSchedulerImage(k8sVersion string) string {
 	fallbackImage := fmt.Sprintf("%s:v%s", image.DefaultKubeSchedulerContainerRegistry, k8sVersion)
 
 	return image.GetDefaultImage(image.KubeSchedulerImageEnvVar, fallbackImage)
-}
-
-// GetNFSServerImage returns NFS server container image used as the default
-// image in the cluster.
-func (s StorageOSClusterSpec) GetNFSServerImage() string {
-	if s.Images.NFSContainer != "" {
-		return s.Images.NFSContainer
-	}
-	return image.GetDefaultImage(image.NFSImageEnvVar, image.DefaultNFSContainerImage)
 }
 
 // GetAPIManagerImage returns the API Manager container image used as the
@@ -446,14 +400,11 @@ func (s StorageOSClusterSpec) GetIngressHostname() string {
 }
 
 // GetCSIEndpoint returns the CSI unix socket endpoint path.
-func (s StorageOSClusterSpec) GetCSIEndpoint(csiv1 bool) string {
+func (s StorageOSClusterSpec) GetCSIEndpoint() string {
 	if s.CSI.Endpoint != "" {
 		return s.CSI.Endpoint
 	}
-	if csiv1 {
-		return getDefaultCSIEndpoint(DefaultPluginRegistrationPath)
-	}
-	return getDefaultCSIEndpoint(OldPluginRegistrationPath)
+	return getDefaultCSIEndpoint(DefaultPluginRegistrationPath)
 }
 
 // GetCSIRegistrarSocketDir returns the CSI registrar socket dir.
@@ -473,14 +424,11 @@ func (s StorageOSClusterSpec) GetCSIKubeletDir() string {
 }
 
 // GetCSIPluginDir returns the CSI plugin dir.
-func (s StorageOSClusterSpec) GetCSIPluginDir(csiv1 bool) string {
+func (s StorageOSClusterSpec) GetCSIPluginDir() string {
 	if s.CSI.PluginDir != "" {
 		return s.CSI.PluginDir
 	}
-	if csiv1 {
-		return getDefaultCSIPluginDir(DefaultPluginRegistrationPath)
-	}
-	return getDefaultCSIPluginDir(OldPluginRegistrationPath)
+	return getDefaultCSIPluginDir(DefaultPluginRegistrationPath)
 }
 
 // GetCSIDeviceDir returns the CSI device dir.
@@ -492,26 +440,19 @@ func (s StorageOSClusterSpec) GetCSIDeviceDir() string {
 }
 
 // GetCSIRegistrationDir returns the CSI registration dir.
-func (s StorageOSClusterSpec) GetCSIRegistrationDir(csiv1 bool) string {
+func (s StorageOSClusterSpec) GetCSIRegistrationDir() string {
 	if s.CSI.RegistrationDir != "" {
 		return s.CSI.RegistrationDir
 	}
-	if csiv1 {
-		return DefaultCSIRegistrationDir
-	}
-	// CSI Registration Dir and Plugin Registration Path are the same.
-	return OldPluginRegistrationPath
+	return DefaultCSIRegistrationDir
 }
 
 // GetCSIKubeletRegistrationPath returns the CSI Kubelet Registration Path.
-func (s StorageOSClusterSpec) GetCSIKubeletRegistrationPath(csiv1 bool) string {
+func (s StorageOSClusterSpec) GetCSIKubeletRegistrationPath() string {
 	if s.CSI.KubeletRegistrationPath != "" {
 		return s.CSI.KubeletRegistrationPath
 	}
-	if csiv1 {
-		return getDefaultCSIKubeletRegistrationPath(DefaultPluginRegistrationPath)
-	}
-	return getDefaultCSIKubeletRegistrationPath(OldPluginRegistrationPath)
+	return getDefaultCSIKubeletRegistrationPath(DefaultPluginRegistrationPath)
 }
 
 // GetCSIDriverRegistrationMode returns the CSI Driver Registration Mode.
@@ -531,14 +472,8 @@ func (s StorageOSClusterSpec) GetCSIDriverRequiresAttachment() string {
 }
 
 // GetCSIVersion returns the CSI Driver version.
-func (s StorageOSClusterSpec) GetCSIVersion(csiv1 bool) string {
-	if s.CSI.Version != "" {
-		return s.CSI.Version
-	}
-	if csiv1 {
-		return "v1"
-	}
-	return "v0"
+func (s StorageOSClusterSpec) GetCSIVersion() string {
+	return "v1"
 }
 
 // GetCSIDeploymentStrategy returns the CSI helper deployment strategy value.

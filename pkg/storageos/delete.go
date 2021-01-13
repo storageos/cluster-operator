@@ -51,14 +51,6 @@ func (s *Deployment) Delete() error {
 		return err
 	}
 
-	if err := s.k8sResourceManager.ClusterRoleBinding(NFSClusterBindingName, nil, nil, nil).Delete(); err != nil {
-		return err
-	}
-
-	if err := s.k8sResourceManager.ClusterRole(NFSClusterRoleName, nil, nil).Delete(); err != nil {
-		return err
-	}
-
 	if err := s.k8sResourceManager.ServiceAccount(DaemonsetSA, namespace, nil).Delete(); err != nil {
 		return err
 	}

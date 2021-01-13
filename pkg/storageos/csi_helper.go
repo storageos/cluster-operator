@@ -110,7 +110,7 @@ func (s Deployment) csiHelperContainers() ([]corev1.Container, error) {
 	privileged := true
 	containers := []corev1.Container{
 		{
-			Image:           s.stos.Spec.GetCSIExternalProvisionerImage(CSIV1Supported(s.k8sVersion)),
+			Image:           s.stos.Spec.GetCSIExternalProvisionerImage(),
 			Name:            "csi-external-provisioner",
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Args: []string{
@@ -136,7 +136,7 @@ func (s Deployment) csiHelperContainers() ([]corev1.Container, error) {
 			},
 		},
 		{
-			Image:           s.stos.Spec.GetCSIExternalAttacherImage(CSIV1Supported(s.k8sVersion), CSIExternalAttacherV2Supported(s.k8sVersion)),
+			Image:           s.stos.Spec.GetCSIExternalAttacherImage(),
 			Name:            "csi-external-attacher",
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Args: []string{
@@ -191,64 +191,6 @@ func (s Deployment) csiHelperContainers() ([]corev1.Container, error) {
 		containers = append(containers, resizer)
 	}
 
-	// CSI v1 requires running CSI driver registrar to register the driver along
-	// with the other CSI helpers.
-	// CSI v0 requires the driver registrar to be run with the driver instances
-	// only.
-	// In k8s 1.13, csi-cluster-driver-registrar was required to be run along
-	// with the CSI helpers. This was responsible for the creation of CSIDriver
-	// resource belonging to the CRD csidrivers.csi.storage.k8s.io. In k8s
-	// 1.14+ this was replaced by a CSIDriver built-in resource belonging to
-	// API group csidrivers.storage.k8s.io. This is no longer automatically
-	// created. The deployment tools should create this resource.
-	//
-	// Add csi-cluster-driver-registrar if the built-in csidrivers resource is
-	// not supported by the k8s api server.
-	supportsCSIDriver, err := HasCSIDriverKind(s.discoveryClient)
-	if err != nil {
-		return containers, err
-	}
-
-	// If CSIDriver is not supported but CSI v1 is supported, run
-	// cluster-driver-registrar.
-	if !supportsCSIDriver && CSIV1Supported(s.k8sVersion) {
-		driverReg := corev1.Container{
-			Image:           s.stos.Spec.GetCSIClusterDriverRegistrarImage(),
-			Name:            "csi-driver-k8s-registrar",
-			ImagePullPolicy: corev1.PullIfNotPresent,
-			Args: []string{
-				"--v=5",
-				"--csi-address=$(ADDRESS)",
-				"--pod-info-mount-version=v1",
-			},
-			Env: []corev1.EnvVar{
-				{
-					Name:  addressEnvVar,
-					Value: "/csi/csi.sock",
-				},
-				{
-					Name: kubeNodeNameEnvVar,
-					ValueFrom: &corev1.EnvVarSource{
-						FieldRef: &corev1.ObjectFieldSelector{
-							APIVersion: "v1",
-							FieldPath:  "spec.nodeName",
-						},
-					},
-				},
-			},
-			SecurityContext: &corev1.SecurityContext{
-				Privileged: &privileged,
-			},
-			VolumeMounts: []corev1.VolumeMount{
-				{
-					Name:      "plugin-dir",
-					MountPath: "/csi",
-				},
-			},
-		}
-		containers = append(containers, driverReg)
-	}
-
 	return containers, nil
 }
 
@@ -261,7 +203,7 @@ func (s Deployment) csiHelperVolumes() []corev1.Volume {
 			Name: "plugin-dir",
 			VolumeSource: corev1.VolumeSource{
 				HostPath: &corev1.HostPathVolumeSource{
-					Path: s.stos.Spec.GetCSIPluginDir(CSIV1Supported(s.k8sVersion)),
+					Path: s.stos.Spec.GetCSIPluginDir(),
 					Type: &hostpathDirOrCreate,
 				},
 			},
