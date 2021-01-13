@@ -332,16 +332,10 @@ func (r *ReconcileStorageOSCluster) updateSpec(m *storageosv1.StorageOSCluster) 
 
 	// CSI related string properties. These must be set always because CSI is
 	// the only supported deployment.
-	properties[&m.Spec.Images.CSINodeDriverRegistrarContainer] = m.Spec.GetCSINodeDriverRegistrarImage(storageos.CSIV1Supported(r.k8sVersion))
-
-	if storageos.CSIV1Supported(r.k8sVersion) {
-		properties[&m.Spec.Images.CSIClusterDriverRegistrarContainer] = m.Spec.GetCSIClusterDriverRegistrarImage()
-		properties[&m.Spec.Images.CSILivenessProbeContainer] = m.Spec.GetCSILivenessProbeImage()
-	}
-
-	properties[&m.Spec.Images.CSIExternalProvisionerContainer] = m.Spec.GetCSIExternalProvisionerImage(storageos.CSIV1Supported(r.k8sVersion))
-
-	properties[&m.Spec.Images.CSIExternalAttacherContainer] = m.Spec.GetCSIExternalAttacherImage(storageos.CSIV1Supported(r.k8sVersion), storageos.CSIExternalAttacherV2Supported(r.k8sVersion))
+	properties[&m.Spec.Images.CSINodeDriverRegistrarContainer] = m.Spec.GetCSINodeDriverRegistrarImage()
+	properties[&m.Spec.Images.CSILivenessProbeContainer] = m.Spec.GetCSILivenessProbeImage()
+	properties[&m.Spec.Images.CSIExternalProvisionerContainer] = m.Spec.GetCSIExternalProvisionerImage()
+	properties[&m.Spec.Images.CSIExternalAttacherContainer] = m.Spec.GetCSIExternalAttacherImage()
 
 	// Add external resizer image if storageos v2 and supported k8s
 	// version.
