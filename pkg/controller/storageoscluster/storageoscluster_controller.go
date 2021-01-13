@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/blang/semver"
 	"github.com/storageos/cluster-operator/internal/pkg/storageoscluster"
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	"github.com/storageos/cluster-operator/pkg/storageos"
@@ -31,9 +32,18 @@ import (
 var log = logf.Log.WithName("storageos.cluster")
 
 const (
-	clusterFinalizer = "finalizer.storageoscluster.storageos.com"
+	// KubernetesMinimumVersion is the minimum version of Kubernetes required
+	// for the controller to operate in.
+	KubernetesMinimumVersion = "1.15.0"
 
+	clusterFinalizer       = "finalizer.storageoscluster.storageos.com"
 	reconcilePeriodSeconds = 15
+)
+
+var (
+	// ErrKubernetesTooOld is returned if the Kubernetes environment does not
+	// meet the minimum version required.
+	ErrKubernetesTooOld = fmt.Errorf("kubernetes %s or above required", KubernetesMinimumVersion)
 )
 
 // Add creates a new StorageOSCluster Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -45,6 +55,19 @@ func Add(mgr manager.Manager) error {
 	version, err := k.GetK8SVersion()
 	if err != nil {
 		return err
+	}
+	supported, err := versionSupported(version, KubernetesMinimumVersion)
+	if err != nil {
+		// If the check failed, default to assuming support.  This will ensure
+		// that strange versions (perhaps due to custom builds) will still work.
+		log.WithValues("k8s", version).Info("Unable to determine kubernetes version.  Skipping compatibility check.")
+		supported = true
+	}
+	if !supported {
+		// Returning an error here will trigger a fatal error and block startup.
+		// Make sure discovered version is logged.
+		log.WithValues("k8s", version).Error(err, "Compatibility check failed")
+		return ErrKubernetesTooOld
 	}
 
 	log.WithValues("k8s", version).Info("Adding cluster controller")
@@ -534,4 +557,24 @@ func remove(list []string, s string) []string {
 		}
 	}
 	return list
+}
+
+// versionSupported takes two versions, current version (haveVersion) and a
+// minimum requirement version (wantVersion) and checks if the current version
+// is supported by comparing it with the minimum requirement.
+func versionSupported(haveVersion, wantVersion string) (bool, error) {
+	supportedVersion, err := semver.Parse(wantVersion)
+	if err != nil {
+		return false, err
+	}
+
+	currentVersion, err := semver.Parse(haveVersion)
+	if err != nil {
+		return false, err
+	}
+
+	if currentVersion.Compare(supportedVersion) >= 0 {
+		return true, nil
+	}
+	return false, nil
 }
