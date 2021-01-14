@@ -77,8 +77,8 @@ func TestClusterCSINodeV2(t *testing.T) {
 		t.Fatalf("failed to get storageos-daemonset: %v", err)
 	}
 
+	//Check the number of containers in daemonset pod spec.
 	t.Run("CSIHelperCountTest", func(t *testing.T) {
-		//Check the number of containers in daemonset pod spec.
 		if len(daemonset.Spec.Template.Spec.Containers) != 3 {
 			t.Errorf("unexpected number of daemonset pod containers:\n\t(GOT) %d\n\t(WNT) %d", len(daemonset.Spec.Template.Spec.Containers), 3)
 		}
