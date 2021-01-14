@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/blang/semver"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
@@ -31,33 +30,9 @@ const (
 )
 
 // PodSchedulerAdmissionControllerTest checks if the pod scheduler mutating
-// admission controller mutates the scheduler name of a pod by creates a pvc
+// admission controller mutates the scheduler name of a pod by creating a pvc
 // backed by StorageOS and a pod that uses the PVC.
-// NOTE: This test has a minimum k8s version requirement.
 func PodSchedulerAdmissionControllerTest(t *testing.T, ctx *framework.Context) {
-	k8sVerMajor := 1
-	k8sVerMinor := 13
-	k8sVerPatch := 0
-	// Minimum version of k8s required to run this test.
-	minVersion := semver.Version{
-		Major: uint64(k8sVerMajor),
-		Minor: uint64(k8sVerMinor),
-		Patch: uint64(k8sVerPatch),
-	}
-
-	// Check the k8s version before running this test. Admission controller
-	// does not works on openshift 3.11 (k8s 1.11).
-	featureSupported, err := featureSupportAvailable(minVersion)
-	if err != nil {
-		t.Errorf("failed to check platform support for admission controller test: %v", err)
-		return
-	}
-
-	// Skip if the feature is not supported.
-	if !featureSupported {
-		return
-	}
-
 	scName1 := "sc1"
 	scName2 := "sc2"
 

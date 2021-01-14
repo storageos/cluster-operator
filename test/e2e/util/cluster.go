@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/blang/semver"
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
@@ -19,13 +18,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/storageos/cluster-operator/pkg/apis"
 	storageos "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	deploy "github.com/storageos/cluster-operator/pkg/storageos"
 	"github.com/storageos/cluster-operator/pkg/util/k8s"
-	"github.com/storageos/cluster-operator/pkg/util/k8sutil"
 )
 
 // Time constants.
@@ -333,61 +330,11 @@ func StorageOSClusterCRAttributesTest(t *testing.T, crName string, crNamespace s
 	}
 }
 
-// featureSupportAvailable can be used by tests to check if the platform
-// supports the test by passing a minimum version of k8s required to run the
-// test.
-func featureSupportAvailable(minVersion semver.Version) (bool, error) {
-	log := logf.Log.WithName("test.featureSupportAvailability")
-	k := k8sutil.NewK8SOps(framework.Global.KubeClient, log)
-	version, err := k.GetK8SVersion()
-	if err != nil {
-		return false, fmt.Errorf("failed to get k8s version: %v", err)
-	}
-
-	currentVersion, err := semver.Parse(version)
-	if err != nil {
-		return false, fmt.Errorf("failed to parse k8s version: %v", err)
-	}
-
-	if currentVersion.Compare(minVersion) >= 0 {
-		// This test is supported in this version of k8s.
-		return true, nil
-	}
-
-	// Test is not supported in this version of k8s. Skip the test.
-	return false, nil
-}
-
-// CSIDriverResourceTest checks if the CSIDriver resource is created. In k8s
-// 1.14+, CSIDriver is created as part of the cluster deployment.
+// CSIDriverResourceTest checks if the CSIDriver resource is created.
 func CSIDriverResourceTest(t *testing.T, driverName string) {
-	k8sVerMajor := 1
-	k8sVerMinor := 14
-	k8sVerPatch := 0
-
-	// Minimum version of k8s required to run this test.
-	minVersion := semver.Version{
-		Major: uint64(k8sVerMajor),
-		Minor: uint64(k8sVerMinor),
-		Patch: uint64(k8sVerPatch),
-	}
-
-	// Check the k8s version before running this test. CSIDriver built-in
-	// resource does not exists in openshift 3.11 (k8s 1.11).
-	featureSupported, err := featureSupportAvailable(minVersion)
-	if err != nil {
-		t.Errorf("failed to check platform support for CSIDriver test: %v", err)
-		return
-	}
-
-	// Skip if the feature is not supported.
-	if !featureSupported {
-		return
-	}
-
 	f := framework.Global
 	csiDriver := &storagev1beta1.CSIDriver{}
-	err = f.Client.Get(goctx.TODO(), types.NamespacedName{Name: driverName}, csiDriver)
+	err := f.Client.Get(goctx.TODO(), types.NamespacedName{Name: driverName}, csiDriver)
 	if err != nil {
 		t.Errorf("CSIDriver not found: %v", err)
 	}
