@@ -51,19 +51,25 @@ func TestClusterCSINodeV2(t *testing.T) {
 
 	testStorageOS := testutil.NewStorageOSCluster(namespace, clusterSpec)
 
-	testutil.SetupOperator(t, ctx)
-	err = testutil.DeployCluster(t, ctx, testStorageOS)
-	if err != nil {
-		t.Fatal(err)
-	}
+	t.Run("SetupOperator", func(t *testing.T) {
+		testutil.SetupOperator(t, ctx)
+	})
+	t.Run("DeployCluster", func(t *testing.T) {
+		err = testutil.DeployCluster(t, ctx, testStorageOS)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
 
 	namespacedName := types.NamespacedName{
 		Name:      testutil.TestClusterCRName,
 		Namespace: namespace,
 	}
-	if err = testutil.ClusterStatusCheck(t, namespacedName, 1, testutil.RetryInterval, testutil.Timeout); err != nil {
-		t.Fatal(err)
-	}
+	t.Run("ClusterStatusCheck", func(t *testing.T) {
+		if err = testutil.ClusterStatusCheck(t, namespacedName, 1, testutil.RetryInterval, testutil.Timeout); err != nil {
+			t.Fatal(err)
+		}
+	})
 
 	f := framework.Global
 
@@ -79,16 +85,18 @@ func TestClusterCSINodeV2(t *testing.T) {
 
 	version := strings.TrimLeft(info.String(), "v")
 
-	//Check the number of containers in daemonset pod spec.
-	if deploy.CSIV1Supported(version) {
-		if len(daemonset.Spec.Template.Spec.Containers) != 3 {
-			t.Errorf("unexpected number of daemonset pod containers:\n\t(GOT) %d\n\t(WNT) %d", len(daemonset.Spec.Template.Spec.Containers), 3)
+	t.Run("CSIHelperCountTest", func(t *testing.T) {
+		//Check the number of containers in daemonset pod spec.
+		if deploy.CSIV1Supported(version) {
+			if len(daemonset.Spec.Template.Spec.Containers) != 3 {
+				t.Errorf("unexpected number of daemonset pod containers:\n\t(GOT) %d\n\t(WNT) %d", len(daemonset.Spec.Template.Spec.Containers), 3)
+			}
+		} else {
+			if len(daemonset.Spec.Template.Spec.Containers) != 2 {
+				t.Errorf("unexpected number of daemonset pod containers:\n\t(GOT) %d\n\t(WNT) %d", len(daemonset.Spec.Template.Spec.Containers), 2)
+			}
 		}
-	} else {
-		if len(daemonset.Spec.Template.Spec.Containers) != 2 {
-			t.Errorf("unexpected number of daemonset pod containers:\n\t(GOT) %d\n\t(WNT) %d", len(daemonset.Spec.Template.Spec.Containers), 2)
-		}
-	}
+	})
 
 	// Test DaemonSet configuration.
 	t.Run("DaemonSetDefaultLogAnnotationTest", func(t *testing.T) {
@@ -96,18 +104,30 @@ func TestClusterCSINodeV2(t *testing.T) {
 	})
 
 	// Test StorageOSCluster CR attributes.
-	testutil.StorageOSClusterCRAttributesTest(t, testutil.TestClusterCRName, namespace)
+	t.Run("StorageOSClusterCRAttributesTest", func(t *testing.T) {
+		testutil.StorageOSClusterCRAttributesTest(t, testutil.TestClusterCRName, namespace)
+	})
 
 	// Test CSIDriver resource existence.
-	testutil.CSIDriverResourceTest(t, deploy.StorageOSProvisionerName)
+	t.Run("CSIDriverResourceTest", func(t *testing.T) {
+		testutil.CSIDriverResourceTest(t, deploy.StorageOSProvisionerName)
+	})
 
 	// Test pod scheduler mutating admission contoller.
-	testutil.PodSchedulerAdmissionControllerTest(t, ctx)
+	t.Run("PodSchedulerAdmissionControllerTest", func(t *testing.T) {
+		testutil.PodSchedulerAdmissionControllerTest(t, ctx)
+	})
 
 	// API Manager tests.
-	testutil.APIManagerDeploymentTest(t, resourceNS, testutil.RetryInterval, testutil.Timeout)
-	testutil.APIManagerMetricsServiceTest(t, resourceNS, testutil.RetryInterval, testutil.Timeout)
-	testutil.APIManagerMetricsServiceMonitorTest(t, resourceNS, testutil.RetryInterval, testutil.Timeout)
+	t.Run("APIManagerDeploymentTest", func(t *testing.T) {
+		testutil.APIManagerDeploymentTest(t, resourceNS, testutil.RetryInterval, testutil.Timeout)
+	})
+	t.Run("APIManagerMetricsServiceTest", func(t *testing.T) {
+		testutil.APIManagerMetricsServiceTest(t, resourceNS, testutil.RetryInterval, testutil.Timeout)
+	})
+	t.Run("APIManagerMetricsServiceMonitorTest", func(t *testing.T) {
+		testutil.APIManagerMetricsServiceMonitorTest(t, resourceNS, testutil.RetryInterval, testutil.Timeout)
+	})
 
 	// Test node label sync.
 	// TODO: Currently relies on v1 CLI.
