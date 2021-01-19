@@ -62,6 +62,7 @@ rules:
   - serviceaccounts
   - secrets
   - services
+  - services/status
   - services/finalizers
   - persistentvolumeclaims
   - persistentvolumeclaims/status
@@ -72,6 +73,7 @@ rules:
   - pods/binding
   - pods/status
   - endpoints
+  - endpoints/status
   verbs:
   - create
   - patch

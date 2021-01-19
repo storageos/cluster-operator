@@ -100,17 +100,29 @@ func (s *Deployment) createClusterRoleForAPIManager() error {
 		{
 			APIGroups: []string{""},
 			Resources: []string{
-				"services",
 				"endpoints",
+				"services",
 				"configmaps",
-				"configmaps/status",
 			},
-			Verbs: []string{"get", "list", "watch", "create", "delete", "update", "patch"},
+			Verbs: []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 		},
 		{
 			APIGroups: []string{""},
-			Resources: []string{"persistentvolumeclaims"},
-			Verbs:     []string{"get", "list", "watch"},
+			Resources: []string{
+				"endpoints/status",
+				"services/status",
+				"configmaps/status",
+			},
+			Verbs: []string{"get", "patch", "update"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{
+				"namespaces",
+				"nodes",
+				"persistentvolumeclaims",
+			},
+			Verbs: []string{"get", "list", "watch"},
 		},
 		{
 			APIGroups: []string{""},
