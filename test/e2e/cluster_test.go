@@ -16,8 +16,8 @@ import (
 	testutil "github.com/storageos/cluster-operator/test/e2e/util"
 )
 
-// TestClusterCSIDeployment test the CSI helper deployment as Deployment.
-func TestClusterCSINodeV2(t *testing.T) {
+// TestCluster tests the cluster deployment.
+func TestCluster(t *testing.T) {
 	ctx := framework.NewTestCtx(t)
 	defer ctx.Cleanup()
 	resourceNS := "kube-system"
