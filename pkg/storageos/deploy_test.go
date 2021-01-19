@@ -267,7 +267,7 @@ func TestCreateDaemonSet(t *testing.T) {
 		}
 
 		nsName := types.NamespacedName{
-			Name:      daemonsetName,
+			Name:      DaemonSetName,
 			Namespace: defaultNS,
 		}
 		createdDaemonset := &appsv1.DaemonSet{
@@ -276,12 +276,21 @@ func TestCreateDaemonSet(t *testing.T) {
 				Kind:       "DaemonSet",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      daemonsetName,
+				Name:      DaemonSetName,
 				Namespace: defaultNS,
 			},
 		}
 		if err := c.Get(context.Background(), nsName, createdDaemonset); err != nil {
 			t.Fatal("failed to get the created object", err)
+		}
+
+		// Check if default container for logging is set.
+		got, ok := createdDaemonset.Spec.Template.Annotations[DefaultLogsContainerAnnotationName]
+		if !ok {
+			t.Errorf("expected annotation %q not set", DefaultLogsContainerAnnotationName)
+		}
+		if ok && got != NodeContainerName {
+			t.Errorf("expected annotation %q set to %q, want %q", DefaultLogsContainerAnnotationName, got, NodeContainerName)
 		}
 
 		if tc.wantEnableCSI {
@@ -667,13 +676,13 @@ func TestDeployCSI(t *testing.T) {
 					Kind:       "DaemonSet",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      daemonsetName,
+					Name:      DaemonSetName,
 					Namespace: stosCluster.Spec.GetResourceNS(),
 				},
 			}
 
 			nsName := types.NamespacedName{
-				Name:      daemonsetName,
+				Name:      DaemonSetName,
 				Namespace: defaultNS,
 			}
 
@@ -912,13 +921,13 @@ func TestDeployNodeAffinity(t *testing.T) {
 					Kind:       "DaemonSet",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      daemonsetName,
+					Name:      DaemonSetName,
 					Namespace: stosCluster.Spec.GetResourceNS(),
 				},
 			}
 
 			nsName := types.NamespacedName{
-				Name:      daemonsetName,
+				Name:      DaemonSetName,
 				Namespace: defaultNS,
 			}
 
@@ -1076,12 +1085,12 @@ func TestDeployTolerations(t *testing.T) {
 					Kind:       "DaemonSet",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      daemonsetName,
+					Name:      DaemonSetName,
 					Namespace: stosCluster.Spec.GetResourceNS(),
 				},
 			}
 			nsName := types.NamespacedName{
-				Name:      daemonsetName,
+				Name:      DaemonSetName,
 				Namespace: defaultNS,
 			}
 			if err := c.Get(context.Background(), nsName, createdDaemonset); err != nil {
@@ -1232,13 +1241,13 @@ func TestDeployNodeResources(t *testing.T) {
 			Kind:       "DaemonSet",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      daemonsetName,
+			Name:      DaemonSetName,
 			Namespace: stosCluster.Spec.GetResourceNS(),
 		},
 	}
 
 	nsName := types.NamespacedName{
-		Name:      daemonsetName,
+		Name:      DaemonSetName,
 		Namespace: defaultNS,
 	}
 
@@ -1329,7 +1338,7 @@ func TestDelete(t *testing.T) {
 
 			createdDaemonset := &appsv1.DaemonSet{}
 			nsNameDaemonSet := types.NamespacedName{
-				Name:      daemonsetName,
+				Name:      DaemonSetName,
 				Namespace: defaultNS,
 			}
 
@@ -1572,7 +1581,7 @@ func TestDeployPodPriorityClass(t *testing.T) {
 			createdDaemonset := &appsv1.DaemonSet{}
 
 			nsName := types.NamespacedName{
-				Name:      daemonsetName,
+				Name:      DaemonSetName,
 				Namespace: stosCluster.Spec.GetResourceNS(),
 			}
 

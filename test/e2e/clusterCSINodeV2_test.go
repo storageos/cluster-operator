@@ -98,6 +98,11 @@ func TestClusterCSINodeV2(t *testing.T) {
 		}
 	})
 
+	// Test DaemonSet configuration.
+	t.Run("DaemonSetDefaultLogAnnotationTest", func(t *testing.T) {
+		testutil.DaemonSetDefaultLogAnnotationTest(t, f.KubeClient, resourceNS)
+	})
+
 	// Test StorageOSCluster CR attributes.
 	t.Run("StorageOSClusterCRAttributesTest", func(t *testing.T) {
 		testutil.StorageOSClusterCRAttributesTest(t, testutil.TestClusterCRName, namespace)
