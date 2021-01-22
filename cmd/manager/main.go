@@ -82,7 +82,7 @@ func main() {
 	// TODO: Expose metrics port after SDK uses controller-runtime's dynamic client
 	// sdk.ExposeMetricsPort()
 
-	// Get a config to talk to the apiserver
+	// Get a config to talk to the apiserver.
 	cfg, err := config.GetConfig()
 	if err != nil {
 		fatal(err)
@@ -107,7 +107,7 @@ func main() {
 
 	log.Info("Registering Components")
 
-	// Setup Scheme for all resources
+	// Setup Scheme for all resources.
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
 		fatal(err)
 	}

@@ -51,16 +51,18 @@ jobs:
       env:
         - "INSTALL_METHOD=none"
       name: KinD (k8s-1.19)
+      before_script:
+        - docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS"
       script: ./test/e2e.sh $INSTALL_METHOD
     - stage: deploy
       go: "1.14"
       sudo: required
       name: Publish Container Image
+      before_script:
+        - docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS"
       script:
         - make operator-image
         - OPERATOR_IMAGE=storageos/cluster-operator:$TRAVIS_TAG make install-manifest
-      before_deploy:
-        - docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS"
       deploy:
         - provider: script
           script: bash scripts/deploy.sh tagged
