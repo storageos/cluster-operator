@@ -1,9 +1,7 @@
 package storageos
 
 func (s *Deployment) createStorageClass() error {
-	parameters := map[string]string{
-		"pool": "default",
-	}
+	parameters := map[string]string{}
 
 	if s.stos.Spec.CSI.Enable {
 		// Add CSI creds secrets in parameters.
