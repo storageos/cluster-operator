@@ -1180,6 +1180,7 @@ data:
                 resources:
                 - storageclasses
                 - volumeattachments
+                - volumeattachments/status
                 - csinodeinfos
                 - csinodes
                 - csidrivers
@@ -1292,6 +1293,8 @@ data:
                       - name: RELATED_IMAGE_CSIV1_EXTERNAL_ATTACHER
                         value: ""
                       - name: RELATED_IMAGE_CSIV1_EXTERNAL_ATTACHER_V2
+                        value: ""
+                      - name: RELATED_IMAGE_CSIV1_EXTERNAL_ATTACHER_V3
                         value: ""
                       - name: RELATED_IMAGE_CSIV1_EXTERNAL_RESIZER
                         value: ""
