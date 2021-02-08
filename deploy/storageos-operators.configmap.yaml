@@ -946,7 +946,7 @@ data:
           description: Cloud-native, persistent storage for containers.
           containerImage: storageos/cluster-operator:test
           repository: https://github.com/storageos/cluster-operator
-          createdAt: 2020-11-13T11:34:33Z
+          createdAt: 2021-02-08T13:51:58Z
           support: StorageOS, Inc
           certified: "false"
           operators.operatorframework.io/internal-objects: |-

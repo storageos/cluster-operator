@@ -20,7 +20,7 @@ FROM storageos/base-image:0.2.3
 LABEL name="StorageOS Cluster Operator" \
     maintainer="support@storageos.com" \
     vendor="StorageOS" \
-    version="v2.3.1" \
+    version="v2.3.3" \
     release="2" \
     distribution-scope="public" \
     architecture="x86_64" \
