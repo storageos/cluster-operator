@@ -10,7 +10,7 @@ const (
 	// password.
 	APIPasswordKey = "apiPassword"
 	// UserAgent is the user-agent name of the StorageOS client.
-	UserAgent = "cluster-operator/v2.3.1"
+	UserAgent = "cluster-operator/v2.3.3"
 	// DefaultScheme is the default scheme of the StorageOS API endpoint.
 	DefaultScheme = "http"
 	// TLSScheme is the TLS scheme of the StorageOS API endpoint.
