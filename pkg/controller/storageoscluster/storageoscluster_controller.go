@@ -341,7 +341,7 @@ func (r *ReconcileStorageOSCluster) updateSpec(m *storageosv1.StorageOSCluster) 
 
 	properties[&m.Spec.Images.CSIExternalProvisionerContainer] = m.Spec.GetCSIExternalProvisionerImage(storageos.CSIV1Supported(r.k8sVersion))
 
-	properties[&m.Spec.Images.CSIExternalAttacherContainer] = m.Spec.GetCSIExternalAttacherImage(storageos.CSIV1Supported(r.k8sVersion), storageos.CSIExternalAttacherV2Supported(r.k8sVersion))
+	properties[&m.Spec.Images.CSIExternalAttacherContainer] = m.Spec.GetCSIExternalAttacherImage(storageos.CSIV1Supported(r.k8sVersion), storageos.CSIExternalAttacherV2Supported(r.k8sVersion), storageos.CSIExternalAttacherV3Supported(r.k8sVersion))
 
 	// Add external resizer image if storageos v2 and supported k8s
 	// version.

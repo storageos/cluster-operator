@@ -136,7 +136,7 @@ func (s Deployment) csiHelperContainers() ([]corev1.Container, error) {
 			},
 		},
 		{
-			Image:           s.stos.Spec.GetCSIExternalAttacherImage(CSIV1Supported(s.k8sVersion), CSIExternalAttacherV2Supported(s.k8sVersion)),
+			Image:           s.stos.Spec.GetCSIExternalAttacherImage(CSIV1Supported(s.k8sVersion), CSIExternalAttacherV2Supported(s.k8sVersion), CSIExternalAttacherV3Supported(s.k8sVersion)),
 			Name:            "csi-external-attacher",
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Args: []string{

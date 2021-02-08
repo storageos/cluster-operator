@@ -11,7 +11,8 @@ const (
 	CSIv1ExternalProvisionerContainerImageV1  = "storageos/csi-provisioner:v1.4.0"
 	CSIv1ExternalProvisionerContainerImageV2  = "storageos/csi-provisioner:v1.6.0-patched"
 	CSIv1ExternalAttacherContainerImage       = "quay.io/k8scsi/csi-attacher:v1.2.1"
-	CSIv1ExternalAttacherv2ContainerImage     = "quay.io/k8scsi/csi-attacher:v2.2.0"
+	CSIv1ExternalAttacherContainerImageV2     = "quay.io/k8scsi/csi-attacher:v2.2.0"
+	CSIv1ExternalAttacherContainerImageV3     = "quay.io/k8scsi/csi-attacher:v3.1.0"
 	CSIv1ExternalResizerContainerImage        = "quay.io/k8scsi/csi-resizer:v0.5.0"
 	CSIv1LivenessProbeContainerImage          = "quay.io/k8scsi/livenessprobe:v1.1.0"
 	CSIv0DriverRegistrarContainerImage        = "quay.io/k8scsi/driver-registrar:v0.4.2"
@@ -35,6 +36,7 @@ const (
 	CSIv1ExternalProvisionerImageEnvVar      = "RELATED_IMAGE_CSIV1_EXTERNAL_PROVISIONER"
 	CSIv1ExternalAttacherImageEnvVar         = "RELATED_IMAGE_CSIV1_EXTERNAL_ATTACHER"
 	CSIv1ExternalAttacherv2ImageEnvVar       = "RELATED_IMAGE_CSIV1_EXTERNAL_ATTACHER_V2"
+	CSIv1ExternalAttacherv3ImageEnvVar       = "RELATED_IMAGE_CSIV1_EXTERNAL_ATTACHER_V3"
 	CSIv1ExternalResizerContainerImageEnvVar = "RELATED_IMAGE_CSIV1_EXTERNAL_RESIZER"
 	CSIv1LivenessProbeImageEnvVar            = "RELATED_IMAGE_CSIV1_LIVENESS_PROBE"
 

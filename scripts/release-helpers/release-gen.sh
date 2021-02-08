@@ -77,6 +77,7 @@ spec.install.spec.deployments[0].spec.template.spec.containers[0].env[8].value: 
 spec.install.spec.deployments[0].spec.template.spec.containers[0].env[9].value: ""
 spec.install.spec.deployments[0].spec.template.spec.containers[0].env[10].value: ""
 spec.install.spec.deployments[0].spec.template.spec.containers[0].env[11].value: ""
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[12].value: ""
 spec.replaces: storageosoperator.$PREV_VERSION
 EOF
 echo
@@ -170,6 +171,7 @@ spec.install.spec.deployments[0].spec.template.spec.containers[0].env[8].value: 
 spec.install.spec.deployments[0].spec.template.spec.containers[0].env[9].value: ""
 spec.install.spec.deployments[0].spec.template.spec.containers[0].env[10].value: ""
 spec.install.spec.deployments[0].spec.template.spec.containers[0].env[11].value: ""
+spec.install.spec.deployments[0].spec.template.spec.containers[0].env[12].value: ""
 spec.customresourcedefinitions.owned[2].specDescriptors[0].description: The StorageOS Node image to upgrade to. e.g. \`registry.connect.redhat.com/storageos/node:latest\`
 spec.replaces: storageosoperator.$PREV_VERSION
 EOF

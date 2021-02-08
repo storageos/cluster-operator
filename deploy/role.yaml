@@ -95,6 +95,7 @@ rules:
   resources:
   - storageclasses
   - volumeattachments
+  - volumeattachments/status
   - csinodeinfos
   - csinodes
   - csidrivers

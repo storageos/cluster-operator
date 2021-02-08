@@ -325,13 +325,18 @@ func (s StorageOSClusterSpec) GetCSIExternalProvisionerImage(csiv1 bool) string 
 // GetCSIExternalAttacherImage returns CSI external attacher container image.
 // CSI v0, CSI v1 on k8s 1.13 and CSI v1 on k8s 1.14+ require different versions
 // of external attacher.
-func (s StorageOSClusterSpec) GetCSIExternalAttacherImage(csiv1 bool, attacherv2Supported bool) string {
+// k8s 1.17+ should use the v3 attacher.  We expect to remove support for k8s
+// 1.14 and earlier soon.
+func (s StorageOSClusterSpec) GetCSIExternalAttacherImage(csiv1 bool, attacherv2Supported bool, attacherV3Supported bool) string {
 	if s.Images.CSIExternalAttacherContainer != "" {
 		return s.Images.CSIExternalAttacherContainer
 	}
 	if csiv1 {
+		if attacherV3Supported {
+			return image.GetDefaultImage(image.CSIv1ExternalAttacherv3ImageEnvVar, image.CSIv1ExternalAttacherContainerImageV3)
+		}
 		if attacherv2Supported {
-			return image.GetDefaultImage(image.CSIv1ExternalAttacherv2ImageEnvVar, image.CSIv1ExternalAttacherv2ContainerImage)
+			return image.GetDefaultImage(image.CSIv1ExternalAttacherv2ImageEnvVar, image.CSIv1ExternalAttacherContainerImageV2)
 		}
 		return image.GetDefaultImage(image.CSIv1ExternalAttacherImageEnvVar, image.CSIv1ExternalAttacherContainerImage)
 	}

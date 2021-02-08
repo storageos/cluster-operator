@@ -315,6 +315,11 @@ func CSIExternalAttacherV2Supported(version string) bool {
 	return versionSupported(version, "1.14.0")
 }
 
+// CSIExternalAttacherV3Supported returns true for k8s 1.17+.
+func CSIExternalAttacherV3Supported(version string) bool {
+	return versionSupported(version, "1.17.0")
+}
+
 // CSIExternalResizerSupported returns true for k8s 1.16+.
 func CSIExternalResizerSupported(version string) bool {
 	return versionSupported(version, "1.16.0")

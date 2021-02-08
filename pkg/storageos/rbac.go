@@ -254,6 +254,11 @@ func (s *Deployment) createClusterRoleForAttacher() error {
 		},
 		{
 			APIGroups: []string{"storage.k8s.io"},
+			Resources: []string{"volumeattachments/status"},
+			Verbs:     []string{"get", "patch", "update"},
+		},
+		{
+			APIGroups: []string{"storage.k8s.io"},
 			Resources: []string{"csinodeinfos", "csinodes"},
 			Verbs:     []string{"get", "list", "watch"},
 		},
