@@ -122,7 +122,7 @@ local-run: upgrader ## Run the opereator locally, out of k8s.
 	# OPERATOR_NAME=cluster-operator operator-sdk up local --go-ldflags "$(LDFLAGS)"
 
 lint: golangci-lint ## Lint the code.
-	$(GOLANGCI_LINT) run
+	$(GOLANGCI_LINT) run --timeout 3m
 
 # Lint the OLM metadata bundle.
 olm-lint: yq generate ## Lint the OLM related files.
