@@ -1,5 +1,5 @@
 ARG BUILD_IMAGE=golang:1.15.2
-ARG BASE_IMAGE=storageos/base-image:0.2.3
+ARG BASE_IMAGE=registry.access.redhat.com/ubi8/ubi-minimal
 ARG OPERATOR_IMAGE=storageos/cluster-operator:test
 
 FROM ${BUILD_IMAGE} AS build
@@ -39,6 +39,8 @@ RUN chmod -R g+rwX /home/operator
 # Docker is required by the upgrader to pre-load images.  Only `docker pull` is
 # used.  `podman` would be preferred but it's not available in the package repo,
 # and there isn't a binary release that we can easily download into the image.
+RUN microdnf update && \
+    microdnf install gzip openssl tar wget
 RUN \
     wget --no-check-certificate -q https://download.docker.com/linux/static/stable/x86_64/docker-17.03.0-ce.tgz && \
     tar -xvzf docker-17.03.0-ce.tgz && \

@@ -4,7 +4,7 @@ GO_ENV = GOOS=linux CGO_ENABLED=0
 SDK_VERSION = v0.17.2
 MACHINE = $(shell uname -m)
 BUILD_IMAGE = golang:1.15.2
-BASE_IMAGE = storageos/base-image:0.2.3
+BASE_IMAGE = registry.access.redhat.com/ubi8/ubi-minimal
 BUILD_DIR = "build"
 OPERATOR_SDK = $(BUILD_DIR)/operator-sdk
 YQ = $(BUILD_DIR)/yq
