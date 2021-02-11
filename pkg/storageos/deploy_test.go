@@ -1413,6 +1413,18 @@ func TestDelete(t *testing.T) {
 				}
 			}
 
+			// Check CSI secret deletion.
+			for _, secretName := range []string{csiProvisionerSecretName, csiControllerPublishSecretName, csiNodePublishSecretName, csiControllerExpandSecretName} {
+				nsNameSecret := types.NamespacedName{
+					Name:      secretName,
+					Namespace: defaultNS,
+				}
+				createdSecret := &corev1.Secret{}
+				if err := c.Get(context.Background(), nsNameSecret, createdSecret); err == nil {
+					t.Fatal("expected the CSI secret to be deleted, but it still exists")
+				}
+			}
+
 			// Check API manager deletion.
 			if err := c.Get(context.Background(), nsNameAPIManagerDeployment, createdAPIManagerDeployment); err == nil {
 				t.Fatal("expected the API manager deployment to be deleted, but it still exists")

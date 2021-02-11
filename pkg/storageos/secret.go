@@ -152,6 +152,10 @@ func (s *Deployment) deleteCSISecrets() error {
 		return err
 	}
 
+	if err := s.k8sResourceManager.Secret(csiControllerExpandSecretName, namespace, nil, corev1.SecretTypeOpaque, nil).Delete(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
