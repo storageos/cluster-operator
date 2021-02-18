@@ -64,6 +64,20 @@ func (s Deployment) createAPIManagerDeployment(replicas int32) error {
 				Labels: podLabels,
 			},
 			Spec: corev1.PodSpec{
+				Affinity: &v1.Affinity{
+					PodAntiAffinity: &v1.PodAntiAffinity{
+						PreferredDuringSchedulingIgnoredDuringExecution: []v1.WeightedPodAffinityTerm{
+							{
+								Weight: 100,
+								PodAffinityTerm: v1.PodAffinityTerm{
+									LabelSelector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{k8s.AppComponent: APIManagerName},
+									},
+								},
+							},
+						},
+					},
+				},
 				ServiceAccountName: APIManagerSA,
 				Containers: []corev1.Container{
 					{
