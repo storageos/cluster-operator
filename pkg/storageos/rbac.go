@@ -126,6 +126,11 @@ func (s *Deployment) createClusterRoleForAPIManager() error {
 		},
 		{
 			APIGroups: []string{""},
+			Resources: []string{"pods"},
+			Verbs:     []string{"get", "list", "watch", "delete"},
+		},
+		{
+			APIGroups: []string{""},
 			Resources: []string{"events"},
 			Verbs:     []string{"create"},
 		},
@@ -133,6 +138,11 @@ func (s *Deployment) createClusterRoleForAPIManager() error {
 			APIGroups: []string{"coordination.k8s.io"},
 			Resources: []string{"leases"},
 			Verbs:     []string{"get", "create", "update"},
+		},
+		{
+			APIGroups: []string{"storage.k8s.io"},
+			Resources: []string{"volumeattachments"},
+			Verbs:     []string{"get", "list", "watch", "delete"},
 		},
 	}
 	return s.k8sResourceManager.ClusterRole(APIManagerClusterRoleName, nil, rules).Create()
