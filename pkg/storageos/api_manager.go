@@ -70,6 +70,7 @@ func (s Deployment) createAPIManagerDeployment(replicas int32) error {
 							{
 								Weight: 100,
 								PodAffinityTerm: v1.PodAffinityTerm{
+									TopologyKey: "kubernetes.io/hostname",
 									LabelSelector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{k8s.AppComponent: APIManagerName},
 									},
