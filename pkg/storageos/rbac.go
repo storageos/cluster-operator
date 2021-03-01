@@ -142,7 +142,7 @@ func (s *Deployment) createClusterRoleForAPIManager() error {
 		{
 			APIGroups: []string{"storage.k8s.io"},
 			Resources: []string{"volumeattachments"},
-			Verbs:     []string{"get", "list", "watch", "delete"},
+			Verbs:     []string{"get", "list", "watch", "update", "patch", "delete"},
 		},
 	}
 	return s.k8sResourceManager.ClusterRole(APIManagerClusterRoleName, nil, rules).Create()
