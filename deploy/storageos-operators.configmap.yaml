@@ -1326,15 +1326,11 @@ data:
                         valueFrom:
                           fieldRef:
                             fieldPath: metadata.namespace
-                      - name: DISABLE_SCHEDULER_WEBHOOK
-                        value: "false"
                       ports:
                       - containerPort: 8383
                         name: metrics
                       - containerPort: 8686
                         name: operatormetrics
-                      - containerPort: 5720
-                        name: podschedwebhook
                     - name: scorecard-proxy
                       image: quay.io/operator-framework/scorecard-proxy:v0.10.0
                       imagePullPolicy: IfNotPresent

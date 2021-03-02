@@ -117,7 +117,7 @@ metadata-update: yq ## Update all the OLM metadata files.
 
 # Run operator locally, from outside of the k8s cluster.
 local-run: upgrader ## Run the opereator locally, out of k8s.
-	OPERATOR_NAME=cluster-operator DISABLE_SCHEDULER_WEBHOOK=true \
+	OPERATOR_NAME=cluster-operator \
 		      $(OPERATOR_SDK) up local
 	# OPERATOR_NAME=cluster-operator operator-sdk up local --go-ldflags "$(LDFLAGS)"
 

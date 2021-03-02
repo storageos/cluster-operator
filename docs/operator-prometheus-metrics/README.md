@@ -34,7 +34,7 @@ pod/storageos-cluster-operator-77bffc958-wjpgx   1/1     Running   0          28
 
 NAME                                         TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)             AGE
 service/storageos-cluster-operator-metrics   ClusterIP   10.110.236.21    <none>        8383/TCP,8686/TCP   28m
-service/storageos-scheduler-webhook          ClusterIP   10.103.159.179   <none>        443/TCP             28m
+service/storageos-webhook                    ClusterIP   10.103.159.179   <none>        443/TCP             28m
 
 NAME                                         READY   UP-TO-DATE   AVAILABLE   AGE
 deployment.apps/storageos-cluster-operator   1/1     1            1           28m

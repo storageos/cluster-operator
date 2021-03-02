@@ -32,13 +32,14 @@ const (
 // createAPIManager deploys the StorageOS api-manager.
 func (s *Deployment) createAPIManager() error {
 	replicas := int32(2)
-	if err := s.createServiceAccountForAPIManager(); err != nil {
-		return err
-	}
+	// service account is created earlier.
 	if err := s.createClusterRoleForAPIManager(); err != nil {
 		return err
 	}
 	if err := s.createClusterRoleBindingForAPIManager(); err != nil {
+		return err
+	}
+	if err := s.createWebhookConfiguration(); err != nil {
 		return err
 	}
 	if err := s.createAPIManagerDeployment(replicas); err != nil {
@@ -121,6 +122,12 @@ func (s Deployment) createAPIManagerDeployment(replicas int32) error {
 		},
 	}
 
+	// If the Scheduler is disabled, set the scheduler name to an empty string.
+	// This will cause the pod scheduler webhook handler to be a no-op.
+	if s.stos.Spec.DisableScheduler {
+		spec.Template.Spec.Containers[0].Args = append(spec.Template.Spec.Containers[0].Args, "-scheduler-name=\"\"")
+	}
+
 	if err := s.addCommonPodProperties(&spec.Template.Spec); err != nil {
 		return err
 	}
@@ -135,6 +142,9 @@ func (s Deployment) deleteAPIManager() error {
 	if err := s.k8sResourceManager.Service(APIManagerMetricsName, ns, nil, nil, nil).Delete(); err != nil {
 		return err
 	}
+	if err := s.deleteWebhookConfiguration(); err != nil {
+		return err
+	}
 	if err := s.k8sResourceManager.Deployment(APIManagerName, ns, nil, nil).Delete(); err != nil {
 		return err
 	}
@@ -144,9 +154,7 @@ func (s Deployment) deleteAPIManager() error {
 	if err := s.k8sResourceManager.ClusterRole(APIManagerClusterRoleName, nil, nil).Delete(); err != nil {
 		return err
 	}
-	if err := s.k8sResourceManager.ServiceAccount(APIManagerSA, ns, nil).Delete(); err != nil {
-		return err
-	}
+	// service acccount deleted elsewhere.
 	return nil
 }
 

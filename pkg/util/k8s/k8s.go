@@ -4,6 +4,7 @@ package k8s
 
 import (
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
+	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
@@ -137,6 +138,11 @@ func (r ResourceManager) CSIDriver(name string, labels map[string]string, spec *
 // ServiceMonitor returns a ServiceMonitor object.
 func (r ResourceManager) ServiceMonitor(name, namespace string, labels map[string]string, annotations map[string]string, svc *corev1.Service, spec *monitoringv1.ServiceMonitorSpec) *resource.ServiceMonitor {
 	return resource.NewServiceMonitor(r.client, name, namespace, r.combineLabels(labels), annotations, svc, spec)
+}
+
+// MutatingWebhookConfiguration returns a MutatingWebhookConfiguration object.
+func (r ResourceManager) MutatingWebhookConfiguration(name string, labels map[string]string, webhooks []admissionv1.MutatingWebhook) *resource.MutatingWebhookConfiguration {
+	return resource.NewMutatingWebhookConfiguration(r.client, name, r.combineLabels(labels), webhooks)
 }
 
 func (r ResourceManager) combineLabels(labels map[string]string) map[string]string {
