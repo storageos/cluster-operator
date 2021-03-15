@@ -1,6 +1,8 @@
 package toleration
 
 import (
+	"sort"
+
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -10,50 +12,44 @@ import (
 // k8s dependency. TaintNodeOutOfDisk is not an upstream constant.
 const (
 	// TaintNodeNotReady will be added when node is not ready
-	// and feature-gate for TaintBasedEvictions flag is enabled,
 	// and removed when node becomes ready.
 	TaintNodeNotReady = "node.kubernetes.io/not-ready"
 
 	// TaintNodeUnreachable will be added when node becomes unreachable
 	// (corresponding to NodeReady status ConditionUnknown)
-	// and feature-gate for TaintBasedEvictions flag is enabled,
 	// and removed when node becomes reachable (NodeReady status ConditionTrue).
 	TaintNodeUnreachable = "node.kubernetes.io/unreachable"
 
 	// TaintNodeUnschedulable will be added when node becomes unschedulable
-	// and feature-gate for TaintNodesByCondition flag is enabled,
 	// and removed when node becomes scheduable.
 	TaintNodeUnschedulable = "node.kubernetes.io/unschedulable"
 
 	// TaintNodeMemoryPressure will be added when node has memory pressure
-	// and feature-gate for TaintNodesByCondition flag is enabled,
 	// and removed when node has enough memory.
 	TaintNodeMemoryPressure = "node.kubernetes.io/memory-pressure"
 
 	// TaintNodeDiskPressure will be added when node has disk pressure
-	// and feature-gate for TaintNodesByCondition flag is enabled,
 	// and removed when node has enough disk.
+	//
+	// `"node.kubernetes.io/out-of-disk"` was removed in k8s 1.13.
 	TaintNodeDiskPressure = "node.kubernetes.io/disk-pressure"
 
 	// TaintNodeNetworkUnavailable will be added when node's network is unavailable
-	// and feature-gate for TaintNodesByCondition flag is enabled,
 	// and removed when network becomes ready.
 	TaintNodeNetworkUnavailable = "node.kubernetes.io/network-unavailable"
 
-	// TaintNodePIDPressure will be added when node has pid pressure
-	// and feature-gate for TaintNodesByCondition flag is enabled,
-	// and removed when node has enough disk.
+	// TaintNodePIDPressure will be added when node has pid pressure, and
+	// removed when node pid usage has reduced below `/proc/sys/kernel/pid_max`.
 	TaintNodePIDPressure = "node.kubernetes.io/pid-pressure"
-
-	// TaintNodePIDPressure will be added when node runs out of disk space, and
-	// removed when disk space becomes available.
-	TaintNodeOutOfDisk = "node.kubernetes.io/out-of-disk"
 )
 
-// GetDefaultTolerations returns a collection of default tolerations for
-// StorageOS related resources.
+// GetDefaultNodeTolerations returns a collection of tolerations suiotable for
+// StorageOS node related resources.
+//
+// Node resources should avoid being evicted.
+//
 // NOTE: An empty effect matches all effects with the given key.
-func GetDefaultTolerations() []corev1.Toleration {
+func GetDefaultNodeTolerations() []corev1.Toleration {
 	return []corev1.Toleration{
 		{
 			Key:      TaintNodeDiskPressure,
@@ -76,11 +72,6 @@ func GetDefaultTolerations() []corev1.Toleration {
 			Effect:   "",
 		},
 		{
-			Key:      TaintNodeOutOfDisk,
-			Operator: corev1.TolerationOpExists,
-			Effect:   "",
-		},
-		{
 			Key:      TaintNodePIDPressure,
 			Operator: corev1.TolerationOpExists,
 			Effect:   "",
@@ -96,4 +87,77 @@ func GetDefaultTolerations() []corev1.Toleration {
 			Effect:   "",
 		},
 	}
+}
+
+// GetDefaultHelperTolerations returns a collection of tolerations suitable for
+// StorageOS related helpers.
+//
+// Helpers should failover when a node is unresponsive but as they have minimal
+// dependencies they are able to tolerate some taints (e.g. disk-pressure).
+//
+// For other taints, only tolerate them for the given period.
+//
+// NOTE: An empty effect matches all effects with the given key.
+func GetDefaultHelperTolerations(tolerationSeconds int64) []corev1.Toleration {
+	return []corev1.Toleration{
+		{
+			Key:               TaintNodeNotReady,
+			Operator:          corev1.TolerationOpExists,
+			Effect:            corev1.TaintEffectNoExecute,
+			TolerationSeconds: &tolerationSeconds,
+		},
+		{
+			Key:               TaintNodeUnreachable,
+			Operator:          corev1.TolerationOpExists,
+			Effect:            corev1.TaintEffectNoExecute,
+			TolerationSeconds: &tolerationSeconds,
+		},
+		{
+			Key:      TaintNodeDiskPressure,
+			Operator: corev1.TolerationOpExists,
+			Effect:   "",
+		},
+	}
+}
+
+// DeepEqual compares two slices of tolerations for equality.
+func DeepEqual(a []corev1.Toleration, b []corev1.Toleration) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	aMap := make(map[string]corev1.Toleration)
+	for _, t := range a {
+		aMap[t.Key] = t
+	}
+	bMap := make(map[string]corev1.Toleration)
+	for _, t := range b {
+		bMap[t.Key] = t
+	}
+
+	for k, aTol := range aMap {
+		bTol, ok := bMap[k]
+		if !ok {
+			return false
+		}
+		if !aTol.MatchToleration(&bTol) {
+			return false
+		}
+		// MatchTolerations does not compare TolerationSeconds.
+		if aTol.TolerationSeconds == nil && bTol.TolerationSeconds == nil {
+			continue
+		}
+		if aTol.TolerationSeconds == nil || bTol.TolerationSeconds == nil {
+			return false
+		}
+		if *aTol.TolerationSeconds != *bTol.TolerationSeconds {
+			return false
+		}
+	}
+	return true
+}
+
+// Sort sorts a slice of tolerations.
+func Sort(a []corev1.Toleration) {
+	sort.SliceStable(a, func(i, j int) bool { return a[i].Key < a[j].Key })
 }
