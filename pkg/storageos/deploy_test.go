@@ -1527,8 +1527,7 @@ func TestDeployTLSEtcdCerts(t *testing.T) {
 }
 
 // TestDeployPodPriorityClass tests that the pod priority class is set properly
-// for the daemonset and statefulset pods when deployed in kube-system
-// namespace.
+// for the daemonset when deployed in kube-system namespace.
 func TestDeployPodPriorityClass(t *testing.T) {
 	testCases := []struct {
 		name                  string
@@ -1537,21 +1536,28 @@ func TestDeployPodPriorityClass(t *testing.T) {
 		wantPriorityClass     bool
 	}{
 		{
-			name:                  "have priority class set | CSI StatefulSet",
-			resourceNS:            "kube-system",
-			csiDeploymentStrategy: "statefulset",
-			wantPriorityClass:     true,
-		},
-		{
 			name:                  "have priority class set | CSI Deployment",
 			resourceNS:            "kube-system",
 			csiDeploymentStrategy: "deployment",
 			wantPriorityClass:     true,
 		},
 		{
-			name:              "no priority class set",
-			resourceNS:        "storageos",
-			wantPriorityClass: false,
+			name:                  "have priority class set | CSI StatefulSet",
+			resourceNS:            "kube-system",
+			csiDeploymentStrategy: "statefulset",
+			wantPriorityClass:     true,
+		},
+		{
+			name:                  "no priority class set | CSI Deployment",
+			resourceNS:            "storageos",
+			csiDeploymentStrategy: "deployment",
+			wantPriorityClass:     false,
+		},
+		{
+			name:                  "no priority class set | CSI StatefulSet",
+			resourceNS:            "storageos",
+			csiDeploymentStrategy: "statefulset",
+			wantPriorityClass:     false,
 		},
 	}
 
@@ -1639,12 +1645,8 @@ func TestDeployPodPriorityClass(t *testing.T) {
 				csiHelperPC = createdStatefulset.Spec.Template.Spec.PriorityClassName
 			}
 
-			if tc.wantPriorityClass && csiHelperPC != criticalPriorityClass {
-				t.Errorf("unexpected CSI helper pod priority class:\n\t(GOT) %v \n\t(WNT) %v", daemonsetPC, criticalPriorityClass)
-			}
-
-			if !tc.wantPriorityClass && csiHelperPC != "" {
-				t.Errorf("expected CSI helper priority class to be not set")
+			if csiHelperPC != "" {
+				t.Errorf("unexpected CSI helper pod priority class:\n\t(GOT) %v \n\t(WNT) %v", csiHelperPC, "")
 			}
 
 			// Check pod priority class for the api-manager.
@@ -1657,12 +1659,22 @@ func TestDeployPodPriorityClass(t *testing.T) {
 				t.Fatal("failed to get the created api-manager deployment", err)
 			}
 			apiManagerPC := createdAPIManagerDeployment.Spec.Template.Spec.PriorityClassName
-			if tc.wantPriorityClass && apiManagerPC != criticalPriorityClass {
-				t.Errorf("unexpected api-manager pod priority class:\n\t(GOT) %v \n\t(WNT) %v", apiManagerPC, criticalPriorityClass)
+			if apiManagerPC != "" {
+				t.Errorf("unexpected api-manager pod priority class:\n\t(GOT) %v \n\t(WNT) %v", apiManagerPC, "")
 			}
 
-			if !tc.wantPriorityClass && apiManagerPC != "" {
-				t.Errorf("expected api-manager priority class to be not set")
+			// Check pod priority class for the scheduler.
+			createdSchedulerDeployment := &appsv1.Deployment{}
+			nsNameSchedulerDeployment := types.NamespacedName{
+				Name:      SchedulerExtenderName,
+				Namespace: stosCluster.Spec.GetResourceNS(),
+			}
+			if err := c.Get(context.Background(), nsNameSchedulerDeployment, createdSchedulerDeployment); err != nil {
+				t.Fatal("failed to get the created scheduler deployment", err)
+			}
+			schedulerPC := createdSchedulerDeployment.Spec.Template.Spec.PriorityClassName
+			if schedulerPC != "" {
+				t.Errorf("unexpected scheduler pod priority class:\n\t(GOT) %v \n\t(WNT) %v", schedulerPC, "")
 			}
 		})
 	}

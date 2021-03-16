@@ -95,7 +95,6 @@ func (s Deployment) createCSIHelperDeployment(replicas int32) error {
 // common pod properties are common for all the pods that are part of storageos
 // deployment, including the CSI helpers pod.
 func (s Deployment) addCommonPodProperties(podSpec *corev1.PodSpec) error {
-	s.addPodPriorityClass(podSpec)
 	s.addNodeAffinity(podSpec)
 	if err := s.addTolerations(podSpec); err != nil {
 		return err
