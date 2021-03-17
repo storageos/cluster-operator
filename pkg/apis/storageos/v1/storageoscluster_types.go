@@ -571,7 +571,7 @@ func (s StorageOSClusterSpec) GetHelperTolerations(tolerationSeconds int64) []co
 }
 
 // mergeTolerations merges a slice of tolerations on top of a base slice,
-// overwiting duplicate keys.
+// overwriting duplicate keys.
 func mergeTolerations(base []corev1.Toleration, overlay []corev1.Toleration) []corev1.Toleration {
 	tolerations := make(map[string]corev1.Toleration)
 	for _, t := range append(base, overlay...) {

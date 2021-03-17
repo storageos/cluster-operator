@@ -43,7 +43,7 @@ const (
 	TaintNodePIDPressure = "node.kubernetes.io/pid-pressure"
 )
 
-// GetDefaultNodeTolerations returns a collection of tolerations suiotable for
+// GetDefaultNodeTolerations returns a collection of tolerations suitable for
 // StorageOS node related resources.
 //
 // Node resources should avoid being evicted.

@@ -66,8 +66,7 @@ func (s Deployment) createSchedulerDeployment(replicas int32) error {
 		},
 	}
 
-	// Add helper tolerations.
-	if err := s.addHelperTolerations(&spec.Template.Spec, podTolerationSeconds); err != nil {
+	if err := s.addCommonPodProperties(&spec.Template.Spec); err != nil {
 		return err
 	}
 

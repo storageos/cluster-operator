@@ -106,26 +106,6 @@ func TestDeepEqual(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "different seconds",
-			a: []corev1.Toleration{
-				{
-					Key:               TaintNodeNotReady,
-					Operator:          corev1.TolerationOpExists,
-					Effect:            corev1.TaintEffectNoExecute,
-					TolerationSeconds: &secondsA,
-				},
-			},
-			b: []corev1.Toleration{
-				{
-					Key:               TaintNodeNotReady,
-					Operator:          corev1.TolerationOpExists,
-					Effect:            corev1.TaintEffectNoExecute,
-					TolerationSeconds: &secondsB,
-				},
-			},
-			want: false,
-		},
-		{
 			name: "different seconds one nil",
 			a: []corev1.Toleration{
 				{
@@ -366,7 +346,7 @@ func TestDeepEqual(t *testing.T) {
 		var tt = tt
 		t.Run(tt.name, func(t *testing.T) {
 			if got := DeepEqual(tt.a, tt.b); got != tt.want {
-				t.Errorf("DeepEqual() = %v, want %v", got, tt.want)
+				t.Errorf("DeepEqual() = %t, want %t", got, tt.want)
 			}
 		})
 	}
