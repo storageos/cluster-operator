@@ -66,13 +66,9 @@ func (s Deployment) createSchedulerDeployment(replicas int32) error {
 		},
 	}
 
-	// Add cluster config tolerations.
-	if err := s.addTolerations(&spec.Template.Spec); err != nil {
+	if err := s.addCommonPodProperties(&spec.Template.Spec); err != nil {
 		return err
 	}
-
-	// Add pod toleration for quick recovery on node failure.
-	addPodTolerationForRecovery(&spec.Template.Spec)
 
 	return s.k8sResourceManager.Deployment(SchedulerExtenderName, s.stos.Spec.GetResourceNS(), nil, spec).Create()
 }
