@@ -96,10 +96,11 @@ func (s Deployment) createCSIHelperDeployment(replicas int32) error {
 // deployment, including the CSI helpers pod.
 func (s Deployment) addCommonPodProperties(podSpec *corev1.PodSpec) error {
 	s.addNodeAffinity(podSpec)
-	if err := s.addTolerations(podSpec); err != nil {
+
+	// Add helper tolerations.
+	if err := s.addHelperTolerations(podSpec, podTolerationSeconds); err != nil {
 		return err
 	}
-	addPodTolerationForRecovery(podSpec)
 	return nil
 }
 
