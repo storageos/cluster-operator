@@ -229,17 +229,19 @@ func (s *Deployment) addNodeAffinity(podSpec *corev1.PodSpec) {
 	}
 }
 
-// addTolerations adds tolerations to the given pod spec from cluster
-// spec Tolerations.
-func (s *Deployment) addTolerations(podSpec *corev1.PodSpec) error {
-	return util.AddTolerations(podSpec, s.stos.Spec.Tolerations)
+// addNodeTolerations adds the default node container tolerations along
+// with the tolerations in the cluster configuration to a given pod spec. The
+// default tolerations prevent pod eviction under various conditions.
+func (s *Deployment) addNodeTolerations(podSpec *corev1.PodSpec) error {
+	return util.AddTolerations(podSpec, s.stos.Spec.GetNodeTolerations())
 }
 
-// addTolerationsWithDefaults adds the default tolerations along with the
-// tolerations in the cluster configuration to a given pod spec. The default
-// tolerations prevent pod eviction under various conditions.
-func (s *Deployment) addTolerationsWithDefaults(podSpec *corev1.PodSpec) error {
-	return util.AddTolerations(podSpec, s.stos.Spec.GetTolerations())
+// addHelperTolerations adds the default helper tolerations along with the
+// tolerations in the cluster configuration to a given pod spec.  The helper
+// tolerations allow pod eviction under various conditions but also tolerate
+// some conditions.
+func (s *Deployment) addHelperTolerations(podSpec *corev1.PodSpec, tolerationSeconds int64) error {
+	return util.AddTolerations(podSpec, s.stos.Spec.GetHelperTolerations(tolerationSeconds))
 }
 
 // addTLSEtcdCerts adds the etcd TLS secret as a secret mount in the given
