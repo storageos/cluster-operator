@@ -554,17 +554,35 @@ func (s StorageOSClusterSpec) GetCSIDeploymentStrategy() string {
 	return DefaultCSIDeploymentStrategy
 }
 
-// GetTolerations returns the tolerations applied to all the StorageOS related
-// pods.
-func (s StorageOSClusterSpec) GetTolerations() []corev1.Toleration {
-	tolerations := toleration.GetDefaultTolerations()
+// GetNodeTolerations returns the tolerations applied to all the StorageOS node
+// container pod.  Tolerations are sorted on key name to ensure idempotency.
+func (s StorageOSClusterSpec) GetNodeTolerations() []corev1.Toleration {
+	t := mergeTolerations(toleration.GetDefaultNodeTolerations(), s.Tolerations)
+	toleration.Sort(t)
+	return t
+}
 
-	// Append the tolerations specified in the spec.
-	if len(s.Tolerations) > 0 {
-		tolerations = append(tolerations, s.Tolerations...)
+// GetHelperTolerations returns the tolerations applied to all the StorageOS
+// helper pods.  Tolerations are sorted on key name to ensure idempotency.
+func (s StorageOSClusterSpec) GetHelperTolerations(tolerationSeconds int64) []corev1.Toleration {
+	t := mergeTolerations(toleration.GetDefaultHelperTolerations(tolerationSeconds), s.Tolerations)
+	toleration.Sort(t)
+	return t
+}
+
+// mergeTolerations merges a slice of tolerations on top of a base slice,
+// overwriting duplicate keys.
+func mergeTolerations(base []corev1.Toleration, overlay []corev1.Toleration) []corev1.Toleration {
+	tolerations := make(map[string]corev1.Toleration)
+	for _, t := range append(base, overlay...) {
+		tolerations[t.Key] = t
 	}
 
-	return tolerations
+	var ret []corev1.Toleration
+	for _, t := range tolerations {
+		ret = append(ret, t)
+	}
+	return ret
 }
 
 // ContainerImages contains image names of all the containers used by the operator.

@@ -7,6 +7,7 @@ import (
 	glog "log"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
@@ -462,11 +463,11 @@ func TestCreateCSIHelper(t *testing.T) {
 			// Check if the recovery tolerations are applied.
 			foundNotReadyTol := false
 			foundUnreachableTol := false
-			for _, toleration := range tolerations {
-				switch toleration.Key {
-				case nodeNotReadyTolKey:
+			for _, tol := range tolerations {
+				switch tol.Key {
+				case toleration.TaintNodeNotReady:
 					foundNotReadyTol = true
-				case nodeUnreachableTolKey:
+				case toleration.TaintNodeUnreachable:
 					foundUnreachableTol = true
 				}
 			}
@@ -982,15 +983,30 @@ func TestDeployNodeAffinity(t *testing.T) {
 }
 
 func TestDeployTolerations(t *testing.T) {
-	defaultTolerations := toleration.GetDefaultTolerations()
+	defaultNodeTolerations := toleration.GetDefaultNodeTolerations()
+	defaultHelperTolerations := toleration.GetDefaultHelperTolerations(podTolerationSeconds)
+	defaultPodTolerationSeconds := int64(30)
+	testSeconds := int64(600)
+
+	tolerationsToString := func(tolerations []corev1.Toleration) string {
+		out := []string{}
+		for _, t := range tolerations {
+			out = append(out, t.String())
+		}
+		return strings.Join(out, "\n")
+	}
 
 	testCases := []struct {
-		name        string
-		tolerations []corev1.Toleration
-		wantError   bool
+		name                  string
+		tolerations           []corev1.Toleration
+		wantNodeTolerations   []corev1.Toleration
+		wantHelperTolerations []corev1.Toleration
+		wantError             bool
 	}{
 		{
-			name: "No tolerations, default",
+			name:                  "No tolerations, default",
+			wantNodeTolerations:   defaultNodeTolerations,
+			wantHelperTolerations: defaultHelperTolerations,
 		},
 		{
 			name: "TolerationOpExists without value",
@@ -1001,6 +1017,16 @@ func TestDeployTolerations(t *testing.T) {
 					Effect:   corev1.TaintEffectNoSchedule,
 				},
 			},
+			wantNodeTolerations: append(defaultNodeTolerations, corev1.Toleration{
+				Key:      "foo",
+				Operator: corev1.TolerationOpExists,
+				Effect:   corev1.TaintEffectNoSchedule,
+			}),
+			wantHelperTolerations: append(defaultHelperTolerations, corev1.Toleration{
+				Key:      "foo",
+				Operator: corev1.TolerationOpExists,
+				Effect:   corev1.TaintEffectNoSchedule,
+			}),
 		},
 		{
 			name: "TolerationOpExists with value",
@@ -1022,6 +1048,86 @@ func TestDeployTolerations(t *testing.T) {
 					Operator: corev1.TolerationOpEqual,
 					Value:    "bar",
 					Effect:   corev1.TaintEffectNoSchedule,
+				},
+			},
+			wantNodeTolerations: append(defaultNodeTolerations, corev1.Toleration{
+				Key:      "foo",
+				Operator: corev1.TolerationOpEqual,
+				Value:    "bar",
+				Effect:   corev1.TaintEffectNoSchedule,
+			}),
+			wantHelperTolerations: append(defaultHelperTolerations, corev1.Toleration{
+				Key:      "foo",
+				Operator: corev1.TolerationOpEqual,
+				Value:    "bar",
+				Effect:   corev1.TaintEffectNoSchedule,
+			}),
+		},
+		{
+			name: "Overwrite default value",
+			tolerations: []corev1.Toleration{
+				{
+					Key:               corev1.TaintNodeNotReady,
+					Operator:          corev1.TolerationOpExists,
+					Effect:            corev1.TaintEffectNoExecute,
+					TolerationSeconds: &testSeconds,
+				},
+			},
+			wantNodeTolerations: []corev1.Toleration{
+				{
+					Key:      corev1.TaintNodeDiskPressure,
+					Operator: corev1.TolerationOpExists,
+					Effect:   "",
+				},
+				{
+					Key:      corev1.TaintNodeMemoryPressure,
+					Operator: corev1.TolerationOpExists,
+					Effect:   "",
+				},
+				{
+					Key:      corev1.TaintNodeNetworkUnavailable,
+					Operator: corev1.TolerationOpExists,
+					Effect:   "",
+				},
+				{
+					Key:               corev1.TaintNodeNotReady,
+					Operator:          corev1.TolerationOpExists,
+					Effect:            corev1.TaintEffectNoExecute,
+					TolerationSeconds: &testSeconds,
+				},
+				{
+					Key:      corev1.TaintNodePIDPressure,
+					Operator: corev1.TolerationOpExists,
+					Effect:   "",
+				},
+				{
+					Key:      corev1.TaintNodeUnreachable,
+					Operator: corev1.TolerationOpExists,
+					Effect:   "",
+				},
+				{
+					Key:      corev1.TaintNodeUnschedulable,
+					Operator: corev1.TolerationOpExists,
+					Effect:   "",
+				},
+			},
+			wantHelperTolerations: []corev1.Toleration{
+				{
+					Key:               corev1.TaintNodeNotReady,
+					Operator:          corev1.TolerationOpExists,
+					Effect:            corev1.TaintEffectNoExecute,
+					TolerationSeconds: &testSeconds,
+				},
+				{
+					Key:               corev1.TaintNodeUnreachable,
+					Operator:          corev1.TolerationOpExists,
+					Effect:            corev1.TaintEffectNoExecute,
+					TolerationSeconds: &defaultPodTolerationSeconds,
+				},
+				{
+					Key:      corev1.TaintNodeDiskPressure,
+					Operator: corev1.TolerationOpExists,
+					Effect:   "",
 				},
 			},
 		},
@@ -1087,10 +1193,10 @@ func TestDeployTolerations(t *testing.T) {
 			if err := c.Get(context.Background(), nsName, createdDaemonset); err != nil {
 				t.Fatal("failed to get the created daemonset", err)
 			}
-			podSpec := createdDaemonset.Spec.Template.Spec
-			wantTolerations := append(defaultTolerations, tc.tolerations...)
-			if !reflect.DeepEqual(podSpec.Tolerations, wantTolerations) {
-				t.Errorf("unexpected Tolerations value:\n\t(GOT) %v\n\t(WNT) %v", podSpec.Tolerations, wantTolerations)
+
+			gotTolerations := createdDaemonset.Spec.Template.Spec.Tolerations
+			if !toleration.DeepEqual(gotTolerations, tc.wantNodeTolerations) {
+				t.Errorf("unexpected node tolerations:\n(GOT):\n%s\n(WNT):\n%s", tolerationsToString(gotTolerations), tolerationsToString(tc.wantNodeTolerations))
 			}
 
 			// Check csi-helpers tolerations.
@@ -1107,32 +1213,10 @@ func TestDeployTolerations(t *testing.T) {
 			if err := c.Get(context.Background(), nsName, createdCSIHelperDeployment); err != nil {
 				t.Fatal("failed to get the created csi helpers deployment", err)
 			}
-			// Remove extra tolerations (unreachable and not-ready) that are
-			// added by k8s by default before comparison. These tolerations
-			// have non-nil toleration seconds attribute.
-			removeExtraTolerations := func(allTolerations []corev1.Toleration) []corev1.Toleration {
-				result := []corev1.Toleration{}
-				for _, tol := range allTolerations {
-					switch tol.Key {
-					case toleration.TaintNodeUnreachable, toleration.TaintNodeNotReady:
-						if tol.TolerationSeconds == nil {
-							result = append(result, tol)
-						}
-						continue
-					default:
-						result = append(result, tol)
-					}
-				}
-				return result
-			}
-			gotTolerations := removeExtraTolerations(createdCSIHelperDeployment.Spec.Template.Spec.Tolerations)
 
-			if !reflect.DeepEqual(gotTolerations, tc.tolerations) {
-				// Deepequal fails for empty maps. If the maps are empty, don't
-				// fail.
-				if len(gotTolerations) != 0 || len(tc.tolerations) != 0 {
-					t.Errorf("unexpected Tolerations value:\n\t(GOT) %v\n\t(WNT) %v", gotTolerations, tc.tolerations)
-				}
+			gotTolerations = createdCSIHelperDeployment.Spec.Template.Spec.Tolerations
+			if !toleration.DeepEqual(gotTolerations, tc.wantHelperTolerations) {
+				t.Errorf("unexpected csi helper tolerations:\n(GOT):\n%s\n(WNT):\n%s", tolerationsToString(gotTolerations), tolerationsToString(tc.wantHelperTolerations))
 			}
 
 			// Check api-manager tolerations.
@@ -1149,14 +1233,10 @@ func TestDeployTolerations(t *testing.T) {
 			if err := c.Get(context.Background(), nsName, createdAPIManagerDeployment); err != nil {
 				t.Fatal("failed to get the created api-manager deployment", err)
 			}
-			gotTolerations = removeExtraTolerations(createdAPIManagerDeployment.Spec.Template.Spec.Tolerations)
 
-			if !reflect.DeepEqual(gotTolerations, tc.tolerations) {
-				// Deepequal fails for empty maps. If the maps are empty, don't
-				// fail.
-				if len(gotTolerations) != 0 || len(tc.tolerations) != 0 {
-					t.Errorf("unexpected Tolerations value:\n\t(GOT) %v\n\t(WNT) %v", gotTolerations, tc.tolerations)
-				}
+			gotTolerations = createdAPIManagerDeployment.Spec.Template.Spec.Tolerations
+			if !toleration.DeepEqual(gotTolerations, tc.wantHelperTolerations) {
+				t.Errorf("unexpected api-manager tolerations:\n(GOT):\n%s\n(WNT):\n%s", tolerationsToString(gotTolerations), tolerationsToString(tc.wantHelperTolerations))
 			}
 
 			// Check scheduler tolerations.
@@ -1173,14 +1253,10 @@ func TestDeployTolerations(t *testing.T) {
 			if err := c.Get(context.Background(), nsName, createdSchedulerDeployment); err != nil {
 				t.Fatal("failed to get the created scheduler deployment", err)
 			}
-			gotTolerations = removeExtraTolerations(createdSchedulerDeployment.Spec.Template.Spec.Tolerations)
 
-			if !reflect.DeepEqual(gotTolerations, tc.tolerations) {
-				// Deepequal fails for empty maps. If the maps are empty, don't
-				// fail.
-				if len(gotTolerations) != 0 || len(tc.tolerations) != 0 {
-					t.Errorf("unexpected Tolerations value:\n\t(GOT) %v\n\t(WNT) %v", gotTolerations, tc.tolerations)
-				}
+			gotTolerations = createdSchedulerDeployment.Spec.Template.Spec.Tolerations
+			if !toleration.DeepEqual(gotTolerations, tc.wantHelperTolerations) {
+				t.Errorf("unexpected scheduler tolerations:\n(GOT):\n%s\n(WNT):\n%s", tolerationsToString(gotTolerations), tolerationsToString(tc.wantHelperTolerations))
 			}
 		})
 	}

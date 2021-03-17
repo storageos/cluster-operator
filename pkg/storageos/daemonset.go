@@ -272,7 +272,7 @@ func (s *Deployment) createDaemonSet() error {
 
 	s.addNodeAffinity(podSpec)
 
-	if err := s.addTolerationsWithDefaults(podSpec); err != nil {
+	if err := s.addNodeTolerations(podSpec); err != nil {
 		return err
 	}
 
