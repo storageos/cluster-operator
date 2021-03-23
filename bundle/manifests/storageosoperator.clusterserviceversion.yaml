@@ -23,7 +23,7 @@ metadata:
     capabilities: Deep Insights
     categories: Storage
     certified: "true"
-    containerImage: registry.connect.redhat.com/storageos/cluster-operator:v2.3.3
+    containerImage: registry.connect.redhat.com/storageos/cluster-operator:v2.3.4
     createdAt: ""
     description: Cloud-native, persistent storage for containers.
     operators.operatorframework.io/internal-objects: |-
@@ -34,7 +34,7 @@ metadata:
       ]
     repository: https://github.com/storageos/cluster-operator
     support: StorageOS, Inc
-  name: storageosoperator.v2.3.3
+  name: storageosoperator.v2.3.4
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -567,4 +567,4 @@ spec:
   selector:
     matchLabels:
       operated-by: storageosoperator
-  version: 2.3.3
+  version: 2.3.4
