@@ -19,7 +19,7 @@ const (
 	CSIv0ExternalProvisionerContainerImage    = "storageos/csi-provisioner:v0.4.3"
 	CSIv0ExternalAttacherContainerImage       = "quay.io/k8scsi/csi-attacher:v0.4.2"
 	DefaultNFSContainerImage                  = "storageos/nfs:1.0.0"
-	DefaultAPIManagerImage                    = "storageos/api-manager:v1.0.1"
+	DefaultAPIManagerImage                    = "storageos/api-manager:v1.0.2"
 
 	DefaultHyperkubeContainerRegistry = "gcr.io/google_containers/hyperkube"
 
