@@ -20,7 +20,7 @@ FROM registry.access.redhat.com/ubi8/ubi-minimal
 LABEL name="StorageOS Cluster Operator" \
     maintainer="support@storageos.com" \
     vendor="StorageOS" \
-    version="v2.3.3" \
+    version="v2.3.4" \
     release="2" \
     distribution-scope="public" \
     architecture="x86_64" \
