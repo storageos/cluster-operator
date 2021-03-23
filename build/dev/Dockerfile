@@ -1,4 +1,4 @@
-FROM storageos/base-image:0.2.3
+FROM registry.access.redhat.com/ubi8/ubi-minimal
 WORKDIR /home/operator
 RUN chmod -R g+rwX /home/operator
 COPY LICENSE /licenses/
