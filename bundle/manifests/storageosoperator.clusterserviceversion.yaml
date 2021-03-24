@@ -567,7 +567,6 @@ spec:
   minKubeVersion: 1.13.0
   provider:
     name: StorageOS, Inc
-  replaces: storageosoperator.v2.3.3
   selector:
     matchLabels:
       operated-by: storageosoperator
