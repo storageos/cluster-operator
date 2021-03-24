@@ -34,7 +34,7 @@ metadata:
       ]
     repository: https://github.com/storageos/cluster-operator
     support: StorageOS, Inc
-  name: storageosoperator.v2.3.3
+  name: storageosoperator.v2.3.4
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -372,6 +372,7 @@ spec:
                 - serviceaccounts
                 - secrets
                 - services
+                - services/status
                 - services/finalizers
                 - persistentvolumeclaims
                 - persistentvolumeclaims/status
@@ -382,6 +383,7 @@ spec:
                 - pods/binding
                 - pods/status
                 - endpoints
+                - endpoints/status
               verbs:
                 - create
                 - patch
@@ -405,6 +407,7 @@ spec:
               resources:
                 - storageclasses
                 - volumeattachments
+                - volumeattachments/status
                 - csinodeinfos
                 - csinodes
                 - csidrivers
@@ -567,4 +570,4 @@ spec:
   selector:
     matchLabels:
       operated-by: storageosoperator
-  version: 2.3.3
+  version: 2.3.4
