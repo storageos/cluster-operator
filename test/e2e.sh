@@ -225,10 +225,10 @@ operator-sdk-e2e-cleanup() {
     kubectl delete statefulset.apps/example-nfsserver --ignore-not-found=true
 
     # Delete webhook service.
-    kubectl -n storageos-operator delete service/storageos-scheduler-webhook --ignore-not-found=true
+    kubectl -n storageos-operator delete service/storageos-webhook --ignore-not-found=true
 
     # Delete webhook config.
-    kubectl delete mutatingwebhookconfigurations storageos-scheduler-webhook --ignore-not-found=true
+    kubectl delete mutatingwebhookconfigurations storageos-mutating-webhook --ignore-not-found=true
 
     # Clean up StorageOS devices
     sudo umount storageos || true
@@ -289,7 +289,7 @@ main() {
     else
 
         # Add taint on the node.
-        kubectl taint nodes $NODE_NAME key=value:NoSchedule
+        # kubectl taint nodes $NODE_NAME key=value:NoSchedule
 
         # Create a namespace for testing operator.
         # This is needed because the service account created using
@@ -314,14 +314,14 @@ main() {
         # resource details. Also comment `defer ctx.Cleanup()` in the cluster to
         # avoid resouce cleanup.
 
-        "$OPERATOR_SDK" test local ./test/e2e --go-test-flags "-v -tags v2" --operator-namespace storageos-operator
+        "$OPERATOR_SDK" test local ./test/e2e --skip-cleanup-error=true --go-test-flags "-v -timeout 10m -tags v2" --operator-namespace storageos-operator
         operator-sdk-e2e-cleanup
 
         # echo "**** Resource details for storageos-operator namespace ****"
         # print_pod_details_and_logs storageos-operator
 
-        # echo "**** Resource details for storageos namespace ****"
-        # print_pod_details_and_logs storageos
+        # echo "**** Resource details for kube-system namespace ****"
+        # print_pod_details_and_logs kube-system
     fi
 
     echo "Done Testing!"

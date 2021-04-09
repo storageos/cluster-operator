@@ -108,6 +108,10 @@ func (s *Deployment) Deploy() error {
 		return err
 	}
 
+	if err := s.createServiceAccountForAPIManager(); err != nil {
+		return err
+	}
+
 	if err := s.createRoleForKeyMgmt(); err != nil {
 		return err
 	}

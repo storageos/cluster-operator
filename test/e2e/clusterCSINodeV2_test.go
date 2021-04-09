@@ -42,7 +42,8 @@ func TestClusterCSINodeV2(t *testing.T) {
 		},
 		K8sDistro: "openshift",
 		Images: storageos.ContainerImages{
-			NodeContainer: "rotsesgao/node:v2",
+			NodeContainer:       "rotsesgao/node:v2",
+			APIManagerContainer: "storageos/api-manager:develop",
 		},
 		KVBackend: storageos.StorageOSClusterKVBackend{
 			Address: "etcd-client.default.svc.cluster.local:2379",
@@ -113,11 +114,6 @@ func TestClusterCSINodeV2(t *testing.T) {
 		testutil.CSIDriverResourceTest(t, deploy.StorageOSProvisionerName)
 	})
 
-	// Test pod scheduler mutating admission contoller.
-	t.Run("PodSchedulerAdmissionControllerTest", func(t *testing.T) {
-		testutil.PodSchedulerAdmissionControllerTest(t, ctx)
-	})
-
 	// API Manager tests.
 	t.Run("APIManagerDeploymentTest", func(t *testing.T) {
 		testutil.APIManagerDeploymentTest(t, resourceNS, testutil.RetryInterval, testutil.Timeout)
@@ -127,6 +123,11 @@ func TestClusterCSINodeV2(t *testing.T) {
 	})
 	t.Run("APIManagerMetricsServiceMonitorTest", func(t *testing.T) {
 		testutil.APIManagerMetricsServiceMonitorTest(t, resourceNS, testutil.RetryInterval, testutil.Timeout)
+	})
+
+	// Test pod scheduler mutating admission contoller.
+	t.Run("PodSchedulerAdmissionControllerTest", func(t *testing.T) {
+		testutil.PodSchedulerAdmissionControllerTest(t, ctx)
 	})
 
 	// Test node label sync.

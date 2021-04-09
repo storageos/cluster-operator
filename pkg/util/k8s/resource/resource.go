@@ -20,6 +20,7 @@ const (
 	APIstoragev1        = "storage.k8s.io/v1"
 	APIstoragev1beta1   = "storage.k8s.io/v1beta1"
 	APIservicemonitorv1 = "monitoring.coreos.com/v1"
+	APIadmissionv1      = "admissionregistration.k8s.io/v1"
 )
 
 // CreateOrUpdate creates or updates an existing k8s resource.

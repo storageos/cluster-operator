@@ -3,13 +3,12 @@ module github.com/storageos/cluster-operator
 go 1.14
 
 require (
-	github.com/appscode/jsonpatch v1.0.1
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/coreos/prometheus-operator v0.38.1-0.20200424145508-7e176fda06cc
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.3
 	github.com/operator-framework/operator-sdk v0.18.1
-	github.com/prometheus/client_golang v1.5.1
+	github.com/pkg/errors v0.9.1
 	github.com/storageos/go-api v0.0.0-20200311150117-c68d7a4607f7
 	github.com/storageos/go-api/v2 v2.3.0
 	k8s.io/api v0.18.4

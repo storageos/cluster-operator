@@ -519,8 +519,6 @@ spec:
                             fieldPath: metadata.namespace
                       - name: OPERATOR_NAME
                         value: storageos-cluster-operator
-                      - name: DISABLE_SCHEDULER_WEBHOOK
-                        value: "false"
                     image: storageos/cluster-operator:test
                     imagePullPolicy: IfNotPresent
                     name: storageos-cluster-operator
@@ -529,8 +527,6 @@ spec:
                         name: metrics
                       - containerPort: 8686
                         name: operatormetrics
-                      - containerPort: 5720
-                        name: podschedwebhook
                     resources: {}
                 serviceAccountName: storageoscluster-operator-sa
                 tolerations:

@@ -87,7 +87,7 @@ func (s *Deployment) createRoleForKeyMgmt() error {
 		{
 			APIGroups: []string{""},
 			Resources: []string{"secrets"},
-			Verbs:     []string{"get", "list", "create", "delete"},
+			Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 		},
 	}
 	return s.k8sResourceManager.Role(KeyManagementRoleName, s.stos.Spec.GetResourceNS(), nil, rules).Create()
@@ -142,6 +142,16 @@ func (s *Deployment) createClusterRoleForAPIManager() error {
 		{
 			APIGroups: []string{"storage.k8s.io"},
 			Resources: []string{"volumeattachments"},
+			Verbs:     []string{"get", "list", "watch", "update", "patch", "delete"},
+		},
+		{
+			APIGroups: []string{"storage.k8s.io"},
+			Resources: []string{"storageclasses"},
+			Verbs:     []string{"get", "list", "watch"},
+		},
+		{
+			APIGroups: []string{"admissionregistration.k8s.io"},
+			Resources: []string{"mutatingwebhookconfigurations"},
 			Verbs:     []string{"get", "list", "watch", "update", "patch", "delete"},
 		},
 	}
@@ -379,6 +389,11 @@ func (s *Deployment) createRoleBindingForKeyMgmt() error {
 		{
 			Kind:      "ServiceAccount",
 			Name:      DaemonsetSA,
+			Namespace: s.stos.Spec.GetResourceNS(),
+		},
+		{
+			Kind:      "ServiceAccount",
+			Name:      APIManagerSA,
 			Namespace: s.stos.Spec.GetResourceNS(),
 		},
 	}

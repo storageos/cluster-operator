@@ -8,6 +8,7 @@ import (
 
 	"github.com/blang/semver"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -75,7 +76,7 @@ func PodSchedulerAdmissionControllerTest(t *testing.T, ctx *framework.Context) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: scName1,
 					},
-					Provisioner: storageos.CSIProvisionerName,
+					Provisioner: storageos.StorageOSProvisionerName,
 				},
 			},
 			pvcs: []*corev1.PersistentVolumeClaim{
@@ -193,7 +194,7 @@ func PodSchedulerAdmissionControllerTest(t *testing.T, ctx *framework.Context) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: scName1,
 					},
-					Provisioner: storageos.CSIProvisionerName,
+					Provisioner: storageos.StorageOSProvisionerName,
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -285,7 +286,7 @@ func PodSchedulerAdmissionControllerTest(t *testing.T, ctx *framework.Context) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: scName1,
 					},
-					Provisioner: storageos.CSIProvisionerName,
+					Provisioner: storageos.StorageOSProvisionerName,
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -382,7 +383,7 @@ func PodSchedulerAdmissionControllerTest(t *testing.T, ctx *framework.Context) {
 							"storageclass.kubernetes.io/is-default-class": "true",
 						},
 					},
-					Provisioner: storageos.CSIProvisionerName,
+					Provisioner: storageos.StorageOSProvisionerName,
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -468,9 +469,6 @@ func PodSchedulerAdmissionControllerTest(t *testing.T, ctx *framework.Context) {
 		},
 	}
 
-	// Provide some time for StorageOS initialization to be complete.
-	time.Sleep(15 * time.Second)
-
 	for _, tt := range tests {
 		var tt = tt
 		t.Run(tt.testname, func(t *testing.T) {
@@ -542,6 +540,14 @@ func PodSchedulerAdmissionControllerTest(t *testing.T, ctx *framework.Context) {
 			}
 			if pod.Spec.SchedulerName != tt.wantSchedulerName {
 				t.Errorf("unexpected scheduler name:\n\t(WNT) %s\n\t(GOT) %s", tt.wantSchedulerName, pod.Spec.SchedulerName)
+			}
+
+			if t.Failed() {
+				logs, err := GetAPIManagerLogs()
+				if err != nil {
+					t.Error(errors.Wrap(err, "failed to fetch logs"))
+				}
+				t.Log(logs)
 			}
 		})
 	}
