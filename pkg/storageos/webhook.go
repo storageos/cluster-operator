@@ -22,8 +22,13 @@ const (
 	webhookPort       int32 = 443
 	webhookTargetPort int32 = 9443
 
-	// webhookPodMutatorName is the name of the webhook configuration
+	mutatePodPath = "/mutate-pods"
+	mutatePVCPath = "/mutate-pvcs"
+
+	// webhookPodMutatorName and webhookPVCMutatorName are the names of the
+	// webhooks.
 	webhookPodMutatorName = "pod-mutator.storageos.com"
+	webhookPVCMutatorName = "pvc-mutator.storageos.com"
 )
 
 // createWebhookConfiguration creates the webhook service and configuration.
@@ -60,45 +65,58 @@ func (s Deployment) createWebhookService() error {
 // webhooks.  The configuration will be updated by the api-manager to include
 // the CA cert bundle.
 func (s Deployment) createMutatingWebhookConfiguration() error {
-	failurePolicy := admissionv1.Ignore
-	matchPolicy := admissionv1.Exact
-	sideEffects := admissionv1.SideEffectClassNoneOnDryRun
-	svcPort := webhookPort
 	scopeAll := admissionv1.AllScopes
-	path := "/mutate-pods"
-
 	webhooks := []admissionv1.MutatingWebhook{
-		{
-			Name: webhookPodMutatorName,
-			ClientConfig: admissionv1.WebhookClientConfig{
-				Service: &admissionv1.ServiceReference{
-					Name:      WebhookServiceName,
-					Namespace: s.stos.Spec.GetResourceNS(),
-					Port:      &svcPort,
-					Path:      &path,
+		s.mutatingWebhookConfiguration(webhookPodMutatorName, webhookPort, mutatePodPath, []admissionv1.RuleWithOperations{
+			{
+				Operations: []admissionv1.OperationType{admissionv1.Create},
+				Rule: admissionv1.Rule{
+					APIGroups:   []string{""},
+					APIVersions: []string{"v1"},
+					Resources:   []string{"pods"},
+					Scope:       &scopeAll,
 				},
 			},
-			Rules: []admissionv1.RuleWithOperations{
-				{
-					Operations: []admissionv1.OperationType{admissionv1.Create},
-					Rule: admissionv1.Rule{
-						APIGroups:   []string{""},
-						APIVersions: []string{"v1"},
-						Resources:   []string{"pods"},
-						Scope:       &scopeAll,
-					},
+		}),
+		s.mutatingWebhookConfiguration(webhookPVCMutatorName, webhookPort, mutatePVCPath, []admissionv1.RuleWithOperations{
+			{
+				Operations: []admissionv1.OperationType{admissionv1.Create},
+				Rule: admissionv1.Rule{
+					APIGroups:   []string{""},
+					APIVersions: []string{"v1"},
+					Resources:   []string{"persistentvolumeclaims"},
+					Scope:       &scopeAll,
 				},
 			},
-			FailurePolicy:           &failurePolicy,
-			MatchPolicy:             &matchPolicy,
-			NamespaceSelector:       &metav1.LabelSelector{},
-			SideEffects:             &sideEffects,
-			AdmissionReviewVersions: []string{"v1"},
-		},
+		}),
 	}
 	labels := podLabelsForAPIManager(s.stos.Name)
 
 	return s.k8sResourceManager.MutatingWebhookConfiguration(MutatingWebhookConfigName, labels, webhooks).Create()
+}
+
+func (s Deployment) mutatingWebhookConfiguration(name string, port int32, path string, rules []admissionv1.RuleWithOperations) admissionv1.MutatingWebhook {
+	failurePolicy := admissionv1.Ignore
+	matchPolicy := admissionv1.Equivalent
+	sideEffects := admissionv1.SideEffectClassNoneOnDryRun
+
+	return admissionv1.MutatingWebhook{
+		Name: name,
+		ClientConfig: admissionv1.WebhookClientConfig{
+			Service: &admissionv1.ServiceReference{
+				Name:      WebhookServiceName,
+				Namespace: s.stos.Spec.GetResourceNS(),
+				Port:      &port,
+				Path:      &path,
+			},
+		},
+		Rules:                   rules,
+		FailurePolicy:           &failurePolicy,
+		MatchPolicy:             &matchPolicy,
+		NamespaceSelector:       &metav1.LabelSelector{},
+		SideEffects:             &sideEffects,
+		AdmissionReviewVersions: []string{"v1"},
+	}
 }
 
 // deleteWebhookConfiguration deletes the webhook service and configuration.

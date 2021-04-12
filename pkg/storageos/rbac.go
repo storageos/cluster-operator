@@ -103,6 +103,7 @@ func (s *Deployment) createClusterRoleForAPIManager() error {
 				"endpoints",
 				"services",
 				"configmaps",
+				"secrets",
 			},
 			Verbs: []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 		},
