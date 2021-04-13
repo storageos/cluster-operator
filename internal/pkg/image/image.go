@@ -9,7 +9,7 @@ const (
 	CSIv1ClusterDriverRegistrarContainerImage = "quay.io/k8scsi/csi-cluster-driver-registrar:v1.0.1"
 	CSIv1NodeDriverRegistrarContainerImage    = "quay.io/k8scsi/csi-node-driver-registrar:v1.2.0"
 	CSIv1ExternalProvisionerContainerImageV1  = "storageos/csi-provisioner:v1.4.0"
-	CSIv1ExternalProvisionerContainerImageV2  = "storageos/csi-provisioner:v1.6.0-patched"
+	CSIv1ExternalProvisionerContainerImageV2  = "storageos/csi-provisioner:v2.1.1-patched"
 	CSIv1ExternalAttacherContainerImage       = "quay.io/k8scsi/csi-attacher:v1.2.1"
 	CSIv1ExternalAttacherContainerImageV2     = "quay.io/k8scsi/csi-attacher:v2.2.0"
 	CSIv1ExternalAttacherContainerImageV3     = "quay.io/k8scsi/csi-attacher:v3.1.0"
