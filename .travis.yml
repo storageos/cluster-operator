@@ -52,14 +52,24 @@ jobs:
         - "INSTALL_METHOD=none"
       name: KinD (k8s-1.19)
       before_script:
-        - docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS"
+        - |
+          if [ -v "$REGISTRY_USER" ] && [ -v "$REGISTRY_PASS" ]; then
+            docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS";
+          else
+            echo "Docker credentials not set. Skipping docker log in...";
+          fi
       script: ./test/e2e.sh $INSTALL_METHOD
     - stage: deploy
       go: "1.14"
       sudo: required
       name: Publish Container Image
       before_script:
-        - docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS"
+        - |
+          if [ -v "$REGISTRY_USER" ] && [ -v "$REGISTRY_PASS" ]; then
+            docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS";
+          else
+            echo "Docker credentials not set. Skipping docker log in...";
+          fi
       script:
         - make operator-image
         - OPERATOR_IMAGE=storageos/cluster-operator:$TRAVIS_TAG make install-manifest
