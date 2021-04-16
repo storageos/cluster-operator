@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/storageos/cluster-operator/pkg/util"
 	"github.com/storageos/cluster-operator/pkg/util/k8s/resource"
+	"github.com/storageos/cluster-operator/pkg/util/version"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -301,29 +301,29 @@ func (s *Deployment) addNodeContainerResources(nodeContainer *corev1.Container) 
 // kubeletPluginsWatcherSupported checks if the given version of k8s supports
 // KubeletPluginsWatcher. This is used to change the CSI driver registry setup
 // based on the kubernetes cluster setup.
-func kubeletPluginsWatcherSupported(version string) bool {
+func kubeletPluginsWatcherSupported(haveVersion string) bool {
 	// Supported if v1.12.0 or above.
-	return util.VersionSupported(version, "1.12.0")
+	return version.IsSupported(haveVersion, "1.12.0")
 }
 
 // CSIV1Supported returns true for k8s versions that support CSI v1.
-func CSIV1Supported(version string) bool {
-	return util.VersionSupported(version, "1.13.0")
+func CSIV1Supported(haveVersion string) bool {
+	return version.IsSupported(haveVersion, "1.13.0")
 }
 
 // CSIExternalAttacherV2Supported returns true for k8s 1.14+.
-func CSIExternalAttacherV2Supported(version string) bool {
-	return util.VersionSupported(version, "1.14.0")
+func CSIExternalAttacherV2Supported(haveVersion string) bool {
+	return version.IsSupported(haveVersion, "1.14.0")
 }
 
 // CSIExternalAttacherV3Supported returns true for k8s 1.17+.
-func CSIExternalAttacherV3Supported(version string) bool {
-	return util.VersionSupported(version, "1.17.0")
+func CSIExternalAttacherV3Supported(haveVersion string) bool {
+	return version.IsSupported(haveVersion, "1.17.0")
 }
 
 // CSIExternalResizerSupported returns true for k8s 1.16+.
-func CSIExternalResizerSupported(version string) bool {
-	return util.VersionSupported(version, "1.16.0")
+func CSIExternalResizerSupported(haveVersion string) bool {
+	return version.IsSupported(haveVersion, "1.16.0")
 }
 
 // func addOwnerRefToObject(obj metav1.Object, ownerRef metav1.OwnerReference) {

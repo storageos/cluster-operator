@@ -1,16 +1,16 @@
-package util
+package version
 
 import (
 	"github.com/blang/semver"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-var log = logf.Log.WithName("storageos.util")
+var log = logf.Log.WithName("storageos").WithName("version")
 
-// VersionSupported takes two versions, current version (haveVersion) and a
+// IsSupported takes two versions, current version (haveVersion) and a
 // minimum requirement version (wantVersion) and checks if the current version
 // is supported by comparing it with the minimum requirement.
-func VersionSupported(haveVersion, wantVersion string) bool {
+func IsSupported(haveVersion, wantVersion string) bool {
 	supportedVersion, err := semver.Parse(wantVersion)
 	if err != nil {
 		log.Info("Failed to parse version", "error", err, "want", wantVersion)

@@ -1,8 +1,8 @@
-package util
+package version
 
 import "testing"
 
-func TestVersionSupported(t *testing.T) {
+func TestIsSupported(t *testing.T) {
 	cases := map[string]struct {
 		haveVersion string
 		wantVersion string
@@ -47,7 +47,7 @@ func TestVersionSupported(t *testing.T) {
 	for name, data := range cases {
 		data := data
 		t.Run(name, func(t *testing.T) {
-			actual := VersionSupported(data.haveVersion, data.wantVersion)
+			actual := IsSupported(data.haveVersion, data.wantVersion)
 			if actual != data.expected {
 				t.Errorf("unexpected version check result:\n\t(WNT) %t\n\t(GOT) %t", data.expected, actual)
 			}

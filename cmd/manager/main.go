@@ -26,8 +26,8 @@ import (
 
 	"github.com/storageos/cluster-operator/pkg/apis"
 	"github.com/storageos/cluster-operator/pkg/controller"
-	"github.com/storageos/cluster-operator/pkg/util"
 	"github.com/storageos/cluster-operator/pkg/util/k8sutil"
+	"github.com/storageos/cluster-operator/pkg/util/version"
 )
 
 const supportedMinVersion = "1.17.0"
@@ -41,7 +41,7 @@ var (
 )
 
 func main() {
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	logf.SetLogger(zap.Logger(true))
 
 	log.WithValues(
 		"goversion", runtime.Version(),
@@ -179,10 +179,10 @@ func serveCRMetrics(cfg *rest.Config) error {
 func versionSupported(config *rest.Config) (bool, error) {
 	client := kubernetes.NewForConfigOrDie(config)
 	kops := k8sutil.NewK8SOps(client, log)
-	version, err := kops.GetK8SVersion()
+	haveVersion, err := kops.GetK8SVersion()
 	if err != nil {
 		return false, err
 	}
 
-	return util.VersionSupported(version, supportedMinVersion), nil
+	return version.IsSupported(haveVersion, supportedMinVersion), nil
 }
