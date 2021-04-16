@@ -8,13 +8,14 @@ import (
 	"runtime"
 
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	oputils "github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -25,7 +26,11 @@ import (
 
 	"github.com/storageos/cluster-operator/pkg/apis"
 	"github.com/storageos/cluster-operator/pkg/controller"
+	"github.com/storageos/cluster-operator/pkg/util/k8sutil"
+	"github.com/storageos/cluster-operator/pkg/util/version"
 )
+
+const supportedMinVersion = "1.17.0"
 
 var log = logf.Log.WithName("storageos.setup")
 
@@ -54,6 +59,13 @@ func main() {
 	cfg, err := config.GetConfig()
 	if err != nil {
 		fatal(err)
+	}
+
+	// Validate Kubernetes version
+	if supported, err := versionSupported(cfg); err != nil {
+		fatal(err)
+	} else if !supported {
+		fatal(fmt.Errorf("current version of Kubernetes is lower than required minimum version [%s]", supportedMinVersion))
 	}
 
 	ctx := context.TODO()
@@ -113,7 +125,7 @@ func main() {
 		services = append(services, service)
 	}
 
-	operatorNs, err := k8sutil.GetOperatorNamespace()
+	operatorNs, err := oputils.GetOperatorNamespace()
 	if err != nil {
 		log.Info("Could not get the operator namespace, not creating ServiceMonitor", "error", err.Error())
 	} else {
@@ -145,12 +157,12 @@ func fatal(err error) {
 func serveCRMetrics(cfg *rest.Config) error {
 	// Below function returns filtered operator/CustomResource specific GVKs.
 	// For more control override the below GVK list with your own custom logic.
-	filteredGVK, err := k8sutil.GetGVKsFromAddToScheme(apis.AddToScheme)
+	filteredGVK, err := oputils.GetGVKsFromAddToScheme(apis.AddToScheme)
 	if err != nil {
 		return err
 	}
 	// Get the namespace the operator is currently deployed in.
-	operatorNs, err := k8sutil.GetOperatorNamespace()
+	operatorNs, err := oputils.GetOperatorNamespace()
 	if err != nil {
 		return err
 	}
@@ -162,4 +174,15 @@ func serveCRMetrics(cfg *rest.Config) error {
 		return err
 	}
 	return nil
+}
+
+func versionSupported(config *rest.Config) (bool, error) {
+	client := kubernetes.NewForConfigOrDie(config)
+	kops := k8sutil.NewK8SOps(client, log)
+	haveVersion, err := kops.GetK8SVersion()
+	if err != nil {
+		return false, err
+	}
+
+	return version.IsSupported(haveVersion, supportedMinVersion), nil
 }

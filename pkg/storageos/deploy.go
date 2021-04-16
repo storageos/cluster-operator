@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blang/semver"
 	"github.com/storageos/cluster-operator/pkg/util/k8s/resource"
+	"github.com/storageos/cluster-operator/pkg/util/version"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const (
@@ -95,8 +94,6 @@ const (
 	// node condition.
 	podTolerationSeconds int64 = 30
 )
-
-var log = logf.Log.WithName("storageos.cluster")
 
 // Deploy deploys storageos by creating all the resources needed to run storageos.
 func (s *Deployment) Deploy() error {
@@ -304,51 +301,29 @@ func (s *Deployment) addNodeContainerResources(nodeContainer *corev1.Container) 
 // kubeletPluginsWatcherSupported checks if the given version of k8s supports
 // KubeletPluginsWatcher. This is used to change the CSI driver registry setup
 // based on the kubernetes cluster setup.
-func kubeletPluginsWatcherSupported(version string) bool {
+func kubeletPluginsWatcherSupported(haveVersion string) bool {
 	// Supported if v1.12.0 or above.
-	return versionSupported(version, "1.12.0")
+	return version.IsSupported(haveVersion, "1.12.0")
 }
 
 // CSIV1Supported returns true for k8s versions that support CSI v1.
-func CSIV1Supported(version string) bool {
-	return versionSupported(version, "1.13.0")
+func CSIV1Supported(haveVersion string) bool {
+	return version.IsSupported(haveVersion, "1.13.0")
 }
 
 // CSIExternalAttacherV2Supported returns true for k8s 1.14+.
-func CSIExternalAttacherV2Supported(version string) bool {
-	return versionSupported(version, "1.14.0")
+func CSIExternalAttacherV2Supported(haveVersion string) bool {
+	return version.IsSupported(haveVersion, "1.14.0")
 }
 
 // CSIExternalAttacherV3Supported returns true for k8s 1.17+.
-func CSIExternalAttacherV3Supported(version string) bool {
-	return versionSupported(version, "1.17.0")
+func CSIExternalAttacherV3Supported(haveVersion string) bool {
+	return version.IsSupported(haveVersion, "1.17.0")
 }
 
 // CSIExternalResizerSupported returns true for k8s 1.16+.
-func CSIExternalResizerSupported(version string) bool {
-	return versionSupported(version, "1.16.0")
-}
-
-// versionSupported takes two versions, current version (haveVersion) and a
-// minimum requirement version (wantVersion) and checks if the current version
-// is supported by comparing it with the minimum requirement.
-func versionSupported(haveVersion, wantVersion string) bool {
-	supportedVersion, err := semver.Parse(wantVersion)
-	if err != nil {
-		log.Info("Failed to parse version", "error", err, "want", wantVersion)
-		return false
-	}
-
-	currentVersion, err := semver.Parse(haveVersion)
-	if err != nil {
-		log.Info("Failed to parse version", "error", err, "have", haveVersion)
-		return false
-	}
-
-	if currentVersion.Compare(supportedVersion) >= 0 {
-		return true
-	}
-	return false
+func CSIExternalResizerSupported(haveVersion string) bool {
+	return version.IsSupported(haveVersion, "1.16.0")
 }
 
 // func addOwnerRefToObject(obj metav1.Object, ownerRef metav1.OwnerReference) {
