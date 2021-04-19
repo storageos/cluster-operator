@@ -194,7 +194,7 @@ func (s *Deployment) addCSI(podSpec *corev1.PodSpec) {
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Args: []string{
 					"--csi-address=$(ADDRESS)",
-					"--connection-timeout=3s",
+					"--probe-timeout=3s",
 				},
 				Env: []corev1.EnvVar{
 					{
