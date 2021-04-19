@@ -53,7 +53,7 @@ jobs:
       name: KinD (k8s-1.19)
       before_script:
         - |
-          if [ -v "$REGISTRY_USER" ] && [ -v "$REGISTRY_PASS" ]; then
+          if [ -n "$REGISTRY_USER" ] && [ -n "$REGISTRY_PASS" ]; then
             docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS";
           else
             echo "Docker credentials not set. Skipping docker log in...";
@@ -65,7 +65,7 @@ jobs:
       name: Publish Container Image
       before_script:
         - |
-          if [ -v "$REGISTRY_USER" ] && [ -v "$REGISTRY_PASS" ]; then
+          if [ -n "$REGISTRY_USER" ] && [ -n "$REGISTRY_PASS" ]; then
             docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS";
           else
             echo "Docker credentials not set. Skipping docker log in...";
