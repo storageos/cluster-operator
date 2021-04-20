@@ -150,7 +150,11 @@ func (r ResourceManager) combineLabels(labels map[string]string) map[string]stri
 	if labels == nil {
 		return r.labels
 	}
-	outLabels := r.labels
+	// Create a new map to avoid updaing r.labels with combined labels.
+	outLabels := make(map[string]string)
+	for k, v := range r.labels {
+		outLabels[k] = v
+	}
 	for k, v := range labels {
 		outLabels[k] = v
 	}

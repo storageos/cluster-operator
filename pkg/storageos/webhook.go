@@ -17,6 +17,10 @@ const (
 	// for the webhook.
 	WebhookServiceName = "storageos-webhook"
 
+	// WebhookServiceFor is the webhook service's value for the
+	// app.kubernetes.io/service-for label.
+	WebhookServiceFor = "storageos-webhook-server"
+
 	// ServicePort configuration.
 	webhookPortName         = "webhooks"
 	webhookPort       int32 = 443
@@ -56,7 +60,11 @@ func (s Deployment) createWebhookService() error {
 			k8s.AppComponent: APIManagerName,
 		},
 	}
-	labels := podLabelsForAPIManager(s.stos.Name)
+	labels := make(map[string]string)
+	for k, v := range podLabelsForAPIManager(s.stos.Name) {
+		labels[k] = v
+	}
+	labels[k8s.ServiceFor] = WebhookServiceFor
 
 	return s.k8sResourceManager.Service(WebhookServiceName, s.stos.Spec.GetResourceNS(), labels, nil, spec).Create()
 }
