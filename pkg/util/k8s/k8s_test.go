@@ -2,9 +2,11 @@ package k8s
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
+	"github.com/storageos/cluster-operator/pkg/util/k8s/resource"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
@@ -16,8 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	"github.com/storageos/cluster-operator/pkg/util/k8s/resource"
 )
 
 // TestResourceManager tests ResourceManager and the resources in the
@@ -245,6 +245,84 @@ func TestResourceManager(t *testing.T) {
 				}
 			} else {
 				t.Errorf("expected %s to not exist", tc.name)
+			}
+		})
+	}
+}
+
+func TestResourceManager_combineLabels(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		base map[string]string
+		add  map[string]string
+		want map[string]string
+	}{
+		{
+			name: "empty",
+		},
+		{
+			name: "empty base",
+			add: map[string]string{
+				"foo": "bar",
+			},
+			want: map[string]string{
+				"foo": "bar",
+			},
+		},
+		{
+			name: "empty added",
+			base: map[string]string{
+				"foo": "bar",
+			},
+			want: map[string]string{
+				"foo": "bar",
+			},
+		},
+		{
+			name: "both not empty",
+			base: map[string]string{
+				"foo": "bar",
+			},
+			add: map[string]string{
+				"baz": "bad",
+			},
+			want: map[string]string{
+				"foo": "bar",
+				"baz": "bad",
+			},
+		},
+		{
+			name: "overwrite",
+			base: map[string]string{
+				"foo": "bar",
+			},
+			add: map[string]string{
+				"foo": "baz",
+			},
+			want: map[string]string{
+				"foo": "baz",
+			},
+		},
+	}
+	for _, tt := range tests {
+		var tt = tt
+		t.Run(tt.name, func(t *testing.T) {
+			r := ResourceManager{
+				client: nil,
+				labels: tt.base,
+			}
+			orig := make(map[string]string)
+			for k, v := range tt.base {
+				orig[k] = v
+			}
+			if got := r.combineLabels(tt.add); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ResourceManager.combineLabels() = %v, want %v", got, tt.want)
+			}
+
+			if len(tt.base) > 0 && !reflect.DeepEqual(tt.base, orig) {
+				t.Errorf("ResourceManager.combineLabels() base labels modified = %v, want %v", tt.base, orig)
 			}
 		})
 	}
