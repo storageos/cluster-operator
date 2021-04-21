@@ -430,6 +430,41 @@ func APIManagerDeploymentTest(t *testing.T, ns string, retryInterval, timeout ti
 	}
 }
 
+// APIManagerWebhookServiceTest checks the api-manager webhook service deployment.
+func APIManagerWebhookServiceTest(t *testing.T, ns string, retryInterval, timeout time.Duration) {
+	f := framework.Global
+	var svc *corev1.Service
+	err := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
+		svc, err = f.KubeClient.CoreV1().Services(ns).Get(context.TODO(), deploy.WebhookServiceName, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+		if svc.Spec.ClusterIP != "" {
+			return true, nil
+		}
+		return false, nil
+	})
+	if err != nil {
+		t.Fatalf("timed out waiting for api-manager webhook service: %v", err)
+	}
+
+	// Check expected labels.
+	got, ok := svc.Labels[k8s.AppComponent]
+	if !ok {
+		t.Errorf("expected label %q not set", k8s.AppComponent)
+	}
+	if ok && got != deploy.APIManagerName {
+		t.Errorf("expected label %q set to %q, want %q", k8s.AppComponent, got, deploy.APIManagerName)
+	}
+	got, ok = svc.Labels[k8s.ServiceFor]
+	if !ok {
+		t.Errorf("expected label %q not set", k8s.ServiceFor)
+	}
+	if ok && got != deploy.WebhookServiceFor {
+		t.Errorf("expected label %q set to %q, want %q", k8s.ServiceFor, got, deploy.WebhookServiceFor)
+	}
+}
+
 // APIManagerMetricsServiceTest checks the api-manager metrics service deployment.
 func APIManagerMetricsServiceTest(t *testing.T, ns string, retryInterval, timeout time.Duration) {
 	f := framework.Global
@@ -455,6 +490,14 @@ func APIManagerMetricsServiceTest(t *testing.T, ns string, retryInterval, timeou
 	}
 	if ok && got != deploy.APIManagerName {
 		t.Errorf("expected label %q set to %q, want %q", k8s.AppComponent, got, deploy.APIManagerName)
+	}
+
+	got, ok = svc.Labels[k8s.ServiceFor]
+	if !ok {
+		t.Errorf("expected label %q not set", k8s.ServiceFor)
+	}
+	if ok && got != deploy.APIManagerName {
+		t.Errorf("expected label %q set to %q, want %q", k8s.ServiceFor, got, deploy.APIManagerName)
 	}
 }
 

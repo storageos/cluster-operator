@@ -185,11 +185,13 @@ func (s Deployment) createAPIManagerMetrics() error {
 		},
 	}
 
-	labels := podLabelsForAPIManager(s.stos.Name)
-	svcLabels := labels
-	svcLabels[k8s.ServiceFor] = APIManagerName
+	labels := make(map[string]string)
+	for k, v := range podLabelsForAPIManager(s.stos.Name) {
+		labels[k] = v
+	}
+	labels[k8s.ServiceFor] = APIManagerName
 
-	if err := s.k8sResourceManager.Service(APIManagerMetricsName, ns, svcLabels, nil, svcSpec).Create(); err != nil {
+	if err := s.k8sResourceManager.Service(APIManagerMetricsName, ns, labels, nil, svcSpec).Create(); err != nil {
 		return err
 	}
 
@@ -206,7 +208,7 @@ func (s Deployment) createAPIManagerMetrics() error {
 	// Wait for service creation.
 	var svc *corev1.Service
 	err = wait.Poll(createPoll, createTimeout, func() (bool, error) {
-		svc, err = s.k8sResourceManager.Service(APIManagerMetricsName, ns, svcLabels, nil, svcSpec).Get()
+		svc, err = s.k8sResourceManager.Service(APIManagerMetricsName, ns, labels, nil, svcSpec).Get()
 		if client.IgnoreNotFound(err) != nil {
 			return false, err
 		}
@@ -230,5 +232,5 @@ func (s Deployment) createAPIManagerMetrics() error {
 	}
 
 	// Create ServiceMonitor resources, but don't error if Prometheus not installed.
-	return s.k8sResourceManager.ServiceMonitor(APIManagerMetricsName, ns, labels, nil, svc, smSpec).Create()
+	return s.k8sResourceManager.ServiceMonitor(APIManagerMetricsName, ns, podLabelsForAPIManager(s.stos.Name), nil, svc, smSpec).Create()
 }
