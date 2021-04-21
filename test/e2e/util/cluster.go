@@ -12,13 +12,16 @@ import (
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
+	admissionv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/storageos/cluster-operator/pkg/apis"
@@ -97,9 +100,61 @@ func SetupOperator(t *testing.T, ctx *framework.Context) {
 
 	f := framework.Global
 
+	// Create webhook resources to test migration. These resources should be
+	// deleted by the operator at startup.
+	oldWebhookResourceName := "storageos-scheduler-webhook"
+
+	whc := &admissionv1.MutatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: oldWebhookResourceName,
+		},
+	}
+	if err := f.Client.Create(context.TODO(), whc, nil); err != nil {
+		t.Errorf("failed to create webhook config: %v", err)
+	}
+
+	// Valid spec.ports is required to create a real service.
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      oldWebhookResourceName,
+			Namespace: namespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "foo",
+					Protocol:   "TCP",
+					Port:       int32(666),
+					TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: int32(777)},
+				},
+			},
+		},
+	}
+	if err := f.Client.Create(context.TODO(), svc, nil); err != nil {
+		t.Errorf("failed to create webhook service: %v", err)
+	}
+
+	// Deploy the operator.
 	err = e2eutil.WaitForDeployment(t, f.KubeClient, namespace, "storageos-cluster-operator", 1, RetryInterval, Timeout)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// Check if the operator delete the webhook resources.
+	whcKey, keyErr := client.ObjectKeyFromObject(whc)
+	if keyErr != nil {
+		t.Errorf("failed to get object key from wehbook config: %v", keyErr)
+	}
+	if getErr := f.Client.Get(context.TODO(), whcKey, whc); getErr == nil {
+		t.Error("webhook configuration still exists after running migration")
+	}
+
+	svcKey, keyErr := client.ObjectKeyFromObject(svc)
+	if keyErr != nil {
+		t.Errorf("failed to get object key from wehbook service: %v", keyErr)
+	}
+	if getErr := f.Client.Get(context.TODO(), svcKey, svc); getErr == nil {
+		t.Error("webhook service still exists after running migration")
 	}
 }
 

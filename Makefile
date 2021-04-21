@@ -118,8 +118,8 @@ metadata-update: yq ## Update all the OLM metadata files.
 # Run operator locally, from outside of the k8s cluster.
 local-run: upgrader ## Run the opereator locally, out of k8s.
 	OPERATOR_NAME=cluster-operator \
-		      $(OPERATOR_SDK) up local
-	# OPERATOR_NAME=cluster-operator operator-sdk up local --go-ldflags "$(LDFLAGS)"
+		      $(OPERATOR_SDK) run --local
+	# OPERATOR_NAME=cluster-operator operator-sdk run --local --go-ldflags "$(LDFLAGS)"
 
 lint: golangci-lint ## Lint the code.
 	$(GOLANGCI_LINT) run --timeout 3m
