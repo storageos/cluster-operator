@@ -124,6 +124,9 @@ func TestClusterCSINodeV2(t *testing.T) {
 	t.Run("APIManagerMetricsServiceMonitorTest", func(t *testing.T) {
 		testutil.APIManagerMetricsServiceMonitorTest(t, resourceNS, testutil.RetryInterval, testutil.Timeout)
 	})
+	t.Run("APIManagerWebhookServiceTest", func(t *testing.T) {
+		testutil.APIManagerMetricsServiceTest(t, resourceNS, testutil.RetryInterval, testutil.Timeout)
+	})
 
 	// Test pod scheduler mutating admission contoller.
 	t.Run("PodSchedulerAdmissionControllerTest", func(t *testing.T) {

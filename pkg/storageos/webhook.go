@@ -26,6 +26,8 @@ const (
 	webhookPort       int32 = 443
 	webhookTargetPort int32 = 9443
 
+	// mutatePodPath and mutatePVCPath are the URL paths of the mutator
+	// services.
 	mutatePodPath = "/mutate-pods"
 	mutatePVCPath = "/mutate-pvcs"
 
