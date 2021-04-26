@@ -327,6 +327,11 @@ func (s *Deployment) createClusterRoleForResizer() error {
 		},
 		{
 			APIGroups: []string{""},
+			Resources: []string{"pods"},
+			Verbs:     []string{"get", "list", "watch"},
+		},
+		{
+			APIGroups: []string{""},
 			Resources: []string{"events"},
 			Verbs:     []string{"list", "watch", "create", "update", "patch"},
 		},
