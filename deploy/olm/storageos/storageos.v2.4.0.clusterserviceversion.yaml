@@ -7,11 +7,11 @@ metadata:
     capabilities: Deep Insights
     categories: Storage
     description: Cloud-native, persistent storage for containers.
-    containerImage: registry.connect.redhat.com/storageos/cluster-operator:v2.4.0
+    containerImage: storageos/cluster-operator:v2.4.0
     repository: https://github.com/storageos/cluster-operator
     createdAt: "2021-04-26T13:08:43Z"
     support: StorageOS, Inc
-    certified: "true"
+    certified: "false"
     operators.operatorframework.io/internal-objects: |-
       [
         "jobs.storageos.com",
@@ -25,57 +25,13 @@ metadata:
           "kind": "StorageOSCluster",
           "metadata": {
             "name": "example-storageos",
-            "namespace": "openshift-operators"
+            "namespace": "default"
           },
           "spec": {
-            "namespace": "kube-system",
             "secretRefName": "storageos-api",
-            "secretRefNamespace": "openshift-operators",
-            "k8sDistro": "openshift",
-            "csi": {
-              "enable": true,
-              "deploymentStrategy": "deployment"
-            }
-          }
-        },
-        {
-          "apiVersion": "storageos.com/v1",
-          "kind": "Job",
-          "metadata": {
-            "name": "example-job",
-            "namespace": "default"
-          },
-          "spec": {
-            "image": "registry.connect.redhat.com/storageos/cluster-operator:latest",
-            "args": ["/var/lib/storageos"],
-            "mountPath": "/var/lib",
-            "hostPath": "/var/lib",
-            "completionWord": "done"
-          }
-        },
-        {
-          "apiVersion": "storageos.com/v1",
-          "kind": "StorageOSUpgrade",
-          "metadata": {
-            "name": "example-upgrade",
-            "namespace": "default"
-          },
-          "spec": {
-            "newImage": "registry.connect.redhat.com/storageos/node:latest"
-          }
-        },
-        {
-          "apiVersion": "storageos.com/v1",
-          "kind": "NFSServer",
-          "metadata": {
-            "name": "example-nfsserver",
-            "namespace": "default"
-          },
-          "spec": {
-            "resources": {
-              "requests": {
-                "storage": "1Gi"
-              }
+            "secretRefNamespace": "default",
+            "kvBackend": {
+              "address": "http://<etcd-node-address>:2379"
             }
           }
         }
@@ -379,7 +335,7 @@ spec:
               - name: storageos-operator
                 command:
                 - cluster-operator
-                image: registry.connect.redhat.com/storageos/cluster-operator:v2.4.0
+                image: storageos/cluster-operator:v2.4.0
                 env:
                 - name: RELATED_IMAGE_STORAGEOS_NODE
                   value: ""
@@ -659,7 +615,7 @@ spec:
       - kind: Job
         version: batch/v1
       specDescriptors:
-      - description: The StorageOS Node image to upgrade to. e.g. `registry.connect.redhat.com/storageos/node:latest`
+      - description: The StorageOS Node image to upgrade to. e.g. `storageos/node:latest`
         displayName: New Image
         path: newImage
       statusDescriptors:

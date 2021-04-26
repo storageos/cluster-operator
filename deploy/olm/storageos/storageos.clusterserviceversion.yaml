@@ -1,15 +1,15 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
-  name: storageosoperator.v2.3.4
+  name: storageosoperator.v2.4.0
   namespace: placeholder
   annotations:
     capabilities: Deep Insights
     categories: Storage
     description: Cloud-native, persistent storage for containers.
-    containerImage: storageos/cluster-operator:v2.3.4
+    containerImage: storageos/cluster-operator:v2.4.0
     repository: https://github.com/storageos/cluster-operator
-    createdAt: "2021-03-23T18:12:02Z"
+    createdAt: "2021-04-26T13:08:43Z"
     support: StorageOS, Inc
     certified: "false"
     operators.operatorframework.io/internal-objects: |-
@@ -116,7 +116,7 @@ spec:
   - storage
   - persistent storage
   - open source
-  version: 2.3.4
+  version: 2.4.0
   minKubeVersion: 1.13.0
   maturity: stable
   maintainers:
@@ -335,7 +335,7 @@ spec:
               - name: storageos-operator
                 command:
                 - cluster-operator
-                image: storageos/cluster-operator:v2.3.4
+                image: storageos/cluster-operator:v2.4.0
                 env:
                 - name: RELATED_IMAGE_STORAGEOS_NODE
                   value: ""
@@ -383,15 +383,11 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.namespace
-                - name: DISABLE_SCHEDULER_WEBHOOK
-                  value: "false"
                 ports:
                 - containerPort: 8383
                   name: metrics
                 - containerPort: 8686
                   name: operatormetrics
-                - containerPort: 5720
-                  name: podschedwebhook
   customresourcedefinitions:
     owned:
     - name: storageosclusters.storageos.com
@@ -678,4 +674,3 @@ spec:
           with the NFS Server. If not specified, a new PVC is provisioned and used.
         displayName: Persistent Volume Claim
         path: persistentVolumeClaim
-  replaces: storageosoperator.v2.3.3
