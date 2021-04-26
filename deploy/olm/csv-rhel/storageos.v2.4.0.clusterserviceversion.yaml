@@ -127,15 +127,15 @@ spec:
 
     * **Thin provisioning** - Only consume the space you need in a storage pool.
 
-    * **Data reduction** - transparent inline data compression to reduce the amount of storage used in a backing store as well as reducing the network bandwidth requirements for replication.
+    * **Data reduction** - Transparent inline data compression to reduce the amount of storage used in a backing store as well as reducing the network bandwidth requirements for replication.
 
     * **Flexible configuration** - all features can be enabled per volume, using PVC and StorageClass labels.
 
-    * **Multi-tenancy** - fully supports standard Namespace and RBAC methods.
+    * **Multi-tenancy** - fully supports standard Namespace and RBAC methods
 
-    * **Observability & instrumentation** - log streams for observability and Prometheus support for instrumentation.
+    * **Observability & instrumentation** - Log streams for observability and Prometheus support for instrumentation.
 
-    * **Deployment flexibility** - scale up or scale out storage based on application requirements. Works with any infrastructure – on-premises, VM, bare metal or cloud.
+    * **Deployment flexibility** - Scale up or scale out storage based on application requirements. Works with any infrastructure – on-premises, VM, bare metal or cloud.
 
     ## Prerequisites
 

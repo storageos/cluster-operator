@@ -17,7 +17,7 @@ OPERATOR_NAME = storageosoperator
 BUNDLE_DIR = $(PWD)/bundle
 # Current bundle version is the next release version.
 # Bundle generation requires the current version number of the operator.
-CURRENT_BUNDLE_VERSION = "2.3.4"
+CURRENT_BUNDLE_VERSION = "2.4.0"
 SERVICE_ACCOUNT_NAME = $(shell $(YQ3) r deploy/operator.yaml spec.template.spec.serviceAccountName)
 SERVICE_ACCOUNT_PATH = "spec.install.spec.clusterPermissions[0].serviceAccountName"
 CSV_FILE = "bundle/manifests/storageosoperator.clusterserviceversion.yaml"
