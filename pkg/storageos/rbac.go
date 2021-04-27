@@ -29,8 +29,8 @@ const (
 	OpenShiftSCCClusterRoleName    = "storageos:openshift-scc"
 	OpenShiftSCCClusterBindingName = "storageos:openshift-scc"
 
-	KeyManagementRoleName    = "storageos:key-management"
-	KeyManagementBindingName = "storageos:key-management"
+	KeyManagementClusterRoleName    = "storageos:key-management"
+	KeyManagementClusterBindingName = "storageos:key-management"
 
 	FencingClusterRoleName    = "storageos:pod-fencer"
 	FencingClusterBindingName = "storageos:pod-fencer"
@@ -82,7 +82,7 @@ func (s *Deployment) createServiceAccountForAPIManager() error {
 	return s.k8sResourceManager.ServiceAccount(APIManagerSA, s.stos.Spec.GetResourceNS(), nil).Create()
 }
 
-func (s *Deployment) createRoleForKeyMgmt() error {
+func (s *Deployment) createClusterRoleForKeyMgmt() error {
 	rules := []rbacv1.PolicyRule{
 		{
 			APIGroups: []string{""},
@@ -90,7 +90,7 @@ func (s *Deployment) createRoleForKeyMgmt() error {
 			Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 		},
 	}
-	return s.k8sResourceManager.Role(KeyManagementRoleName, s.stos.Spec.GetResourceNS(), nil, rules).Create()
+	return s.k8sResourceManager.ClusterRole(KeyManagementClusterRoleName, nil, rules).Create()
 }
 
 // createClusterRoleForAPIManager creates a role with all the permissions for
@@ -389,7 +389,7 @@ func (s *Deployment) createClusterRoleForScheduler() error {
 	return s.k8sResourceManager.ClusterRole(SchedulerClusterRoleName, nil, rules).Create()
 }
 
-func (s *Deployment) createRoleBindingForKeyMgmt() error {
+func (s *Deployment) createClusterRoleBindingForKeyMgmt() error {
 	subjects := []rbacv1.Subject{
 		{
 			Kind:      "ServiceAccount",
@@ -403,11 +403,11 @@ func (s *Deployment) createRoleBindingForKeyMgmt() error {
 		},
 	}
 	roleRef := &rbacv1.RoleRef{
-		Kind:     "Role",
-		Name:     KeyManagementRoleName,
+		Kind:     "ClusterRole",
+		Name:     KeyManagementClusterRoleName,
 		APIGroup: "rbac.authorization.k8s.io",
 	}
-	return s.k8sResourceManager.RoleBinding(KeyManagementBindingName, s.stos.Spec.GetResourceNS(), nil, subjects, roleRef).Create()
+	return s.k8sResourceManager.ClusterRoleBinding(KeyManagementClusterBindingName, nil, subjects, roleRef).Create()
 }
 
 // createClusterRoleBindingForAPIManager creates a role binding for api-manager.

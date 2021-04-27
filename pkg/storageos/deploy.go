@@ -109,11 +109,11 @@ func (s *Deployment) Deploy() error {
 		return err
 	}
 
-	if err := s.createRoleForKeyMgmt(); err != nil {
+	if err := s.createClusterRoleForKeyMgmt(); err != nil {
 		return err
 	}
 
-	if err := s.createRoleBindingForKeyMgmt(); err != nil {
+	if err := s.createClusterRoleBindingForKeyMgmt(); err != nil {
 		return err
 	}
 

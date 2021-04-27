@@ -43,11 +43,11 @@ func (s *Deployment) Delete() error {
 		return err
 	}
 
-	if err := s.k8sResourceManager.RoleBinding(KeyManagementBindingName, namespace, nil, nil, nil).Delete(); err != nil {
+	if err := s.k8sResourceManager.ClusterRoleBinding(KeyManagementClusterBindingName, nil, nil, nil).Delete(); err != nil {
 		return err
 	}
 
-	if err := s.k8sResourceManager.Role(KeyManagementRoleName, namespace, nil, nil).Delete(); err != nil {
+	if err := s.k8sResourceManager.ClusterRole(KeyManagementClusterRoleName, nil, nil).Delete(); err != nil {
 		return err
 	}
 
