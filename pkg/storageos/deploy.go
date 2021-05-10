@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/storageos/cluster-operator/pkg/util/k8s/resource"
-	"github.com/storageos/cluster-operator/pkg/util/version"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -39,44 +38,32 @@ const (
 	configmapName   = "storageos-node-config"
 	csiHelperName   = "storageos-csi-helper"
 
-	// tlsSecretType       = "kubernetes.io/tls"
-	// storageosSecretType = "kubernetes.io/storageos"
-
-	defaultFSType                            = "ext4"
-	secretNamespaceKey                       = "adminSecretNamespace"
-	secretNameKey                            = "adminSecretName"
-	apiAddressKey                            = "apiAddress"
-	apiUsernameKey                           = "apiUsername"
-	apiPasswordKey                           = "apiPassword"
-	csiParameterPrefix                       = "csi.storage.k8s.io/"
-	csiProvisionUsernameKey                  = "csiProvisionUsername"
-	csiProvisionPasswordKey                  = "csiProvisionPassword"
-	csiControllerPublishUsernameKey          = "csiControllerPublishUsername"
-	csiControllerPublishPasswordKey          = "csiControllerPublishPassword"
-	csiNodePublishUsernameKey                = "csiNodePublishUsername"
-	csiNodePublishPasswordKey                = "csiNodePublishPassword"
-	csiControllerExpandUsernameKey           = "csiControllerExpandUsername"
-	csiControllerExpandPasswordKey           = "csiControllerExpandPassword"
-	fsType                                   = "fsType"
-	csiV0ProvisionerSecretNameKey            = "csiProvisionerSecretName"
-	csiV0ProvisionerSecretNamespaceKey       = "csiProvisionerSecretNamespace"
-	csiV0ControllerPublishSecretNameKey      = "csiControllerPublishSecretName"
-	csiV0ControllerPublishSecretNamespaceKey = "csiControllerPublishSecretNamespace"
-	csiV0NodePublishSecretNameKey            = "csiNodePublishSecretName"
-	csiV0NodePublishSecretNamespaceKey       = "csiNodePublishSecretNamespace"
-	csiV1FSType                              = csiParameterPrefix + "fstype"
-	csiV1ProvisionerSecretNameKey            = csiParameterPrefix + "provisioner-secret-name"
-	csiV1ProvisionerSecretNamespaceKey       = csiParameterPrefix + "provisioner-secret-namespace"
-	csiV1ControllerPublishSecretNameKey      = csiParameterPrefix + "controller-publish-secret-name"
-	csiV1ControllerPublishSecretNamespaceKey = csiParameterPrefix + "controller-publish-secret-namespace"
-	csiV1NodePublishSecretNameKey            = csiParameterPrefix + "node-publish-secret-name"
-	csiV1NodePublishSecretNamespaceKey       = csiParameterPrefix + "node-publish-secret-namespace"
-	csiV1ControllerExpandSecretNameKey       = csiParameterPrefix + "controller-expand-secret-name"
-	csiV1ControllerExpandSecretnamespaceKey  = csiParameterPrefix + "controller-expand-secret-namespace"
-	tlsCertKey                               = "tls.crt"
-	tlsKeyKey                                = "tls.key"
-	credUsernameKey                          = "username"
-	credPasswordKey                          = "password"
+	defaultFSType                          = "ext4"
+	apiAddressKey                          = "apiAddress"
+	apiUsernameKey                         = "apiUsername"
+	apiPasswordKey                         = "apiPassword"
+	csiParameterPrefix                     = "csi.storage.k8s.io/"
+	csiProvisionUsernameKey                = "csiProvisionUsername"
+	csiProvisionPasswordKey                = "csiProvisionPassword"
+	csiControllerPublishUsernameKey        = "csiControllerPublishUsername"
+	csiControllerPublishPasswordKey        = "csiControllerPublishPassword"
+	csiNodePublishUsernameKey              = "csiNodePublishUsername"
+	csiNodePublishPasswordKey              = "csiNodePublishPassword"
+	csiControllerExpandUsernameKey         = "csiControllerExpandUsername"
+	csiControllerExpandPasswordKey         = "csiControllerExpandPassword"
+	csiFSType                              = csiParameterPrefix + "fstype"
+	csiProvisionerSecretNameKey            = csiParameterPrefix + "provisioner-secret-name"
+	csiProvisionerSecretNamespaceKey       = csiParameterPrefix + "provisioner-secret-namespace"
+	csiControllerPublishSecretNameKey      = csiParameterPrefix + "controller-publish-secret-name"
+	csiControllerPublishSecretNamespaceKey = csiParameterPrefix + "controller-publish-secret-namespace"
+	csiNodePublishSecretNameKey            = csiParameterPrefix + "node-publish-secret-name"
+	csiNodePublishSecretNamespaceKey       = csiParameterPrefix + "node-publish-secret-namespace"
+	csiControllerExpandSecretNameKey       = csiParameterPrefix + "controller-expand-secret-name"
+	csiControllerExpandSecretnamespaceKey  = csiParameterPrefix + "controller-expand-secret-namespace"
+	tlsCertKey                             = "tls.crt"
+	tlsKeyKey                              = "tls.key"
+	credUsernameKey                        = "username"
+	credPasswordKey                        = "password"
 
 	defaultUsername = "storageos"
 	defaultPassword = "storageos"
@@ -114,14 +101,6 @@ func (s *Deployment) Deploy() error {
 	}
 
 	if err := s.createClusterRoleBindingForKeyMgmt(); err != nil {
-		return err
-	}
-
-	if err := s.createClusterRoleForNFS(); err != nil {
-		return err
-	}
-
-	if err := s.createClusterRoleBindingForNFS(); err != nil {
 		return err
 	}
 
@@ -296,34 +275,6 @@ func (s *Deployment) addNodeContainerResources(nodeContainer *corev1.Container) 
 		}
 		s.stos.Spec.Resources.DeepCopyInto(&nodeContainer.Resources)
 	}
-}
-
-// kubeletPluginsWatcherSupported checks if the given version of k8s supports
-// KubeletPluginsWatcher. This is used to change the CSI driver registry setup
-// based on the kubernetes cluster setup.
-func kubeletPluginsWatcherSupported(haveVersion string) bool {
-	// Supported if v1.12.0 or above.
-	return version.IsSupported(haveVersion, "1.12.0")
-}
-
-// CSIV1Supported returns true for k8s versions that support CSI v1.
-func CSIV1Supported(haveVersion string) bool {
-	return version.IsSupported(haveVersion, "1.13.0")
-}
-
-// CSIExternalAttacherV2Supported returns true for k8s 1.14+.
-func CSIExternalAttacherV2Supported(haveVersion string) bool {
-	return version.IsSupported(haveVersion, "1.14.0")
-}
-
-// CSIExternalAttacherV3Supported returns true for k8s 1.17+.
-func CSIExternalAttacherV3Supported(haveVersion string) bool {
-	return version.IsSupported(haveVersion, "1.17.0")
-}
-
-// CSIExternalResizerSupported returns true for k8s 1.16+.
-func CSIExternalResizerSupported(haveVersion string) bool {
-	return version.IsSupported(haveVersion, "1.16.0")
 }
 
 // func addOwnerRefToObject(obj metav1.Object, ownerRef metav1.OwnerReference) {

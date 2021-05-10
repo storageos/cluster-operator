@@ -6,7 +6,6 @@ import (
 )
 
 func TestGetDefaultImage(t *testing.T) {
-	fakeNFSDefaultImage := "nfs/foo:1"
 	fakeStorageOSNodeImage := "stos/foo:1"
 
 	testcases := []struct {
@@ -18,15 +17,12 @@ func TestGetDefaultImage(t *testing.T) {
 		{
 			name: "images from env vars",
 			envVars: map[string]string{
-				NFSImageEnvVar:           fakeNFSDefaultImage,
 				StorageOSNodeImageEnvVar: fakeStorageOSNodeImage,
 			},
 			defaultImages: map[string]string{
-				NFSImageEnvVar:           DefaultNFSContainerImage,
 				StorageOSNodeImageEnvVar: DefaultNodeContainerImage,
 			},
 			wantImages: map[string]string{
-				NFSImageEnvVar:           fakeNFSDefaultImage,
 				StorageOSNodeImageEnvVar: fakeStorageOSNodeImage,
 			},
 		},
@@ -34,29 +30,24 @@ func TestGetDefaultImage(t *testing.T) {
 			name:    "images not in env var",
 			envVars: map[string]string{},
 			defaultImages: map[string]string{
-				NFSImageEnvVar:           DefaultNFSContainerImage,
 				StorageOSNodeImageEnvVar: DefaultNodeContainerImage,
 			},
 			wantImages: map[string]string{
-				NFSImageEnvVar:           DefaultNFSContainerImage,
 				StorageOSNodeImageEnvVar: DefaultNodeContainerImage,
 			},
 		},
 		{
 			name: "some images in env var and some defaults",
 			envVars: map[string]string{
-				NFSImageEnvVar:           fakeNFSDefaultImage,
 				StorageOSNodeImageEnvVar: fakeStorageOSNodeImage,
 			},
 			defaultImages: map[string]string{
-				NFSImageEnvVar:                DefaultNFSContainerImage,
-				StorageOSNodeImageEnvVar:      DefaultNodeContainerImage,
-				CSIv1LivenessProbeImageEnvVar: CSIv1LivenessProbeContainerImage,
+				StorageOSNodeImageEnvVar:    DefaultNodeContainerImage,
+				CSILivenessProbeImageEnvVar: CSILivenessProbeContainerImage,
 			},
 			wantImages: map[string]string{
-				NFSImageEnvVar:                fakeNFSDefaultImage,
-				StorageOSNodeImageEnvVar:      fakeStorageOSNodeImage,
-				CSIv1LivenessProbeImageEnvVar: CSIv1LivenessProbeContainerImage,
+				StorageOSNodeImageEnvVar:    fakeStorageOSNodeImage,
+				CSILivenessProbeImageEnvVar: CSILivenessProbeContainerImage,
 			},
 		},
 	}

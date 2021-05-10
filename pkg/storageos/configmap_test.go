@@ -29,14 +29,12 @@ func Test_configFromSpec(t *testing.T) {
 		name       string
 		spec       storageosv1.StorageOSClusterSpec
 		env        map[string]string
-		csiv1      bool
 		wantbase   map[string]string
 		wantcustom map[string]string
 	}{
 		{
 			name:     "defaults",
 			spec:     defaultSpec,
-			csiv1:    true,
 			wantbase: defaultConfig,
 		},
 		{
@@ -46,29 +44,13 @@ func Test_configFromSpec(t *testing.T) {
 					Enable: true,
 				},
 			},
-			csiv1:    true,
 			wantbase: defaultConfig,
-		},
-		{
-			name: "csi v0 - override to csi v1",
-			spec: storageosv1.StorageOSClusterSpec{
-				CSI: storageosv1.StorageOSClusterCSI{
-					Enable: true,
-				},
-			},
-			csiv1:    false,
-			wantbase: defaultConfig,
-			wantcustom: map[string]string{
-				csiEndpointEnvVar: "unix:///var/lib/kubelet/plugins_registry/storageos/csi.sock",
-				csiVersionEnvVar:  "v1",
-			},
 		},
 		{
 			name: "shared-dir",
 			spec: storageosv1.StorageOSClusterSpec{
 				SharedDir: "some-dir-path",
 			},
-			csiv1:    true,
 			wantbase: defaultConfig,
 			wantcustom: map[string]string{
 				deviceDirEnvVar: "some-dir-path/devices",
@@ -79,7 +61,6 @@ func Test_configFromSpec(t *testing.T) {
 			spec: storageosv1.StorageOSClusterSpec{
 				DisableTelemetry: true,
 			},
-			csiv1:    true,
 			wantbase: defaultConfig,
 			wantcustom: map[string]string{
 				disableTelemetryEnvVar:      "true",
@@ -93,7 +74,6 @@ func Test_configFromSpec(t *testing.T) {
 		// 	spec: storageosv1.StorageOSClusterSpec{
 		// 		DisableFencing: true,
 		// 	},
-		// 	csiv1:    true,
 		// 	wantbase: v2DefaultConfig,
 		// 	wantcustom: map[string]string{
 		// 		disableFencingEnvVar: "true",
@@ -104,7 +84,6 @@ func Test_configFromSpec(t *testing.T) {
 			spec: storageosv1.StorageOSClusterSpec{
 				DisableTCMU: true,
 			},
-			csiv1:    true,
 			wantbase: defaultConfig,
 			wantcustom: map[string]string{
 				disableTCMUEnvVar: "true",
@@ -115,7 +94,6 @@ func Test_configFromSpec(t *testing.T) {
 			spec: storageosv1.StorageOSClusterSpec{
 				ForceTCMU: true,
 			},
-			csiv1:    true,
 			wantbase: defaultConfig,
 			wantcustom: map[string]string{
 				forceTCMUEnvVar: "true",
@@ -127,7 +105,6 @@ func Test_configFromSpec(t *testing.T) {
 				TLSEtcdSecretRefName:      "etcd-certs",
 				TLSEtcdSecretRefNamespace: "default",
 			},
-			csiv1:    true,
 			wantbase: defaultConfig,
 			wantcustom: map[string]string{
 				etcdTLSClientCAEnvVar:   "/run/storageos/pki/etcd-client-ca.crt",
@@ -140,7 +117,6 @@ func Test_configFromSpec(t *testing.T) {
 			spec: storageosv1.StorageOSClusterSpec{
 				K8sDistro: "some-distro-name",
 			},
-			csiv1:    true,
 			wantbase: defaultConfig,
 			wantcustom: map[string]string{
 				k8sDistroEnvVar: "some-distro-name",
@@ -152,7 +128,6 @@ func Test_configFromSpec(t *testing.T) {
 			env: map[string]string{
 				jaegerEndpointEnvVar: "http:/1.2.3.4:1234",
 			},
-			csiv1:    true,
 			wantbase: defaultConfig,
 			wantcustom: map[string]string{
 				jaegerEndpointEnvVar: "http:/1.2.3.4:1234",
@@ -164,7 +139,6 @@ func Test_configFromSpec(t *testing.T) {
 			env: map[string]string{
 				jaegerServiceNameEnvVar: "test-1234",
 			},
-			csiv1:    true,
 			wantbase: defaultConfig,
 			wantcustom: map[string]string{
 				jaegerServiceNameEnvVar: "test-1234",
@@ -193,7 +167,7 @@ func Test_configFromSpec(t *testing.T) {
 				want[k] = v
 			}
 
-			if got := configFromSpec(tt.spec, tt.csiv1); !reflect.DeepEqual(got, want) {
+			if got := configFromSpec(tt.spec); !reflect.DeepEqual(got, want) {
 				t.Errorf("configFromSpec() got:\n%v\n want:\n%v\n", got, want)
 			}
 		})

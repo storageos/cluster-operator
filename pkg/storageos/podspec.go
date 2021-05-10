@@ -59,162 +59,151 @@ func (s *Deployment) addCSI(podSpec *corev1.PodSpec) {
 
 	nodeContainer := &podSpec.Containers[0]
 
-	// Add CSI specific configurations if enabled.
-	if s.stos.Spec.CSI.Enable {
-		vols := []corev1.Volume{
-			{
-				Name: "registrar-socket-dir",
-				VolumeSource: corev1.VolumeSource{
-					HostPath: &corev1.HostPathVolumeSource{
-						Path: s.stos.Spec.GetCSIRegistrarSocketDir(),
-						Type: &hostpathDirOrCreate,
-					},
+	vols := []corev1.Volume{
+		{
+			Name: "registrar-socket-dir",
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Path: s.stos.Spec.GetCSIRegistrarSocketDir(),
+					Type: &hostpathDirOrCreate,
 				},
 			},
-			{
-				Name: "kubelet-dir",
-				VolumeSource: corev1.VolumeSource{
-					HostPath: &corev1.HostPathVolumeSource{
-						Path: s.stos.Spec.GetCSIKubeletDir(),
-						Type: &hostpathDir,
-					},
+		},
+		{
+			Name: "kubelet-dir",
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Path: s.stos.Spec.GetCSIKubeletDir(),
+					Type: &hostpathDir,
 				},
 			},
-			{
-				Name: "plugin-dir",
-				VolumeSource: corev1.VolumeSource{
-					HostPath: &corev1.HostPathVolumeSource{
-						Path: s.stos.Spec.GetCSIPluginDir(CSIV1Supported(s.k8sVersion)),
-						Type: &hostpathDirOrCreate,
-					},
+		},
+		{
+			Name: "plugin-dir",
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Path: s.stos.Spec.GetCSIPluginDir(),
+					Type: &hostpathDirOrCreate,
 				},
 			},
-			{
-				Name: "device-dir",
-				VolumeSource: corev1.VolumeSource{
-					HostPath: &corev1.HostPathVolumeSource{
-						Path: s.stos.Spec.GetCSIDeviceDir(),
-						Type: &hostpathDir,
-					},
+		},
+		{
+			Name: "device-dir",
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Path: s.stos.Spec.GetCSIDeviceDir(),
+					Type: &hostpathDir,
 				},
 			},
-			{
-				Name: "registration-dir",
-				VolumeSource: corev1.VolumeSource{
-					HostPath: &corev1.HostPathVolumeSource{
-						Path: s.stos.Spec.GetCSIRegistrationDir(CSIV1Supported(s.k8sVersion)),
-						Type: &hostpathDir,
-					},
+		},
+		{
+			Name: "registration-dir",
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Path: s.stos.Spec.GetCSIRegistrationDir(),
+					Type: &hostpathDir,
 				},
 			},
-		}
-
-		podSpec.Volumes = append(podSpec.Volumes, vols...)
-
-		volMnts := []corev1.VolumeMount{
-			{
-				Name:             "kubelet-dir",
-				MountPath:        s.stos.Spec.GetCSIKubeletDir(),
-				MountPropagation: &mountPropagationBidirectional,
-			},
-			{
-				Name:      "device-dir",
-				MountPath: s.stos.Spec.GetCSIDeviceDir(),
-			},
-		}
-		// Only add a mount for the plugin-dir if it's not under the kubelet-dir
-		// mount path, which is now the k8s default.  Overlapping mounts will
-		// cause unmount issues when the container restarts, leaving entries in
-		// /proc/mounts.
-		if !strings.HasPrefix(s.stos.Spec.GetCSIPluginDir(CSIV1Supported(s.k8sVersion)), s.stos.Spec.GetCSIKubeletDir()) {
-			volMnts = append(volMnts, corev1.VolumeMount{
-				Name:      "plugin-dir",
-				MountPath: s.stos.Spec.GetCSIPluginDir(CSIV1Supported(s.k8sVersion)),
-			})
-		}
-
-		// Append volume mounts to the first container, the only container is the node container, at this point.
-		nodeContainer.VolumeMounts = append(nodeContainer.VolumeMounts, volMnts...)
-
-		driverReg := corev1.Container{
-			Image:           s.stos.Spec.GetCSINodeDriverRegistrarImage(CSIV1Supported(s.k8sVersion)),
-			Name:            "csi-driver-registrar",
-			ImagePullPolicy: corev1.PullIfNotPresent,
-			Args: []string{
-				"--v=5",
-				"--csi-address=$(ADDRESS)",
-			},
-			Env: []corev1.EnvVar{
-				{
-					Name:  addressEnvVar,
-					Value: "/csi/csi.sock",
-				},
-				{
-					Name: kubeNodeNameEnvVar,
-					ValueFrom: &corev1.EnvVarSource{
-						FieldRef: &corev1.ObjectFieldSelector{
-							APIVersion: "v1",
-							FieldPath:  "spec.nodeName",
-						},
-					},
-				},
-			},
-			SecurityContext: &corev1.SecurityContext{
-				Privileged: &privileged,
-			},
-			VolumeMounts: []corev1.VolumeMount{
-				{
-					Name:      "plugin-dir",
-					MountPath: "/csi",
-				},
-				{
-					Name:      "registrar-socket-dir",
-					MountPath: "/var/lib/csi/sockets/",
-				},
-				{
-					Name:      "registration-dir",
-					MountPath: "/registration",
-				},
-			},
-		}
-
-		// Add extra flags to activate node-register mode if kubelet plugins
-		// watcher is supported.
-		if kubeletPluginsWatcherSupported(s.k8sVersion) {
-			driverReg.Args = append(
-				driverReg.Args,
-				fmt.Sprintf("--kubelet-registration-path=%s", s.stos.Spec.GetCSIKubeletRegistrationPath(CSIV1Supported(s.k8sVersion))))
-		}
-		podSpec.Containers = append(podSpec.Containers, driverReg)
-
-		if CSIV1Supported(s.k8sVersion) {
-			livenessProbe := corev1.Container{
-				Image:           s.stos.Spec.GetCSILivenessProbeImage(),
-				Name:            "csi-liveness-probe",
-				ImagePullPolicy: corev1.PullIfNotPresent,
-				Args: []string{
-					"--csi-address=$(ADDRESS)",
-					"--probe-timeout=3s",
-				},
-				Env: []corev1.EnvVar{
-					{
-						Name:  addressEnvVar,
-						Value: "/csi/csi.sock",
-					},
-				},
-				SecurityContext: &corev1.SecurityContext{
-					Privileged: &privileged,
-				},
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						Name:      "plugin-dir",
-						MountPath: "/csi",
-					},
-				},
-			}
-			podSpec.Containers = append(podSpec.Containers, livenessProbe)
-		}
+		},
 	}
+
+	podSpec.Volumes = append(podSpec.Volumes, vols...)
+
+	volMnts := []corev1.VolumeMount{
+		{
+			Name:             "kubelet-dir",
+			MountPath:        s.stos.Spec.GetCSIKubeletDir(),
+			MountPropagation: &mountPropagationBidirectional,
+		},
+		{
+			Name:      "device-dir",
+			MountPath: s.stos.Spec.GetCSIDeviceDir(),
+		},
+	}
+	// Only add a mount for the plugin-dir if it's not under the kubelet-dir
+	// mount path, which is now the k8s default.  Overlapping mounts will
+	// cause unmount issues when the container restarts, leaving entries in
+	// /proc/mounts.
+	if !strings.HasPrefix(s.stos.Spec.GetCSIPluginDir(), s.stos.Spec.GetCSIKubeletDir()) {
+		volMnts = append(volMnts, corev1.VolumeMount{
+			Name:      "plugin-dir",
+			MountPath: s.stos.Spec.GetCSIPluginDir(),
+		})
+	}
+
+	// Append volume mounts to the first container, the only container is the node container, at this point.
+	nodeContainer.VolumeMounts = append(nodeContainer.VolumeMounts, volMnts...)
+
+	driverReg := corev1.Container{
+		Image:           s.stos.Spec.GetCSINodeDriverRegistrarImage(),
+		Name:            "csi-driver-registrar",
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Args: []string{
+			"--v=5",
+			"--csi-address=$(ADDRESS)",
+			"--kubelet-registration-path=%s", s.stos.Spec.GetCSIKubeletRegistrationPath(),
+		},
+		Env: []corev1.EnvVar{
+			{
+				Name:  addressEnvVar,
+				Value: "/csi/csi.sock",
+			},
+			{
+				Name: kubeNodeNameEnvVar,
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						APIVersion: "v1",
+						FieldPath:  "spec.nodeName",
+					},
+				},
+			},
+		},
+		SecurityContext: &corev1.SecurityContext{
+			Privileged: &privileged,
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      "plugin-dir",
+				MountPath: "/csi",
+			},
+			{
+				Name:      "registrar-socket-dir",
+				MountPath: "/var/lib/csi/sockets/",
+			},
+			{
+				Name:      "registration-dir",
+				MountPath: "/registration",
+			},
+		},
+	}
+
+	podSpec.Containers = append(podSpec.Containers, driverReg)
+
+	livenessProbe := corev1.Container{
+		Image:           s.stos.Spec.GetCSILivenessProbeImage(),
+		Name:            "csi-liveness-probe",
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Args: []string{
+			"--csi-address=$(ADDRESS)",
+			"--probe-timeout=3s",
+		},
+		Env: []corev1.EnvVar{
+			{
+				Name:  addressEnvVar,
+				Value: "/csi/csi.sock",
+			},
+		},
+		SecurityContext: &corev1.SecurityContext{
+			Privileged: &privileged,
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      "plugin-dir",
+				MountPath: "/csi",
+			},
+		},
+	}
+	podSpec.Containers = append(podSpec.Containers, livenessProbe)
 }
 
 // addNodeAffinity adds node affinity to the given pod spec from the cluster
