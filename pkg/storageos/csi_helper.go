@@ -91,19 +91,6 @@ func (s Deployment) createCSIHelperDeployment(replicas int32) error {
 	return s.k8sResourceManager.Deployment(csiHelperName, s.stos.Spec.GetResourceNS(), nil, spec).Create()
 }
 
-// addCommonPodProperties adds common pod properties to a given pod spec. The
-// common pod properties are common for all the pods that are part of storageos
-// deployment, including the CSI helpers pod.
-func (s Deployment) addCommonPodProperties(podSpec *corev1.PodSpec) error {
-	s.addNodeAffinity(podSpec)
-
-	// Add helper tolerations.
-	if err := s.addHelperTolerations(podSpec, podTolerationSeconds); err != nil {
-		return err
-	}
-	return nil
-}
-
 // csiHelperContainers returns a list of containers that should be part of the
 // CSI helper pods.
 //
