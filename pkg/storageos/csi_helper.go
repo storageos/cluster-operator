@@ -93,6 +93,11 @@ func (s Deployment) createCSIHelperDeployment(replicas int32) error {
 
 // csiHelperContainers returns a list of containers that should be part of the
 // CSI helper pods.
+//
+// Worker threads are reduced from the default pool of 100 to 20 so that we can
+// control back-pressure via the CSI provisioner, rather than the control plane.
+// The worker pool is shared between create and delete operations, so deletes
+// may take longer when there are create operations pending.
 func (s Deployment) csiHelperContainers() ([]corev1.Container, error) {
 	privileged := true
 	containers := []corev1.Container{
@@ -104,6 +109,7 @@ func (s Deployment) csiHelperContainers() ([]corev1.Container, error) {
 				"--v=5",
 				"--csi-address=$(ADDRESS)",
 				"--extra-create-metadata",
+				"--worker-threads=20",
 			},
 			Env: []corev1.EnvVar{
 				{
