@@ -9,11 +9,11 @@ import (
 )
 
 const (
-	// Name of kube-system namespace.
-	kubeSystemNamespace = "kube-system"
+	// Name of the node critical priority class.
+	nodeCriticalPriorityClass = "system-node-critical"
 
-	// Name of the critical priority class.
-	criticalPriorityClass = "system-node-critical"
+	// Name of the cluster critical priority class.
+	clusterCriticalPriorityClass = "system-cluster-critical"
 )
 
 // addSharedDir adds env var and volumes for shared dir when running kubelet in
@@ -273,9 +273,24 @@ func (s *Deployment) addTLSEtcdCerts(podSpec *corev1.PodSpec) {
 	}
 }
 
-func (s *Deployment) addPodPriorityClass(podSpec *corev1.PodSpec) {
-	// Set pod priority to critical only when deployed in kube-system namespace.
-	if s.stos.Spec.GetResourceNS() == kubeSystemNamespace {
-		podSpec.PriorityClassName = criticalPriorityClass
+// addCommonPodProperties adds common pod properties to a given pod spec. The
+// common pod properties are common for all the pods that are part of storageos
+// deployment, including the CSI helpers, api-manager and the scheduler.
+func (s Deployment) addCommonPodProperties(podSpec *corev1.PodSpec) error {
+	s.addNodeAffinity(podSpec)
+	s.addPodPriorityClass(podSpec, clusterCriticalPriorityClass)
+
+	// Add helper tolerations.
+	if err := s.addHelperTolerations(podSpec, podTolerationSeconds); err != nil {
+		return err
 	}
+	return nil
+}
+
+// addPodPriorityClass sets the priority class for a Pod.
+//
+// Prior to StorageOS v2.4.0, the priority class was only set for Pods running
+// in the kube-system namespace, as k8s 1.16 and earlier would only allow this.
+func (s *Deployment) addPodPriorityClass(podSpec *corev1.PodSpec, priorityClass string) {
+	podSpec.PriorityClassName = priorityClass
 }
