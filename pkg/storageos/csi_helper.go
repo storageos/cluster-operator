@@ -109,6 +109,7 @@ func (s Deployment) csiHelperContainers() ([]corev1.Container, error) {
 				"--v=5",
 				"--csi-address=$(ADDRESS)",
 				"--extra-create-metadata",
+				"--timeout=30s",
 				"--worker-threads=20",
 			},
 			Env: []corev1.EnvVar{
