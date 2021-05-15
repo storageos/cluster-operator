@@ -1,7 +1,7 @@
 OPERATOR_IMAGE ?= storageos/cluster-operator:test
 GO_BUILD_CMD = go build -v
 GO_ENV = GOOS=linux CGO_ENABLED=0
-SDK_VERSION = v0.17.2
+SDK_VERSION = v0.18.2
 MACHINE = $(shell uname -m)
 BUILD_IMAGE = golang:1.15.2
 BASE_IMAGE = registry.access.redhat.com/ubi8/ubi-minimal
@@ -92,7 +92,7 @@ k8s-code-gen:
 go-gen: operator-sdk k8s-code-gen
 	# generate k8s requires GOROOT to be set.
 	GOROOT=$(GOPATH) GO111MODULE=on $(OPERATOR_SDK) generate k8s
-	GO111MODULE=on $(OPERATOR_SDK) generate crds
+	GO111MODULE=on $(OPERATOR_SDK) generate crds --crd-version=v1beta1
 	# TODO: Install kube-openapi and generate OpenAPI. Operator-sdk no
 	# longer provides subcommand to generate OpenAPI. Install
 	# k8s.io/kube-openapi
