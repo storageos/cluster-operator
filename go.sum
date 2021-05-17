@@ -841,8 +841,8 @@ github.com/spf13/viper v1.3.2/go.mod h1:ZiWeW+zYFKm7srdB9IoDzzZXaJaI5eL9QjNiN/DM
 github.com/spf13/viper v1.4.0/go.mod h1:PTJ7Z/lr49W6bUbkmS1V3by4uWynFiR9p7+dSq/yZzE=
 github.com/storageos/go-api v0.0.0-20200311150117-c68d7a4607f7 h1:eL53AX9Fwyqbpayn3mjvlwbiyS3kEp8ZJl8eFt7zLeY=
 github.com/storageos/go-api v0.0.0-20200311150117-c68d7a4607f7/go.mod h1:ZrLn+e0ZuF3Y65PNF6dIwbJPZqfmtCXxFm9ckv0agOY=
-github.com/storageos/go-api/v2 v2.3.0 h1:7T7g0cxwPgez7ApjKUqUaG6e4n5uX7VJK9eARTtpaEE=
-github.com/storageos/go-api/v2 v2.3.0/go.mod h1:FpEkX+56ILt5L8Jt7pnXM1BRzFQ5YPkMSeZijTGcw5U=
+github.com/storageos/go-api/v2 v2.4.0 h1:NIu+CpNP7dGqnq0OGl5vPvO1dXRCyjMD6ITsxNUFtb4=
+github.com/storageos/go-api/v2 v2.4.0/go.mod h1:FpEkX+56ILt5L8Jt7pnXM1BRzFQ5YPkMSeZijTGcw5U=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.2.0/go.mod h1:qt09Ya8vawLte6SNmTgCsAVtYtaKzEcn8ATUoHMkEqE=

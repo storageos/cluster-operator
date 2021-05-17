@@ -10,7 +10,7 @@ require (
 	github.com/operator-framework/operator-sdk v0.18.1
 	github.com/pkg/errors v0.9.1
 	github.com/storageos/go-api v0.0.0-20200311150117-c68d7a4607f7
-	github.com/storageos/go-api/v2 v2.3.0
+	github.com/storageos/go-api/v2 v2.4.0
 	k8s.io/api v0.18.4
 	k8s.io/apiextensions-apiserver v0.18.4
 	k8s.io/apimachinery v0.18.4

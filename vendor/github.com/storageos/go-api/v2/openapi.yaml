@@ -1,7 +1,7 @@
 openapi: "3.0.2"
 info:
     title: "StorageOS API"
-    version: "2.3.0"
+    version: "2.4.0"
     contact:
         name: StorageOS
         url: https://storageos.com
@@ -140,6 +140,18 @@ components:
                 The attachment type of a volume. "host" indicates that the
                 volume is consumed by the node it is attached to.
             example: "host"
+
+        FailureModeIntent:
+            type: string
+            enum: 
+                - "hard"
+                - "soft"
+                - "alwayson"
+            description: >
+                The intent-based failure mode behaviour of a volume. The default
+                behaviour for a volume is "hard", in the absence of a directly 
+                configured intent or numerical failure threshold. 
+            example: "hard"
 
         NodeHealth:
             type: string
@@ -330,7 +342,7 @@ components:
                     type: array
                     items:
                         $ref: "#/components/schemas/NfsAcl"
-        NFSConfig:
+        NfsConfig:
             type: object
             properties:
                 exports:
@@ -352,7 +364,7 @@ components:
             description: >
                 A set of arbitrary key value labels to apply to the entity.
             externalDocs:
-                url: https://docs.storageos.com/v2/openapi-help/labels
+                url:  https://docs.storageos.com/docs/reference/labels
             additionalProperties:
                 type: string
             example:
@@ -576,7 +588,7 @@ components:
                 nfs:
                     readOnly: true
                     nullable: true
-                    $ref: "#/components/schemas/NFSConfig"
+                    $ref: "#/components/schemas/NfsConfig"
                 namespaceID:
                     readOnly: true
                     allOf:
@@ -875,6 +887,43 @@ components:
             items:
                 $ref: "#/components/schemas/Volume"
 
+        # ------------------------------------------------------------------------------
+        # request schemas
+        #
+        # encapsulated request schemas for use cases where inline definition is not 
+        # supported by the openapi codegenerator. this is a bit of a workaround for
+        # bugs when using certain spec description features. 
+        # ------------------------------------------------------------------------------
+        SetFailureThresholdRequestData:
+            type: object
+            properties:
+                failureThreshold:
+                    type: uint64
+                    default: 0
+                    minimum: 0
+                    maximum: 5
+                    description: >
+                      The minimum number of replicas required to be online and
+                      receiving writes in order for the volume to remain
+                      read-writable. This value replaces any previously set
+                      failure threshold or intent-based failure mode.
+                    example: 2
+                version:
+                    $ref: "#/components/schemas/Version"
+
+        SetFailureModeIntentRequestData:
+            type: object
+            properties:
+                mode:
+                    $ref: "#/components/schemas/FailureModeIntent"
+                version:
+                    $ref: "#/components/schemas/Version"
+        
+        SetFailureModeRequest:
+            oneOf:
+                - $ref: "#/components/schemas/SetFailureThresholdRequestData"
+                - $ref: "#/components/schemas/SetFailureModeIntentRequestData"
+
     parameters:
         ObjectVersion:
             name: version
@@ -1076,6 +1125,18 @@ components:
                         $ref: "#/components/schemas/Error"
                     example:
                         error: in use
+
+        InvalidResult:
+            description: >
+                The requested configuration change for the referenced entity
+                cannot be made as it would result in a conflict which
+                invalidates the resultant config.
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/Error"
+                    example:
+                        error: label \"a\" with value \"b\" conflicts with label \"c\" with value \"d\"
 
         Locked:
             description: >
@@ -1940,13 +2001,15 @@ paths:
         put:
             summary: Update a node
             operationId: updateNode
-            description: Update the node identified by id.
+            description: >
+                Update the non-storageos labels configured for the node 
+                identified by id.
             security:
                 - jwt: []
-            parameters:
-                - $ref: "#/components/parameters/IgnoreVersion"
             requestBody:
-                description: The new node data to store.
+                description: >
+                    Update the label configuration of the node to the desired
+                    state. Alterations of StorageOS labels are rejected. 
                 required: true
                 content:
                     application/json:
@@ -2036,6 +2099,68 @@ paths:
 
                 "503":
                     $ref: "#/components/responses/StoreError"
+
+    /nodes/{id}/compute-only:
+        parameters:
+            - name: id
+              in: path
+              description: ID of a Node
+              required: true
+              schema:
+                  $ref: "#/components/schemas/NodeID"
+
+        put:
+            summary: Modify the computeonly behaviour state for a node
+            operationId: setComputeOnly
+            description: >
+                Set the compute-only configuration state for the node corresponding 
+                to id given by the request.
+            security:
+                - jwt: []
+            parameters:
+                - $ref: "#/components/parameters/IgnoreVersion"
+            requestBody: 
+                description: Desired compute-only configuration state for the node.
+                required: true
+                content: 
+                    application/json:
+                        schema:
+                            type: object
+                            title: SetComputeOnlyNodeData
+                            properties:
+                                computeOnly:
+                                    type: boolean
+                                    description: >
+                                        Marks the node's desired configuration 
+                                        state as compute-only. This will result
+                                        in the node being avoided for volume
+                                        placement
+                                    example: true
+                                version:
+                                    $ref: "#/components/schemas/Version"
+            responses:
+                "200":
+                    description: The node was successfullly updated
+                    content:
+                        application/json: 
+                            schema: 
+                                $ref: "#/components/schemas/Node"
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+                "404":
+                    $ref: "#/components/responses/NotFound"
+                "412":
+                    $ref: "#/components/responses/StaleWrite"
+                "500":
+                    $ref: "#/components/responses/ServerError"
+                "503":
+                    $ref: "#/components/responses/StoreError"
+
 
     /policies:
         post:
@@ -2979,6 +3104,80 @@ paths:
 
                 "503":
                     $ref: "#/components/responses/StoreError"
+
+    /namespaces/{namespaceID}/volumes/{id}/failure-mode:
+        parameters:
+            - name: namespaceID
+              in: path
+              description: ID of a Namespace
+              required: true
+              schema:
+                  $ref: "#/components/schemas/NamespaceID"
+            - name: id
+              in: path
+              description: ID of a Volume
+              required: true
+              schema:
+                  $ref: "#/components/schemas/VolumeID"
+        put:
+            summary: Set the failure mode of the volume.
+            operationId: setFailureMode
+            description: >
+                Set the behaviour of the volume identified by id when responding
+                to observed replica failure. This modifies the protected 
+                StorageOS system label "storageos.com/failure-mode".
+
+                This request may either specify a precise failure threshold or a
+                more flexible intent-based failure mode operating with respect 
+                to the volume's current replication target.
+
+                A request will be denied if the current state of the volume does
+                not satisfy the requested failure behaviour.
+            security:
+                - jwt: []
+            parameters:
+                - $ref: "#/components/parameters/IgnoreVersion"
+            requestBody:
+                description: Failure mode to use
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SetFailureModeRequest"
+            responses:
+                "200":
+                    description: The updated volume information.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Volume"
+
+                "400":
+                    $ref: "#/components/responses/BadRequest"
+                
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "404":
+                    $ref: "#/components/responses/NotFound"
+
+                "409":
+                    $ref: "#/components/responses/InvalidResult"
+
+                "412":
+                    $ref: "#/components/responses/StaleWrite"
+
+                "422":
+                    $ref: "#/components/responses/InvalidStateTransition"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
     
     /namespaces/{namespaceID}/volumes/{id}/size:
         parameters:
@@ -3248,17 +3447,19 @@ paths:
             summary: Retrieves a diagnostics bundle from the target node
             operationId: getDiagnostics
             description: >
-                Requests that the target node gathers detailed information
-                about the state of the cluster, using it to then build and
-                return a bundle which can be used for troubleshooting.
+                Requests that the recipient node gathers information
+                about the global state of the cluster and detailed information
+                about the local state of each node in the cluster, using it to
+                then build and return a bundle which can be used for 
+                troubleshooting. For clusters in an unhealthy state this may
+                result in a slower, incomplete response. 
+
+                If the cluster has many nodes, it is recommended to use the 
+                single node diagnostic collection endpoint to target the desired
+                nodes in turn.
 
                 The request will only be served when the authenticated user
                 is an administrator.
-
-                The node will attempt to gather information about its local
-                state, cluster-wide state and local state of other nodes
-                in the cluster. If the cluster is unhealthy this may cause
-                a slower response.
             security:
                 - jwt: []
             responses:
@@ -3267,7 +3468,7 @@ paths:
                         A diagnostics bundle was successfully built and
                         returned.
                     content:
-                        application/gzip:
+                        application/octet-stream:
                             schema:
                                 type: string
                                 format: binary
@@ -3292,9 +3493,71 @@ paths:
                         The returned bundle is still valid and should be sent to
                         StorageOS.
                     content:
-                        application/json:
+                        application/octet-stream:
                             schema:
-                                $ref: "#/components/schemas/Error"
+                                type: string
+                                format: binary
+
+                "503":
+                    $ref: "#/components/responses/StoreError"
+    /diagnostics/{id}:
+        parameters:
+            - name: id
+              in: path
+              description: ID of a node
+              required: true
+              schema:
+                  $ref: "#/components/schemas/NodeID"
+        get:
+            summary: Retrieves a single node diagnostics bundle from the target node
+            operationId: getSingleNodeDiagnostics
+            description: >
+                Requests that the recipient node gathers information about the
+                global state of the cluster and detailed information about the
+                target node, using it to then build and return a bundle
+                which can be used for troubleshooting. If the target node is
+                in an unhealthy state then the response may be slower and 
+                incomplete.
+
+                The request will only be served when the authenticated user
+                is an administrator.
+            security:
+                - jwt: []
+            responses:
+                "200":
+                    description: >
+                        A diagnostics bundle was successfully built and
+                        returned for just the target node.
+                    content:
+                        application/octet-stream:
+                            schema:
+                                type: string
+                                format: binary
+
+                "401":
+                    $ref: "#/components/responses/Unauthorised"
+
+                "403":
+                    $ref: "#/components/responses/Forbidden"
+
+                "500":
+                    $ref: "#/components/responses/ServerError"
+
+                "502":
+                    description: >
+                        The server is returning an incomplete diagnostic bundle.
+
+                        A single-node bundle may contain partial information if
+                        the target node failed to respond, or did not gather all
+                        available diagnostics during the collection process.
+
+                        The returned bundle may still contain useful data and 
+                        should be sent to StorageOS.
+                    content:
+                        application/octet-stream:
+                            schema:
+                                type: string
+                                format: binary
 
                 "503":
                     $ref: "#/components/responses/StoreError"

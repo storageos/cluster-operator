@@ -9,10 +9,10 @@
  */
 
 package api
-// NfsVolumeMountEndpoint struct for NfsVolumeMountEndpoint
-type NfsVolumeMountEndpoint struct {
-	// The address to which the NFS server is bound. 
-	MountEndpoint string `json:"mountEndpoint,omitempty"`
+// SetComputeOnlyNodeData struct for SetComputeOnlyNodeData
+type SetComputeOnlyNodeData struct {
+	// Marks the node's desired configuration  state as compute-only. This will result in the node being avoided for volume placement 
+	ComputeOnly bool `json:"computeOnly,omitempty"`
 	// An opaque representation of an entity version at the time it was obtained from the API. All operations that mutate the entity must include this version field in the request unchanged. The format of this type is undefined and may change but the defined properties will not change. 
 	Version string `json:"version,omitempty"`
 }
