@@ -62,3 +62,9 @@ func (s *Deployment) createService() error {
 
 	return nil
 }
+
+// APIServiceEndpoint returns the API's service endpoint suitable for use within
+// the cluster.
+func (s *Deployment) APIServiceEndpoint() string {
+	return fmt.Sprintf("http://%s.%s.svc:%d", s.stos.Spec.GetServiceName(), s.stos.Spec.GetResourceNS(), s.stos.Spec.GetServiceExternalPort())
+}

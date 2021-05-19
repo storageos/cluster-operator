@@ -27,9 +27,10 @@ const (
 func CreateOrUpdate(c client.Client, obj runtime.Object) error {
 	if err := c.Create(context.Background(), obj); err != nil {
 		if apierrors.IsAlreadyExists(err) {
-			// TODO: Support update.
-			// Check for update option and update the object.
-			// return c.Update(context.Background(), obj)
+			// Only allow updates on specic kinds.
+			if obj.GetObjectKind().GroupVersionKind().Kind == "ConfigMap" {
+				return c.Update(context.Background(), obj)
+			}
 
 			// Exists, no update.
 			return nil

@@ -141,7 +141,8 @@ func (s *Deployment) Deploy() error {
 		return err
 	}
 
-	if err := s.createConfigMap(); err != nil {
+	// ConfigMap is mutable - apply updates.
+	if err := s.ensureConfigMap(); err != nil {
 		return err
 	}
 

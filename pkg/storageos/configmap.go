@@ -1,11 +1,16 @@
 package storageos
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
+	storageosapi "github.com/storageos/cluster-operator/internal/pkg/storageos"
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 )
 
@@ -121,17 +126,87 @@ const (
 	tlsEtcdCertsVolume = "etcd-certs"
 )
 
-// createService creates a ConfigMap to store the node container configuration.
-func (s *Deployment) createConfigMap() error {
+// ensureConfigMap creates or updates a ConfigMap to store the node container
+// configuration.
+func (s *Deployment) ensureConfigMap() error {
 	config := configFromSpec(s.stos.Spec, CSIV1Supported(s.k8sVersion))
 
 	labels := make(map[string]string)
 
+	existing, err := s.k8sResourceManager.ConfigMap(configmapName, s.stos.Spec.GetResourceNS(), labels, config).Get()
+	if err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	// If there is an existing CM, check for changes and apply any that are set
+	// dynamically via the API.
+	if existing != nil {
+		// Don't update if unchanged.
+		if reflect.DeepEqual(config, existing) {
+			return nil
+		}
+
+		// Skip if the API isn't ready yet.  This will cause the operator to log
+		// errors while the initial StorageOS cluster is starting.  We need to
+		// return an error (which will be logged) so that it can be re-queued.
+		status, err := s.getStorageOSStatus()
+		if err != nil {
+			return fmt.Errorf("failed to get storageos status: %v", err)
+		}
+		if status.Phase != storageosv1.ClusterPhaseRunning {
+			return fmt.Errorf("storageos api not ready, retrying")
+		}
+
+		// Apply cluster configuration.  Don't progress on error, re-queue instead.
+		if err := s.applyClusterConfig(); err != nil {
+			return fmt.Errorf("failed to apply cluster config: %v", err)
+		}
+	}
+
+	// Create or Update the ConfigMap.  "Create" is badly named.  For ConfigMaps
+	// it will update if the resource already exists.
 	if err := s.k8sResourceManager.ConfigMap(configmapName, s.stos.Spec.GetResourceNS(), labels, config).Create(); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// returns true if cluster config was updated.
+func (s *Deployment) applyClusterConfig() error {
+	// Load api admin credentials from secret.
+	username, password, err := s.getAdminCreds()
+	if err != nil {
+		return err
+	}
+
+	client, err := storageosapi.New(string(username), string(password), s.APIServiceEndpoint())
+	if err != nil {
+		return err
+	}
+
+	current, err := client.GetCluster(context.Background())
+	if err != nil {
+		return err
+	}
+
+	want := &storageosapi.Cluster{
+		DisableTelemetry:      s.stos.Spec.DisableTelemetry,
+		DisableCrashReporting: s.stos.Spec.DisableTelemetry,
+		DisableVersionCheck:   s.stos.Spec.DisableTelemetry,
+		LogLevel:              "info", // default.
+		LogFormat:             "json", // not configurable.
+		Version:               current.Version,
+	}
+	if s.stos.Spec.Debug {
+		want.LogLevel = debugVal
+	}
+
+	if current.IsEqual(want) {
+		return nil
+	}
+
+	return client.UpdateCluster(context.Background(), want)
 }
 
 // configFromSpec generates config entries.
@@ -156,7 +231,7 @@ func configFromSpec(spec storageosv1.StorageOSClusterSpec, csiv1 bool) map[strin
 	// Always show telemetry and feature options to ensure they're visble.
 	config[disableTelemetryEnvVar] = strconv.FormatBool(spec.DisableTelemetry)
 
-	// TODO: separte CR items for version check and crash reports.  Use
+	// TODO: separate CR items for version check and crash reports.  Use
 	// Telemetry to enable/disable everything for now.
 	config[disableVersionCheckEnvVar] = strconv.FormatBool(spec.DisableTelemetry)
 	config[disableCrashReportingEnvVar] = strconv.FormatBool(spec.DisableTelemetry)

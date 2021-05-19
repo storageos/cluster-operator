@@ -599,6 +599,9 @@ func DisableDefaultStorageClass(t *testing.T, fc framework.FrameworkClient) (fun
 				if err != nil {
 					return err
 				}
+				if sc.Annotations == nil {
+					sc.Annotations = make(map[string]string)
+				}
 				sc.Annotations[defaultStorageClassKey] = "true"
 				return fc.Update(goctx.TODO(), &sc)
 			}

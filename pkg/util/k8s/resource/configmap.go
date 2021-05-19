@@ -36,8 +36,10 @@ func NewConfigMap(c client.Client, name, namespace string, labels map[string]str
 // Get returns an existing ConfigMap and an error if any.
 func (cm ConfigMap) Get() (*corev1.ConfigMap, error) {
 	configmap := &corev1.ConfigMap{}
-	err := cm.client.Get(context.TODO(), cm.NamespacedName, configmap)
-	return configmap, err
+	if err := cm.client.Get(context.TODO(), cm.NamespacedName, configmap); err != nil {
+		return nil, err
+	}
+	return configmap, nil
 }
 
 // Create creates a new k8s ConfigMap resource.
