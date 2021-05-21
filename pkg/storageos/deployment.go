@@ -6,6 +6,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	storageosapi "github.com/storageos/cluster-operator/internal/pkg/storageos"
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	"github.com/storageos/cluster-operator/pkg/util/k8s"
 )
@@ -14,6 +15,7 @@ import (
 // resource creation and update.
 type Deployment struct {
 	client             client.Client
+	apiClient          *storageosapi.Client
 	discoveryClient    discovery.DiscoveryInterface
 	stos               *storageosv1.StorageOSCluster
 	recorder           record.EventRecorder
@@ -27,6 +29,7 @@ type Deployment struct {
 // and an event broadcast recorder.
 func NewDeployment(
 	client client.Client,
+	apiClient *storageosapi.Client,
 	discoveryClient discovery.DiscoveryInterface,
 	stos *storageosv1.StorageOSCluster,
 	labels map[string]string,
@@ -36,6 +39,7 @@ func NewDeployment(
 	update bool) *Deployment {
 	return &Deployment{
 		client:             client,
+		apiClient:          apiClient,
 		discoveryClient:    discoveryClient,
 		stos:               stos,
 		recorder:           recorder,

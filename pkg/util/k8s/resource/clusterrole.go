@@ -47,7 +47,7 @@ func (c ClusterRole) Get() (*rbacv1.ClusterRole, error) {
 func (c ClusterRole) Create() error {
 	cr := getClusterRole(c.Name, c.labels)
 	cr.Rules = c.rules
-	return CreateOrUpdate(c.client, cr)
+	return Create(c.client, cr)
 }
 
 // Delete deletes a ClusterRole resource.

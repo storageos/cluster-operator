@@ -48,7 +48,7 @@ func (r Role) Get() (*rbacv1.Role, error) {
 func (r *Role) Create() error {
 	role := getRole(r.Name, r.Namespace, r.labels)
 	role.Rules = r.rules
-	return CreateOrUpdate(r.client, role)
+	return Create(r.client, role)
 }
 
 // Delete deletes a k8s Role resource.

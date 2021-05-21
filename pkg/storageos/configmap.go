@@ -2,6 +2,7 @@ package storageos
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -138,35 +139,43 @@ func (s *Deployment) ensureConfigMap() error {
 		return err
 	}
 
-	// If there is an existing CM, check for changes and apply any that are set
-	// dynamically via the API.
-	if existing != nil {
-		// Don't update if unchanged.
-		if reflect.DeepEqual(config, existing) {
-			return nil
+	// Create the ConfigMap or update if its data doesn't match the new config.
+	if existing == nil {
+		if err := s.k8sResourceManager.ConfigMap(configmapName, s.stos.Spec.GetResourceNS(), labels, config).Create(); err != nil {
+			return fmt.Errorf("failed to create ConfigMap: %v", err)
 		}
-
-		// Skip if the API isn't ready yet.  This will cause the operator to log
-		// errors while the initial StorageOS cluster is starting.  We need to
-		// return an error (which will be logged) so that it can be re-queued.
-		status, err := s.getStorageOSStatus()
-		if err != nil {
-			return fmt.Errorf("failed to get storageos status: %v", err)
-		}
-		if status.Phase != storageosv1.ClusterPhaseRunning {
-			return fmt.Errorf("storageos api not ready, retrying")
-		}
-
-		// Apply cluster configuration.  Don't progress on error, re-queue instead.
-		if err := s.applyClusterConfig(); err != nil {
-			return fmt.Errorf("failed to apply cluster config: %v", err)
+	} else if !reflect.DeepEqual(existing.Data, config) {
+		if err := s.k8sResourceManager.ConfigMap(configmapName, s.stos.Spec.GetResourceNS(), labels, config).Update(); err != nil {
+			return fmt.Errorf("failed to update ConfigMap: %v", err)
 		}
 	}
 
-	// Create or Update the ConfigMap.  "Create" is badly named.  For ConfigMaps
-	// it will update if the resource already exists.
-	if err := s.k8sResourceManager.ConfigMap(configmapName, s.stos.Spec.GetResourceNS(), labels, config).Create(); err != nil {
-		return err
+	// Apply a subset of the configuration directly to the StorageOS API.
+	//
+	// Don't attempt to update via the API if the cluster isn't ready.
+
+	// This is likely on first bootstrap, where we need to write the ConfigMap
+	// for the cluster to start, but it isn't used again.  In this case, don't
+	// return an error as there is no need to re-apply after the bootstrap.
+	//
+	// To ensure changes to an existing CR made during an upgrade are applied,
+	// we need to return an error so that the API update will get retried when
+	// the cluster is back online.
+	status, err := s.getStorageOSStatus()
+	if err != nil {
+		return fmt.Errorf("failed to get storageos status: %v", err)
+	}
+	if status.Phase != storageosv1.ClusterPhaseRunning {
+		if existing == nil {
+			// No need to re-queue if this is a new cluster.
+			return nil
+		}
+		return errors.New("storageos api not ready, retrying")
+	}
+
+	// Apply cluster configuration.  Don't progress on error, re-queue instead.
+	if err := s.applyClusterConfig(); err != nil {
+		return fmt.Errorf("failed to apply cluster config: %v", err)
 	}
 
 	return nil
@@ -180,12 +189,11 @@ func (s *Deployment) applyClusterConfig() error {
 		return err
 	}
 
-	client, err := storageosapi.New(string(username), string(password), s.APIServiceEndpoint())
-	if err != nil {
+	if err := s.apiClient.Authenticate(string(username), string(password)); err != nil {
 		return err
 	}
 
-	current, err := client.GetCluster(context.Background())
+	current, err := s.apiClient.GetCluster(context.Background())
 	if err != nil {
 		return err
 	}
@@ -206,7 +214,7 @@ func (s *Deployment) applyClusterConfig() error {
 		return nil
 	}
 
-	return client.UpdateCluster(context.Background(), want)
+	return s.apiClient.UpdateCluster(context.Background(), want)
 }
 
 // configFromSpec generates config entries.

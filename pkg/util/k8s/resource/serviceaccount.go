@@ -44,7 +44,7 @@ func (s *ServiceAccount) Get() (*corev1.ServiceAccount, error) {
 // Create creates a new k8s ServiceAccount resource.
 func (s *ServiceAccount) Create() error {
 	sa := getServiceAccount(s.Name, s.Namespace, s.labels)
-	return CreateOrUpdate(s.client, sa)
+	return Create(s.client, sa)
 }
 
 // Delete deletes a ServiceAccount resource.

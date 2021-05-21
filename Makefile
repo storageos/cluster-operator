@@ -1,5 +1,6 @@
 OPERATOR_IMAGE ?= storageos/cluster-operator:test
 GO_BUILD_CMD = go build -v
+GO_GENERATE_CMD = go generate -v
 GO_ENV = GOOS=linux CGO_ENABLED=0
 SDK_VERSION = v0.17.2
 MACHINE = $(shell uname -m)
@@ -88,26 +89,16 @@ k8s-code-gen:
 		git clone --depth=1 https://github.com/kubernetes/code-generator $(CACHE_K8S_CODE_GEN_DIR); \
 	fi
 
+# Generate mocks.  This is not run automatically.
+mock-gen:
+	$(GO_ENV) GO111MODULE=on $(GO_GENERATE_CMD) -mod=vendor ./...
+
 # Generate APIs, CRD specs and CRD clientset.
 go-gen: operator-sdk k8s-code-gen
 	# generate k8s requires GOROOT to be set.
 	GOROOT=$(GOPATH) GO111MODULE=on $(OPERATOR_SDK) generate k8s
 	GO111MODULE=on $(OPERATOR_SDK) generate crds
-	# TODO: Install kube-openapi and generate OpenAPI. Operator-sdk no
-	# longer provides subcommand to generate OpenAPI. Install
-	# k8s.io/kube-openapi
-	# Generate OpenAPI.
-	# openapi-gen --logtostderr=true \
-        #           -i ./pkg/apis/storageos/v1 \
-        #           -o "" \
-        #           -O zz_generated.openapi \
-        #           -p ./pkg/apis/storageos/v1 \
-        #           -h $(CACHE_DIR)/go/src/k8s.io/code-generator/hack/boilerplate.go.txt \
-        #           -r "-"
-	# Generate storageos operator resource client.
-	$(CACHE_K8S_GEN_GROUPS_SCRIPT) "deepcopy,client" \
-		github.com/storageos/cluster-operator/pkg/client \
-		github.com/storageos/cluster-operator/pkg/apis storageos:v1
+
 
 generate: go-gen-docker ## Run all the code generators.
 

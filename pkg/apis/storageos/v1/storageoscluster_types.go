@@ -418,6 +418,12 @@ func (s StorageOSClusterSpec) GetServiceName() string {
 	return DefaultServiceName
 }
 
+// APIServiceEndpoint returns the API endpoint string that can be used within
+// the cluster.
+func (s StorageOSClusterSpec) APIServiceEndpoint() string {
+	return fmt.Sprintf("http://%s.%s.svc:%d", s.GetServiceName(), s.GetResourceNS(), s.GetServiceExternalPort())
+}
+
 // GetServiceType returns the service type.
 func (s StorageOSClusterSpec) GetServiceType() string {
 	if s.Service.Type != "" {

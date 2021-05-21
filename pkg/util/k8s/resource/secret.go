@@ -57,7 +57,7 @@ func (s Secret) Create() error {
 	secret := getSecret(s.Name, s.Namespace, s.labels)
 	secret.Type = s.secType
 	secret.Data = s.data
-	return CreateOrUpdate(s.client, secret)
+	return Create(s.client, secret)
 }
 
 // getSecret returns a generic Secret object.

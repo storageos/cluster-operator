@@ -47,7 +47,7 @@ func (c CSIDriver) Get() (*storagev1beta1.CSIDriver, error) {
 func (c CSIDriver) Create() error {
 	csiDriver := getCSIDriver(c.Name, c.labels)
 	csiDriver.Spec = *c.spec
-	return CreateOrUpdate(c.client, csiDriver)
+	return Create(c.client, csiDriver)
 }
 
 // Delete deletes a CSIDriver.

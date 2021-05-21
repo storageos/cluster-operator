@@ -52,7 +52,7 @@ func (c ClusterRoleBinding) Create() error {
 	roleBinding := getClusterRoleBinding(c.Name, c.labels)
 	roleBinding.Subjects = c.subjects
 	roleBinding.RoleRef = *c.roleRef
-	return CreateOrUpdate(c.client, roleBinding)
+	return Create(c.client, roleBinding)
 }
 
 // Delete deletes a ClusterRoleBinding resources.

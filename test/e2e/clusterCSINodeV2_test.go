@@ -70,11 +70,14 @@ func TestClusterCSINodeV2(t *testing.T) {
 
 	t.Run("ClusterStatusCheck", func(t *testing.T) {
 		if err = testutil.ClusterStatusCheck(t, clusterNsName, 1, testutil.RetryInterval, testutil.Timeout); err != nil {
+			// Output the operator logs to help with debugging.
 			logs, logErr := util.GetOperatorLogs(namespace)
+			t.Log(logs)
 			if logErr != nil {
 				t.Error(errors.Wrap(logErr, "failed to fetch operator logs"))
 			}
-			t.Log(logs)
+
+			// Log the original error and exit.
 			t.Fatal(err)
 		}
 	})

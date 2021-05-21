@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/storageos/cluster-operator/internal/pkg/image"
+	storageosapi "github.com/storageos/cluster-operator/internal/pkg/storageos"
 	"github.com/storageos/cluster-operator/internal/pkg/toleration"
 	storageosapis "github.com/storageos/cluster-operator/pkg/apis"
 	api "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
@@ -65,26 +66,41 @@ func getFakeDiscoveryClient() (discovery.DiscoveryInterface, error) {
 
 func setupFakeDeployment() (client.Client, *Deployment, error) {
 	c := fake.NewFakeClientWithScheme(testScheme)
-	deploy, err := setupFakeDeploymentWithClient(c)
+	deploy, err := setupFakeDeploymentWithK8sAndAPI(c, nil)
 	return c, deploy, err
 }
 
-func setupFakeDeploymentWithClient(c client.Client) (*Deployment, error) {
+func setupFakeDeploymentWithAPI(apiClient *storageosapi.Client) (client.Client, *Deployment, error) {
+	c := fake.NewFakeClientWithScheme(testScheme)
+	deploy, err := setupFakeDeploymentWithK8sAndAPI(c, apiClient)
+	return c, deploy, err
+}
+
+func setupFakeDeploymentWithK8sAndAPI(c client.Client, apiClient *storageosapi.Client) (*Deployment, error) {
 	stosCluster := &api.StorageOSCluster{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: gvk.GroupVersion().String(),
 			Kind:       gvk.Kind,
 		},
 	}
-	return setupFakeDeploymentWithClientAndCluster(c, stosCluster)
+	return setupFakeDeploymentWithk8sAndAPIAndCluster(c, apiClient, stosCluster)
 }
 
-func setupFakeDeploymentWithClientAndCluster(c client.Client, stosCluster *api.StorageOSCluster) (*Deployment, error) {
+func setupFakeDeploymentWithK8sAndCluster(c client.Client, stosCluster *api.StorageOSCluster) (*Deployment, error) {
 	dc, err := getFakeDiscoveryClient()
 	if err != nil {
 		return nil, err
 	}
-	deploy := NewDeployment(c, dc, stosCluster, nil, nil, testScheme, "", false)
+	deploy := NewDeployment(c, storageosapi.Fake(), dc, stosCluster, nil, nil, testScheme, "", false)
+	return deploy, nil
+}
+
+func setupFakeDeploymentWithk8sAndAPIAndCluster(c client.Client, apiClient *storageosapi.Client, stosCluster *api.StorageOSCluster) (*Deployment, error) {
+	dc, err := getFakeDiscoveryClient()
+	if err != nil {
+		return nil, err
+	}
+	deploy := NewDeployment(c, apiClient, dc, stosCluster, nil, nil, testScheme, "", false)
 	return deploy, nil
 }
 
@@ -259,7 +275,7 @@ func TestCreateDaemonSet(t *testing.T) {
 		c := fake.NewFakeClientWithScheme(testScheme, etcdSecret)
 
 		stosCluster.Spec = tc.spec
-		deploy, err := setupFakeDeploymentWithClientAndCluster(c, stosCluster)
+		deploy, err := setupFakeDeploymentWithK8sAndCluster(c, stosCluster)
 		if err != nil {
 			t.Fatalf("failed to create deployment: %v", err)
 		}
@@ -428,7 +444,7 @@ func TestCreateCSIHelper(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			c := fake.NewFakeClientWithScheme(testScheme)
-			deploy, err := setupFakeDeploymentWithClientAndCluster(c, stosCluster)
+			deploy, err := setupFakeDeploymentWithK8sAndCluster(c, stosCluster)
 			if err != nil {
 				t.Fatalf("failed to create deployment: %v", err)
 			}
@@ -519,7 +535,7 @@ func TestCreateAPIManager(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			c := fake.NewFakeClientWithScheme(testScheme)
 
-			deploy, err := setupFakeDeploymentWithClientAndCluster(c, stosCluster)
+			deploy, err := setupFakeDeploymentWithK8sAndCluster(c, stosCluster)
 			if err != nil {
 				t.Fatalf("failed to create deployment: %v", err)
 			}
@@ -666,7 +682,7 @@ func TestDeployCSI(t *testing.T) {
 				t.Fatalf("failed to create discovery client: %v", err)
 			}
 
-			deploy := NewDeployment(c, dc, stosCluster, nil, nil, testScheme, tc.k8sVersion, false)
+			deploy := NewDeployment(c, storageosapi.Fake(), dc, stosCluster, nil, nil, testScheme, tc.k8sVersion, false)
 			if err := deploy.Deploy(); err != nil {
 				t.Fatalf("failed to deploy cluster: %v", err)
 			}
@@ -745,7 +761,7 @@ func TestDeployEtcdEndpoints(t *testing.T) {
 		t.Fatalf("failed to create storageoscluster object: %v", err)
 	}
 
-	deploy, err := setupFakeDeploymentWithClientAndCluster(c, stosCluster)
+	deploy, err := setupFakeDeploymentWithK8sAndCluster(c, stosCluster)
 	if err != nil {
 		t.Fatalf("failed to create deployment: %v", err)
 	}
@@ -810,7 +826,7 @@ func TestDeployDebug(t *testing.T) {
 		t.Fatalf("failed to create storageoscluster object: %v", err)
 	}
 
-	deploy, err := setupFakeDeploymentWithClientAndCluster(c, stosCluster)
+	deploy, err := setupFakeDeploymentWithK8sAndCluster(c, stosCluster)
 	if err != nil {
 		t.Fatalf("failed to create deployment: %v", err)
 	}
@@ -908,7 +924,7 @@ func TestDeployNodeAffinity(t *testing.T) {
 				t.Fatalf("failed to create storageoscluster object: %v", err)
 			}
 
-			deploy, err := setupFakeDeploymentWithClientAndCluster(c, stosCluster)
+			deploy, err := setupFakeDeploymentWithK8sAndCluster(c, stosCluster)
 			if err != nil {
 				t.Fatalf("failed to create deployment: %v", err)
 			}
@@ -1168,7 +1184,7 @@ func TestDeployTolerations(t *testing.T) {
 				t.Fatalf("failed to create storageoscluster object: %v", err)
 			}
 
-			deploy, err := setupFakeDeploymentWithClientAndCluster(c, stosCluster)
+			deploy, err := setupFakeDeploymentWithK8sAndCluster(c, stosCluster)
 			if err != nil {
 				t.Fatalf("failed to create deployment: %v", err)
 			}
@@ -1303,7 +1319,7 @@ func TestDeployNodeResources(t *testing.T) {
 		t.Fatalf("failed to create storageoscluster object: %v", err)
 	}
 
-	deploy, err := setupFakeDeploymentWithClientAndCluster(c, stosCluster)
+	deploy, err := setupFakeDeploymentWithK8sAndCluster(c, stosCluster)
 	if err != nil {
 		t.Fatalf("failed to create deployment: %v", err)
 	}
@@ -1399,7 +1415,7 @@ func TestDelete(t *testing.T) {
 				t.Fatal("expected the namespace to not exist initially", err)
 			}
 
-			deploy, err := setupFakeDeploymentWithClientAndCluster(c, stosCluster)
+			deploy, err := setupFakeDeploymentWithK8sAndCluster(c, stosCluster)
 			if err != nil {
 				t.Fatalf("failed to create deployment: %v", err)
 			}
@@ -1565,7 +1581,7 @@ func TestDeployTLSEtcdCerts(t *testing.T) {
 	}
 
 	// Deploy storageos cluster.
-	deploy, err := setupFakeDeploymentWithClientAndCluster(c, stosCluster)
+	deploy, err := setupFakeDeploymentWithK8sAndCluster(c, stosCluster)
 	if err != nil {
 		t.Fatalf("failed to create deployment: %v", err)
 	}
@@ -1678,7 +1694,7 @@ func TestDeployPodPriorityClass(t *testing.T) {
 				t.Fatalf("failed to create storageoscluster object: %v", err)
 			}
 
-			deploy, err := setupFakeDeploymentWithClientAndCluster(c, stosCluster)
+			deploy, err := setupFakeDeploymentWithK8sAndCluster(c, stosCluster)
 			if err != nil {
 				t.Fatalf("failed to create deployment: %v", err)
 			}
@@ -1794,7 +1810,7 @@ func TestDeploySchedulerExtender(t *testing.T) {
 		t.Fatalf("failed to create discovery client: %v", err)
 	}
 
-	deploy := NewDeployment(c, dc, stosCluster, nil, nil, testScheme, "1.15.0", false)
+	deploy := NewDeployment(c, storageosapi.Fake(), dc, stosCluster, nil, nil, testScheme, "1.15.0", false)
 	err = deploy.Deploy()
 	if err != nil {
 		t.Error("deployment failed:", err)

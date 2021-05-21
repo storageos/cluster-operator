@@ -284,7 +284,7 @@ func (s *Deployment) createNamespace() error {
 		},
 	}
 
-	return resource.CreateOrUpdate(s.client, ns)
+	return resource.Create(s.client, ns)
 }
 
 // addNodeContainerResources adds resource requirements for the node containers.

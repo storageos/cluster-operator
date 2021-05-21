@@ -51,7 +51,7 @@ func (i Ingress) Get() (*extensionsv1beta1.Ingress, error) {
 func (i Ingress) Create() error {
 	ingress := getIngress(i.Name, i.Namespace, i.labels, i.annotations)
 	ingress.Spec = *i.spec
-	return CreateOrUpdate(i.client, ingress)
+	return Create(i.client, ingress)
 }
 
 // Delete deletes an existing Ingress resource.

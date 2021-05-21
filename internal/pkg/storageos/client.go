@@ -12,7 +12,7 @@ import (
 	api "github.com/storageos/go-api/v2"
 )
 
-//go:generate mockgen -build_flags=--mod=vendor -destination=mocks/mock_control_plane.go -package=mocks . ControlPlane
+//go:generate mockgen -build_flags=--mod=vendor -destination=mocks/mock_control_plane.go -package=mocks github.com/storageos/cluster-operator/internal/pkg/storageos ControlPlane
 
 // ControlPlane is the subset of the StorageOS control plane ControlPlane that
 // the operator requires.  New methods should be added here as needed, then the
@@ -26,10 +26,8 @@ type ControlPlane interface {
 
 // Client provides access to the StorageOS API.
 type Client struct {
-	api       ControlPlane
-	transport http.RoundTripper
-	ctx       context.Context
-	traced    bool
+	api ControlPlane
+	ctx context.Context
 }
 
 const (
@@ -38,15 +36,9 @@ const (
 
 	// DefaultScheme is used for api endpoint.
 	DefaultScheme = "http"
-
-	// TLSScheme scheme can be used if the api endpoint has TLS enabled.
-	TLSScheme = "https"
 )
 
 var (
-	// ErrNotInitialized is returned if the API client was accessed before it
-	// was initialised.
-	ErrNotInitialized = errors.New("api client not initialized")
 	// ErrNoAuthToken is returned when the API client did not get an error
 	// during authentication but no valid auth token was returned.
 	ErrNoAuthToken = errors.New("no token found in auth response")
@@ -60,37 +52,21 @@ var (
 	// AuthenticationTimeout is the time limit for authentication requests to
 	// complete.  It should be longer than the HTTPTimeout.
 	AuthenticationTimeout = 20 * time.Second
-
-	// DefaultRequestTimeout is the default time limit for api requests to
-	// complete.  It should be longer than the HTTPTimeout.
-	DefaultRequestTimeout = 20 * time.Second
 )
 
-// NewTestAPIClient returns a client that uses the provided ControlPlane api
-// client. Intended for tests that use a mocked StorageOS api.  This avoids
-// having to publically expose the api on the Client struct.
-func NewTestAPIClient(api ControlPlane) *Client {
+// Mocked returns a client that uses the provided ControlPlane api client.
+// Intended for tests that use a mocked StorageOS api.  This avoids having to
+// publically expose the api on the Client struct.
+func Mocked(api ControlPlane) *Client {
 	return &Client{
-		api:       api,
-		transport: http.DefaultTransport,
-		ctx:       context.TODO(),
-		traced:    false,
+		api: api,
+		ctx: context.TODO(),
 	}
 }
 
-// New returns a pre-authenticated client for the StorageOS API.  The
-// authentication token must be refreshed periodically using
-// AuthenticateRefresh().
-func New(username, password, endpoint string) (*Client, error) {
-	transport := http.DefaultTransport
-	ctx, client, err := newAuthenticatedClient(username, password, endpoint, transport)
-	if err != nil {
-		return nil, err
-	}
-	return &Client{api: client.DefaultApi, transport: transport, ctx: ctx}, nil
-}
-
-func newAuthenticatedClient(username, password, endpoint string, transport http.RoundTripper) (context.Context, *api.APIClient, error) {
+// New returns an unauthenticated client for the StorageOS API.  Authenticate()
+// must be called before using the client.
+func New(endpoint string) *Client {
 	config := api.NewConfiguration()
 
 	if !strings.Contains(endpoint, "://") {
@@ -99,7 +75,10 @@ func newAuthenticatedClient(username, password, endpoint string, transport http.
 
 	u, err := url.Parse(endpoint)
 	if err != nil {
-		return nil, nil, err
+		// This should never happen as we control the endpoint that is passed
+		// in.  It allows us to create a client in places that are unable to
+		// handle an error gracefully.
+		panic(err)
 	}
 
 	config.Scheme = u.Scheme
@@ -108,48 +87,45 @@ func newAuthenticatedClient(username, password, endpoint string, transport http.
 		config.Host = fmt.Sprintf("%s:%d", u.Host, DefaultPort)
 	}
 
-	httpc := &http.Client{
+	config.HTTPClient = &http.Client{
 		Timeout:   HTTPTimeout,
-		Transport: transport,
+		Transport: http.DefaultTransport,
 	}
-	config.HTTPClient = httpc
 
 	// Get a wrappered API client.
 	client := api.NewAPIClient(config)
 
-	// Authenticate and return context with credentials and client.
-	ctx, err := Authenticate(client, username, password)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return ctx, client, nil
+	return &Client{api: client.DefaultApi, ctx: context.TODO()}
 }
 
 // Authenticate against the API and set the authentication token in the client
 // to be used for subsequent API requests.  The token must be refreshed
-// periodically using AuthenticateRefresh().
-func Authenticate(client *api.APIClient, username, password string) (context.Context, error) {
+// periodically using AuthenticateRefresh(), or Authenticate() called again.
+func (c *Client) Authenticate(username, password string) error {
 	// Create context just for the login.
 	ctx, cancel := context.WithTimeout(context.Background(), AuthenticationTimeout)
 	defer cancel()
 
 	// Initial basic auth to retrieve the jwt token.
-	_, resp, err := client.DefaultApi.AuthenticateUser(ctx, api.AuthUserData{
+	_, resp, err := c.api.AuthenticateUser(ctx, api.AuthUserData{
 		Username: username,
 		Password: password,
 	})
 	if err != nil {
-		return nil, api.MapAPIError(err, resp)
+		return api.MapAPIError(err, resp)
 	}
 	defer resp.Body.Close()
 
 	// Set auth token in a new context for re-use.
 	token := respAuthToken(resp)
 	if token == "" {
-		return nil, ErrNoAuthToken
+		return ErrNoAuthToken
 	}
-	return context.WithValue(context.Background(), api.ContextAccessToken, token), nil
+
+	// Update the client with the new token.
+	c.ctx = context.WithValue(context.Background(), api.ContextAccessToken, token)
+
+	return nil
 }
 
 // AddToken adds the current authentication token to a given context.

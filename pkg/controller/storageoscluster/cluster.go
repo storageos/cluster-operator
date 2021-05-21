@@ -1,6 +1,7 @@
 package storageoscluster
 
 import (
+	storageosapi "github.com/storageos/cluster-operator/internal/pkg/storageos"
 	storageosv1 "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	"github.com/storageos/cluster-operator/pkg/storageos"
 	"github.com/storageos/cluster-operator/pkg/util/k8s"
@@ -46,7 +47,10 @@ func (c *StorageOSCluster) SetDeployment(r *ReconcileStorageOSCluster) {
 	// default.
 	labels = k8s.AddDefaultAppLabels(c.cluster.Name, labels)
 
-	c.deployment = storageos.NewDeployment(r.client, r.discoveryClient, c.cluster, labels, r.recorder, r.scheme, r.k8sVersion, updateIfExists)
+	// Add a StorageOS API client.  It must be authenticated before use.
+	apiClient := storageosapi.New(c.cluster.Spec.APIServiceEndpoint())
+
+	c.deployment = storageos.NewDeployment(r.client, apiClient, r.discoveryClient, c.cluster, labels, r.recorder, r.scheme, r.k8sVersion, updateIfExists)
 }
 
 // IsCurrentCluster compares the cluster attributes to check if the given

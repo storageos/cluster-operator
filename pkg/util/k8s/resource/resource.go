@@ -4,6 +4,7 @@ package resource
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -23,16 +24,13 @@ const (
 	APIadmissionv1      = "admissionregistration.k8s.io/v1"
 )
 
-// CreateOrUpdate creates or updates an existing k8s resource.
-func CreateOrUpdate(c client.Client, obj runtime.Object) error {
+// Create a k8s resource.  Does not return an error if the resource
+// already exists.  It is up to the caller to check beforehand and call Update()
+// if required and the object Kind supports it.
+func Create(c client.Client, obj runtime.Object) error {
 	if err := c.Create(context.Background(), obj); err != nil {
 		if apierrors.IsAlreadyExists(err) {
-			// Only allow updates on specic kinds.
-			if obj.GetObjectKind().GroupVersionKind().Kind == "ConfigMap" {
-				return c.Update(context.Background(), obj)
-			}
-
-			// Exists, no update.
+			// Exists, update must be requested specifically.
 			return nil
 		}
 
@@ -42,7 +40,22 @@ func CreateOrUpdate(c client.Client, obj runtime.Object) error {
 	return nil
 }
 
-// Delete deletes a k8s resource.
+// Update an existing k8s resource.
+func Update(c client.Client, obj runtime.Object) error {
+	kind := obj.GetObjectKind().GroupVersionKind().Kind
+
+	// Only allow updates on specic kinds.
+	if kind != "ConfigMap" {
+		return errors.New("update not supported for this object kind")
+	}
+
+	if err := c.Update(context.Background(), obj); err != nil {
+		return fmt.Errorf("failed to update %s: %v", kind, err)
+	}
+	return nil
+}
+
+// Delete a k8s resource.
 func Delete(c client.Client, obj runtime.Object) error {
 	if err := c.Delete(context.Background(), obj); err != nil {
 		if apierrors.IsNotFound(err) {

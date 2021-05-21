@@ -84,8 +84,9 @@ func StorageOSClusterUpdateTest(t *testing.T, ctx *framework.Context) {
 	var client *storageosapi.Client
 	var clientErr error
 	for _, ip := range stos.Status.Members.Ready {
-		client, clientErr = storageosapi.New(apiUsername, apiPassword, ip)
-		if err == nil {
+		client = storageosapi.New(ip)
+		clientErr = client.Authenticate(apiUsername, apiPassword)
+		if clientErr == nil {
 			break
 		}
 	}

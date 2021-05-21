@@ -24,6 +24,9 @@ type Resource interface {
 	// Create creates the resource.
 	Create() error
 
+	// Update updates the resource.
+	Update() error
+
 	// Delete deletes the resource.
 	Delete() error
 }
