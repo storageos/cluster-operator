@@ -141,7 +141,8 @@ func (s *Deployment) Deploy() error {
 		return err
 	}
 
-	if err := s.createConfigMap(); err != nil {
+	// ConfigMap is mutable - apply updates.
+	if err := s.ensureConfigMap(); err != nil {
 		return err
 	}
 
@@ -283,7 +284,7 @@ func (s *Deployment) createNamespace() error {
 		},
 	}
 
-	return resource.CreateOrUpdate(s.client, ns)
+	return resource.Create(s.client, ns)
 }
 
 // addNodeContainerResources adds resource requirements for the node containers.

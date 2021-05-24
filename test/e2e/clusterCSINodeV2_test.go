@@ -8,12 +8,14 @@ import (
 	"testing"
 
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	storageos "github.com/storageos/cluster-operator/pkg/apis/storageos/v1"
 	deploy "github.com/storageos/cluster-operator/pkg/storageos"
+	"github.com/storageos/cluster-operator/test/e2e/util"
 	testutil "github.com/storageos/cluster-operator/test/e2e/util"
 )
 
@@ -50,7 +52,11 @@ func TestClusterCSINodeV2(t *testing.T) {
 		},
 	}
 
-	testStorageOS := testutil.NewStorageOSCluster(namespace, clusterSpec)
+	clusterNsName := types.NamespacedName{
+		Name:      testutil.TestClusterCRName,
+		Namespace: namespace,
+	}
+	testStorageOS := testutil.NewStorageOSCluster(clusterNsName, clusterSpec)
 
 	t.Run("SetupOperator", func(t *testing.T) {
 		testutil.SetupOperator(t, ctx)
@@ -62,12 +68,16 @@ func TestClusterCSINodeV2(t *testing.T) {
 		}
 	})
 
-	namespacedName := types.NamespacedName{
-		Name:      testutil.TestClusterCRName,
-		Namespace: namespace,
-	}
 	t.Run("ClusterStatusCheck", func(t *testing.T) {
-		if err = testutil.ClusterStatusCheck(t, namespacedName, 1, testutil.RetryInterval, testutil.Timeout); err != nil {
+		if err = testutil.ClusterStatusCheck(t, clusterNsName, 1, testutil.RetryInterval, testutil.Timeout); err != nil {
+			// Output the operator logs to help with debugging.
+			logs, logErr := util.GetOperatorLogs(namespace)
+			t.Log(logs)
+			if logErr != nil {
+				t.Error(errors.Wrap(logErr, "failed to fetch operator logs"))
+			}
+
+			// Log the original error and exit.
 			t.Fatal(err)
 		}
 	})
@@ -133,7 +143,9 @@ func TestClusterCSINodeV2(t *testing.T) {
 		testutil.PodSchedulerAdmissionControllerTest(t, ctx)
 	})
 
-	// Test node label sync.
-	// TODO: Currently relies on v1 CLI.
-	// testutil.NodeLabelSyncTest(t, f.KubeClient)
+	// Test StorageOSCluster CR mutation.
+	t.Run("StorageOSClusterUpdateTest", func(t *testing.T) {
+		testutil.StorageOSClusterUpdateTest(t, ctx)
+	})
+
 }

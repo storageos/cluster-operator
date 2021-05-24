@@ -48,7 +48,7 @@ func (s StatefulSet) Get() (*appsv1.StatefulSet, error) {
 func (s StatefulSet) Create() error {
 	statefulset := getStatefulSet(s.Name, s.Namespace, s.labels)
 	statefulset.Spec = *s.spec
-	return CreateOrUpdate(s.client, statefulset)
+	return Create(s.client, statefulset)
 }
 
 // Delete deletes a StatefulSet.

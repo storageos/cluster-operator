@@ -16,6 +16,27 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+func GetOperatorLogs(namespace string) (string, error) {
+	podList, err := PodListForSelector(namespace, labels.SelectorFromSet(labels.Set{
+		"name": "storageos-cluster-operator",
+	}))
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get operator pods")
+	}
+
+	output := ""
+	for _, pod := range podList.Items {
+		logs, err := GetPodLogs(pod.Name, pod.Namespace)
+		if err != nil {
+			return "", errors.Wrap(err, "failed to get operator pod")
+		}
+		for k, v := range logs {
+			output = strings.Join([]string{output, v}, fmt.Sprintf("\n---- %s/%s\n", pod.Name, k))
+		}
+	}
+	return output, nil
+}
+
 func GetAPIManagerLogs() (string, error) {
 	podList, err := PodListForSelector("kube-system", labels.SelectorFromSet(labels.Set{
 		k8s.AppComponent: deploy.APIManagerName,

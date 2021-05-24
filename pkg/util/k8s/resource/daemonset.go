@@ -48,7 +48,7 @@ func (d DaemonSet) Get() (*appsv1.DaemonSet, error) {
 func (d DaemonSet) Create() error {
 	daemonset := getDaemonSet(d.Name, d.Namespace, d.labels)
 	daemonset.Spec = *d.spec
-	return CreateOrUpdate(d.client, daemonset)
+	return Create(d.client, daemonset)
 }
 
 // Delete deletes an existing DaemonSet resource.

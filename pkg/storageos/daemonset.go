@@ -33,7 +33,7 @@ const (
 	daemonSetNamespaceEnvVar = "DAEMONSET_NAMESPACE"
 
 	sysAdminCap = "SYS_ADMIN"
-	debugVal    = "xdebug"
+	debugVal    = "debug"
 
 	// Configmap file mode.
 	cmFileMode os.FileMode = 0600

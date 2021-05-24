@@ -37,6 +37,8 @@ const (
 	Timeout              = time.Second * 90
 	CleanupRetryInterval = time.Second * 1
 	CleanupTimeout       = time.Second * 15
+	apiUsername          = "storageos"
+	apiPassword          = "storageos"
 )
 
 // TestClusterCRName is the name of StorageOSCluster CR used in the tests.
@@ -44,15 +46,15 @@ const TestClusterCRName string = "example-storageos"
 
 // NewStorageOSCluster returns a StorageOSCluster object, created using a given
 // cluster spec.
-func NewStorageOSCluster(namespace string, clusterSpec storageos.StorageOSClusterSpec) *storageos.StorageOSCluster {
+func NewStorageOSCluster(nn types.NamespacedName, clusterSpec storageos.StorageOSClusterSpec) *storageos.StorageOSCluster {
 	return &storageos.StorageOSCluster{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "StorageOSCluster",
 			APIVersion: "storageos.com/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      TestClusterCRName,
-			Namespace: namespace,
+			Name:      nn.Name,
+			Namespace: nn.Namespace,
 		},
 		Spec: clusterSpec,
 		Status: storageos.StorageOSClusterStatus{
@@ -223,8 +225,8 @@ func DeployCluster(t *testing.T, ctx *framework.Context, cluster *storageos.Stor
 		},
 		Type: corev1.SecretType("kubernetes.io/storageos"),
 		StringData: map[string]string{
-			"apiUsername": "storageos",
-			"apiPassword": "storageos",
+			"apiUsername": apiUsername,
+			"apiPassword": apiPassword,
 		},
 	}
 

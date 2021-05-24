@@ -55,7 +55,7 @@ func (s ServiceMonitor) Get() (*monitoringv1.ServiceMonitor, error) {
 func (s ServiceMonitor) Create() error {
 	sm := getServiceMonitor(s.Name, s.Namespace, s.labels, s.annotations, s.service)
 	sm.Spec = *s.spec
-	return CreateOrUpdate(s.client, sm)
+	return Create(s.client, sm)
 }
 
 // Delete deletes a ServiceMonitor.

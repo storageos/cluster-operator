@@ -48,7 +48,7 @@ func (d Deployment) Get() (*appsv1.Deployment, error) {
 func (d Deployment) Create() error {
 	deployment := getDeployment(d.Name, d.Namespace, d.labels)
 	deployment.Spec = *d.spec
-	return CreateOrUpdate(d.client, deployment)
+	return Create(d.client, deployment)
 }
 
 // Delete deletes an existing Deployment resource.

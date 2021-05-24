@@ -36,15 +36,29 @@ func NewConfigMap(c client.Client, name, namespace string, labels map[string]str
 // Get returns an existing ConfigMap and an error if any.
 func (cm ConfigMap) Get() (*corev1.ConfigMap, error) {
 	configmap := &corev1.ConfigMap{}
-	err := cm.client.Get(context.TODO(), cm.NamespacedName, configmap)
-	return configmap, err
+	if err := cm.client.Get(context.TODO(), cm.NamespacedName, configmap); err != nil {
+		return nil, err
+	}
+	return configmap, nil
 }
 
 // Create creates a new k8s ConfigMap resource.
 func (cm ConfigMap) Create() error {
 	configmap := getConfigMap(cm.Name, cm.Namespace, cm.labels)
 	configmap.Data = cm.data
-	return CreateOrUpdate(cm.client, configmap)
+	return Create(cm.client, configmap)
+}
+
+// Update an existing k8s ConfigMap resource.
+func (cm ConfigMap) Update() error {
+	configmap, err := cm.Get()
+	if err != nil {
+		return err
+	}
+	configmap.Labels = cm.labels
+	configmap.Data = cm.data
+
+	return Update(cm.client, configmap)
 }
 
 // Delete deletes an existing k8s resource.

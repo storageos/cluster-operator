@@ -48,7 +48,7 @@ func (p PVC) Get() (*corev1.PersistentVolumeClaim, error) {
 func (p PVC) Create() error {
 	pvc := getPVC(p.Name, p.Namespace, p.labels)
 	pvc.Spec = *p.spec
-	return CreateOrUpdate(p.client, pvc)
+	return Create(p.client, pvc)
 }
 
 // Delete deletes a PVC.

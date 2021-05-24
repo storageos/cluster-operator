@@ -52,7 +52,7 @@ func (r *RoleBinding) Create() error {
 	roleBinding := getRoleBinding(r.Name, r.Namespace, r.labels)
 	roleBinding.Subjects = r.subjects
 	roleBinding.RoleRef = *r.roleRef
-	return CreateOrUpdate(r.client, roleBinding)
+	return Create(r.client, roleBinding)
 }
 
 // Delete deletes a Rolebinding resource.

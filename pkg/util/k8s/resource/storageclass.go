@@ -59,7 +59,7 @@ func (s StorageClass) Create() error {
 	sc.Provisioner = s.provisioner
 	sc.Parameters = s.params
 	sc.AllowVolumeExpansion = &allowVolumeExpansion
-	return CreateOrUpdate(s.client, sc)
+	return Create(s.client, sc)
 }
 
 // getStorageClass returns a generic StorageClass object with the given name.

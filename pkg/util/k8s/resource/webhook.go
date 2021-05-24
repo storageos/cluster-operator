@@ -47,7 +47,7 @@ func (w MutatingWebhookConfiguration) Get() (*admissionv1.MutatingWebhookConfigu
 // Create creates a MutatingWebhookConfiguration.
 func (w MutatingWebhookConfiguration) Create() error {
 	wh := getMutatingWebhookConfiguration(w.Name, w.labels, w.webhooks)
-	return CreateOrUpdate(w.client, wh)
+	return Create(w.client, wh)
 }
 
 // Delete deletes a MutatingWebhookConfiguration.
