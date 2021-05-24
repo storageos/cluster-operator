@@ -300,7 +300,7 @@ func TestDeployment_ensureConfigMap(t *testing.T) {
 			want:       genCM(defaultConfig),
 			prepare:    func(m *mocks.MockControlPlane) {},
 			apiOffline: true,
-			wantErr:    true,
+			wantErr:    false,
 		},
 		{
 			name:     "change while api down then recovered",

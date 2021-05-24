@@ -2,7 +2,6 @@ package storageos
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -166,11 +165,9 @@ func (s *Deployment) ensureConfigMap() error {
 		return fmt.Errorf("failed to get storageos status: %v", err)
 	}
 	if status.Phase != storageosv1.ClusterPhaseRunning {
-		if existing == nil {
-			// No need to re-queue if this is a new cluster.
-			return nil
-		}
-		return errors.New("storageos api not ready, retrying")
+		// No need to re-queue if the cluster isn't ready.  It will get
+		// re-evaluated when the status changes.
+		return nil
 	}
 
 	// Apply cluster configuration.  Don't progress on error, re-queue instead.
