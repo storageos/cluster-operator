@@ -41,6 +41,9 @@ const (
 	SchedulerClusterRoleName    = "storageos:scheduler-extender"
 	SchedulerClusterBindingName = "storageos:scheduler-extender"
 
+	SchedulingClusterRoleName    = "storageos:scheduling-extender"
+	SchedulingClusterBindingName = "storageos:scheduling-extender"
+
 	InitClusterRoleName    = "storageos:init"
 	InitClusterBindingName = "storageos:init"
 
@@ -389,6 +392,27 @@ func (s *Deployment) createClusterRoleForScheduler() error {
 	return s.k8sResourceManager.ClusterRole(SchedulerClusterRoleName, nil, rules).Create()
 }
 
+// createClusterRoleForScheduling creates a ClusterRole resource for scheduler
+// extender with all the permissions required by custom scheduler extender.
+func (s *Deployment) createClusterRoleForScheduling() error {
+	rules := []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{""},
+			Resources: []string{
+				"persistentvolumes",
+				"persistentvolumeclaims",
+			},
+			Verbs: []string{"get"},
+		},
+		{
+			APIGroups: []string{"storage.k8s.io"},
+			Resources: []string{"storageclasses"},
+			Verbs:     []string{"get"},
+		},
+	}
+	return s.k8sResourceManager.ClusterRole(SchedulingClusterRoleName, nil, rules).Create()
+}
+
 func (s *Deployment) createClusterRoleBindingForKeyMgmt() error {
 	subjects := []rbacv1.Subject{
 		{
@@ -583,7 +607,7 @@ func (s *Deployment) createClusterRoleBindingForSCC() error {
 }
 
 // createClusterRoleBindingForScheduler creates a cluster role binding for the
-// scheduler extender.
+// kube-scheduler.
 func (s *Deployment) createClusterRoleBindingForScheduler() error {
 	subjects := []rbacv1.Subject{
 		{
@@ -598,6 +622,24 @@ func (s *Deployment) createClusterRoleBindingForScheduler() error {
 		APIGroup: "rbac.authorization.k8s.io",
 	}
 	return s.k8sResourceManager.ClusterRoleBinding(SchedulerClusterBindingName, nil, subjects, roleRef).Create()
+}
+
+// createClusterRoleBindingForScheduler creates a cluster role binding for the
+// custom scheduler extender.
+func (s *Deployment) createClusterRoleBindingForScheduling() error {
+	subjects := []rbacv1.Subject{
+		{
+			Kind:      "ServiceAccount",
+			Name:      DaemonsetSA,
+			Namespace: s.stos.Spec.GetResourceNS(),
+		},
+	}
+	roleRef := &rbacv1.RoleRef{
+		Kind:     "ClusterRole",
+		Name:     SchedulingClusterRoleName,
+		APIGroup: "rbac.authorization.k8s.io",
+	}
+	return s.k8sResourceManager.ClusterRoleBinding(SchedulingClusterBindingName, nil, subjects, roleRef).Create()
 }
 
 // createClusterRoleForInit creates cluster role for the init container. This is
