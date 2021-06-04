@@ -38,11 +38,11 @@ const (
 	NFSClusterRoleName    = "storageos:nfs-provisioner"
 	NFSClusterBindingName = "storageos:nfs-provisioner"
 
-	SchedulerClusterRoleName    = "storageos:scheduler-extender"
-	SchedulerClusterBindingName = "storageos:scheduler-extender"
+	KubeSchedulerClusterRoleName    = "storageos:kube-scheduler"
+	KubeSchedulerClusterBindingName = "storageos:kube-scheduler"
 
-	SchedulingClusterRoleName    = "storageos:scheduling-extender"
-	SchedulingClusterBindingName = "storageos:scheduling-extender"
+	SchedulerExtenderClusterRoleName    = "storageos:scheduler-extender"
+	SchedulerExtenderClusterBindingName = "storageos:scheduler-extender"
 
 	InitClusterRoleName    = "storageos:init"
 	InitClusterBindingName = "storageos:init"
@@ -342,9 +342,9 @@ func (s *Deployment) createClusterRoleForResizer() error {
 	return s.k8sResourceManager.ClusterRole(CSIResizerClusterRoleName, nil, rules).Create()
 }
 
-// createClusterRoleForScheduler creates a ClusterRole resource for scheduler
+// createClusterRoleForKubeScheduler creates a ClusterRole resource for scheduler
 // extender with all the permissions required by kube-scheduler.
-func (s *Deployment) createClusterRoleForScheduler() error {
+func (s *Deployment) createClusterRoleForKubeScheduler() error {
 	rules := []rbacv1.PolicyRule{
 		{
 			APIGroups: []string{""},
@@ -389,12 +389,12 @@ func (s *Deployment) createClusterRoleForScheduler() error {
 			Verbs:     []string{"get", "create", "update"},
 		},
 	}
-	return s.k8sResourceManager.ClusterRole(SchedulerClusterRoleName, nil, rules).Create()
+	return s.k8sResourceManager.ClusterRole(KubeSchedulerClusterRoleName, nil, rules).Create()
 }
 
-// createClusterRoleForScheduling creates a ClusterRole resource for scheduler
+// createClusterRoleForSchedulerExtender creates a ClusterRole resource for scheduler
 // extender with all the permissions required by custom scheduler extender.
-func (s *Deployment) createClusterRoleForScheduling() error {
+func (s *Deployment) createClusterRoleForSchedulerExtender() error {
 	rules := []rbacv1.PolicyRule{
 		{
 			APIGroups: []string{""},
@@ -410,7 +410,7 @@ func (s *Deployment) createClusterRoleForScheduling() error {
 			Verbs:     []string{"get"},
 		},
 	}
-	return s.k8sResourceManager.ClusterRole(SchedulingClusterRoleName, nil, rules).Create()
+	return s.k8sResourceManager.ClusterRole(SchedulerExtenderClusterRoleName, nil, rules).Create()
 }
 
 func (s *Deployment) createClusterRoleBindingForKeyMgmt() error {
@@ -606,9 +606,9 @@ func (s *Deployment) createClusterRoleBindingForSCC() error {
 	return s.k8sResourceManager.ClusterRoleBinding(OpenShiftSCCClusterBindingName, nil, subjects, roleRef).Create()
 }
 
-// createClusterRoleBindingForScheduler creates a cluster role binding for the
+// createClusterRoleBindingForKubeScheduler creates a cluster role binding for the
 // kube-scheduler.
-func (s *Deployment) createClusterRoleBindingForScheduler() error {
+func (s *Deployment) createClusterRoleBindingForKubeScheduler() error {
 	subjects := []rbacv1.Subject{
 		{
 			Kind:      "ServiceAccount",
@@ -618,15 +618,15 @@ func (s *Deployment) createClusterRoleBindingForScheduler() error {
 	}
 	roleRef := &rbacv1.RoleRef{
 		Kind:     "ClusterRole",
-		Name:     SchedulerClusterRoleName,
+		Name:     KubeSchedulerClusterRoleName,
 		APIGroup: "rbac.authorization.k8s.io",
 	}
-	return s.k8sResourceManager.ClusterRoleBinding(SchedulerClusterBindingName, nil, subjects, roleRef).Create()
+	return s.k8sResourceManager.ClusterRoleBinding(KubeSchedulerClusterBindingName, nil, subjects, roleRef).Create()
 }
 
 // createClusterRoleBindingForScheduler creates a cluster role binding for the
 // custom scheduler extender.
-func (s *Deployment) createClusterRoleBindingForScheduling() error {
+func (s *Deployment) createClusterRoleBindingForSchedulerExtender() error {
 	subjects := []rbacv1.Subject{
 		{
 			Kind:      "ServiceAccount",
@@ -636,10 +636,10 @@ func (s *Deployment) createClusterRoleBindingForScheduling() error {
 	}
 	roleRef := &rbacv1.RoleRef{
 		Kind:     "ClusterRole",
-		Name:     SchedulingClusterRoleName,
+		Name:     SchedulerExtenderClusterRoleName,
 		APIGroup: "rbac.authorization.k8s.io",
 	}
-	return s.k8sResourceManager.ClusterRoleBinding(SchedulingClusterBindingName, nil, subjects, roleRef).Create()
+	return s.k8sResourceManager.ClusterRoleBinding(SchedulerExtenderClusterBindingName, nil, subjects, roleRef).Create()
 }
 
 // createClusterRoleForInit creates cluster role for the init container. This is
