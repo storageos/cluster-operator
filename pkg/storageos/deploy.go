@@ -109,11 +109,11 @@ func (s *Deployment) Deploy() error {
 		return err
 	}
 
-	if err := s.createClusterRoleForSchedulerExtender(); err != nil {
+	if err := s.createClusterRoleForSchedulerExtenderVolumeChecker(); err != nil {
 		return err
 	}
 
-	if err := s.createClusterRoleBindingForSchedulerExtender(); err != nil {
+	if err := s.createClusterRoleBindingForSchedulerExtenderVolumeChecker(); err != nil {
 		return err
 	}
 

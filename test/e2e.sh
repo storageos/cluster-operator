@@ -211,14 +211,14 @@ operator-sdk-e2e-cleanup() {
     kubectl delete clusterrole storageos:csi-attacher \
         storageos:csi-provisioner storageos:driver-registrar \
         storageos:openshift-scc storageos:pod-fencer \
-        storageos:kube-scheduler storageos:scheduler-extender storageos:init \
+        storageos:scheduler-extender storageos:scheduler-extender-vol-checker storageos:init \
         storageos:nfs-provisioner --ignore-not-found=true
 
     # Delete all the cluster role bindings.
     kubectl delete clusterrolebinding storageos:csi-attacher \
         storageos:csi-provisioner storageos:driver-registrar \
         storageos:k8s-driver-registrar storageos:openshift-scc \
-        storageos:pod-fencer storageos:kube-scheduler storageos:scheduler-extender \
+        storageos:pod-fencer storageos:scheduler-extender storageos:scheduler-extender-vol-checker \
         storageos:init storageos:nfs-provisioner --ignore-not-found=true
 
     # Delete NFSServer statefulset.
