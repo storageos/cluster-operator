@@ -140,7 +140,7 @@ func (s Deployment) createSchedulerPolicy() error {
         "urlPrefix": "{{.URLPrefix}}",
         "filterVerb": "{{.FilterVerb}}",
         "prioritizeVerb": "{{.PrioritizeVerb}}",
-        "weight": 1,
+        "weight": 1000,
         "enableHttps": {{.EnableHTTPS}},
         "nodeCacheCapable": false
       }]
