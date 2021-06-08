@@ -29,13 +29,13 @@ func (s *Deployment) createSchedulerExtender() error {
 	}
 
 	// Create RBAC related resources.
-	if err := s.createClusterRoleForScheduler(); err != nil {
+	if err := s.createClusterRoleForSchedulerExtender(); err != nil {
 		return err
 	}
 	if err := s.createServiceAccountForScheduler(); err != nil {
 		return err
 	}
-	if err := s.createClusterRoleBindingForScheduler(); err != nil {
+	if err := s.createClusterRoleBindingForSchedulerExtender(); err != nil {
 		return err
 	}
 
@@ -103,13 +103,13 @@ func (s Deployment) deleteSchedulerExtender() error {
 	if err := s.k8sResourceManager.ConfigMap(policyConfigMapName, namespace, nil, nil).Delete(); err != nil {
 		return err
 	}
-	if err := s.k8sResourceManager.ClusterRoleBinding(SchedulerClusterBindingName, nil, nil, nil).Delete(); err != nil {
+	if err := s.k8sResourceManager.ClusterRoleBinding(SchedulerExtenderClusterBindingName, nil, nil, nil).Delete(); err != nil {
 		return err
 	}
 	if err := s.k8sResourceManager.ServiceAccount(SchedulerSA, namespace, nil).Delete(); err != nil {
 		return err
 	}
-	if err := s.k8sResourceManager.ClusterRole(SchedulerClusterRoleName, nil, nil).Delete(); err != nil {
+	if err := s.k8sResourceManager.ClusterRole(SchedulerExtenderClusterRoleName, nil, nil).Delete(); err != nil {
 		return err
 	}
 	return nil

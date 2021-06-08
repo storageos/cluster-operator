@@ -38,8 +38,11 @@ const (
 	NFSClusterRoleName    = "storageos:nfs-provisioner"
 	NFSClusterBindingName = "storageos:nfs-provisioner"
 
-	SchedulerClusterRoleName    = "storageos:scheduler-extender"
-	SchedulerClusterBindingName = "storageos:scheduler-extender"
+	SchedulerExtenderClusterRoleName    = "storageos:scheduler-extender"
+	SchedulerExtenderClusterBindingName = "storageos:scheduler-extender"
+
+	SchedulerExtenderVolumeCheckerClusterRoleName    = "storageos:scheduler-extender-vol-checker"
+	SchedulerExtenderVolumeCheckerClusterBindingName = "storageos:scheduler-extender-vol-checker"
 
 	InitClusterRoleName    = "storageos:init"
 	InitClusterBindingName = "storageos:init"
@@ -339,9 +342,9 @@ func (s *Deployment) createClusterRoleForResizer() error {
 	return s.k8sResourceManager.ClusterRole(CSIResizerClusterRoleName, nil, rules).Create()
 }
 
-// createClusterRoleForScheduler creates a ClusterRole resource for scheduler
+// createClusterRoleForSchedulerExtender creates a ClusterRole resource for scheduler
 // extender with all the permissions required by kube-scheduler.
-func (s *Deployment) createClusterRoleForScheduler() error {
+func (s *Deployment) createClusterRoleForSchedulerExtender() error {
 	rules := []rbacv1.PolicyRule{
 		{
 			APIGroups: []string{""},
@@ -386,7 +389,28 @@ func (s *Deployment) createClusterRoleForScheduler() error {
 			Verbs:     []string{"get", "create", "update"},
 		},
 	}
-	return s.k8sResourceManager.ClusterRole(SchedulerClusterRoleName, nil, rules).Create()
+	return s.k8sResourceManager.ClusterRole(SchedulerExtenderClusterRoleName, nil, rules).Create()
+}
+
+// createClusterRoleForSchedulerExtenderVolumeChecker creates a ClusterRole resource for scheduler
+// extender with all the permissions required by custom scheduler extender.
+func (s *Deployment) createClusterRoleForSchedulerExtenderVolumeChecker() error {
+	rules := []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{""},
+			Resources: []string{
+				"persistentvolumes",
+				"persistentvolumeclaims",
+			},
+			Verbs: []string{"get"},
+		},
+		{
+			APIGroups: []string{"storage.k8s.io"},
+			Resources: []string{"storageclasses"},
+			Verbs:     []string{"get"},
+		},
+	}
+	return s.k8sResourceManager.ClusterRole(SchedulerExtenderVolumeCheckerClusterRoleName, nil, rules).Create()
 }
 
 func (s *Deployment) createClusterRoleBindingForKeyMgmt() error {
@@ -582,9 +606,9 @@ func (s *Deployment) createClusterRoleBindingForSCC() error {
 	return s.k8sResourceManager.ClusterRoleBinding(OpenShiftSCCClusterBindingName, nil, subjects, roleRef).Create()
 }
 
-// createClusterRoleBindingForScheduler creates a cluster role binding for the
-// scheduler extender.
-func (s *Deployment) createClusterRoleBindingForScheduler() error {
+// createClusterRoleBindingForSchedulerExtender creates a cluster role binding for the
+// kube-scheduler.
+func (s *Deployment) createClusterRoleBindingForSchedulerExtender() error {
 	subjects := []rbacv1.Subject{
 		{
 			Kind:      "ServiceAccount",
@@ -594,10 +618,28 @@ func (s *Deployment) createClusterRoleBindingForScheduler() error {
 	}
 	roleRef := &rbacv1.RoleRef{
 		Kind:     "ClusterRole",
-		Name:     SchedulerClusterRoleName,
+		Name:     SchedulerExtenderClusterRoleName,
 		APIGroup: "rbac.authorization.k8s.io",
 	}
-	return s.k8sResourceManager.ClusterRoleBinding(SchedulerClusterBindingName, nil, subjects, roleRef).Create()
+	return s.k8sResourceManager.ClusterRoleBinding(SchedulerExtenderClusterBindingName, nil, subjects, roleRef).Create()
+}
+
+// createClusterRoleBindingForScheduler creates a cluster role binding for the
+// custom scheduler extender.
+func (s *Deployment) createClusterRoleBindingForSchedulerExtenderVolumeChecker() error {
+	subjects := []rbacv1.Subject{
+		{
+			Kind:      "ServiceAccount",
+			Name:      DaemonsetSA,
+			Namespace: s.stos.Spec.GetResourceNS(),
+		},
+	}
+	roleRef := &rbacv1.RoleRef{
+		Kind:     "ClusterRole",
+		Name:     SchedulerExtenderVolumeCheckerClusterRoleName,
+		APIGroup: "rbac.authorization.k8s.io",
+	}
+	return s.k8sResourceManager.ClusterRoleBinding(SchedulerExtenderVolumeCheckerClusterBindingName, nil, subjects, roleRef).Create()
 }
 
 // createClusterRoleForInit creates cluster role for the init container. This is
