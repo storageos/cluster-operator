@@ -45,8 +45,3 @@ spec:
                   fieldPath: metadata.namespace
             - name: OPERATOR_NAME
               value: "storageos-cluster-operator"
-      tolerations:
-      - key: "key"
-        operator: "Equal"
-        value: "value"
-        effect: "NoSchedule"
