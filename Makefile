@@ -18,13 +18,13 @@ OPERATOR_NAME = storageosoperator
 BUNDLE_DIR = $(PWD)/bundle
 # Current bundle version is the next release version.
 # Bundle generation requires the current version number of the operator.
-CURRENT_BUNDLE_VERSION = "2.4.0"
+CURRENT_BUNDLE_VERSION = "2.4.1"
 SERVICE_ACCOUNT_NAME = $(shell $(YQ3) r deploy/operator.yaml spec.template.spec.serviceAccountName)
 SERVICE_ACCOUNT_PATH = "spec.install.spec.clusterPermissions[0].serviceAccountName"
 CSV_FILE = "bundle/manifests/storageosoperator.clusterserviceversion.yaml"
 
 # Set the new version before running the release target.
-NEW_VERSION ?= v2.3.0
+NEW_VERSION ?= v2.4.1
 
 # Variables to be used when running the make targets in a container.
 CACHE_DIR = $(shell pwd)/.cache
@@ -113,7 +113,7 @@ local-run: upgrader ## Run the opereator locally, out of k8s.
 	# OPERATOR_NAME=cluster-operator operator-sdk run --local --go-ldflags "$(LDFLAGS)"
 
 lint: golangci-lint ## Lint the code.
-	$(GOLANGCI_LINT) run --timeout 3m
+	$(GOLANGCI_LINT) run --timeout 4m
 
 # Lint the OLM metadata bundle.
 olm-lint: yq generate ## Lint the OLM related files.
