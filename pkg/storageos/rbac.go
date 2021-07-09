@@ -135,7 +135,7 @@ func (s *Deployment) createClusterRoleForAPIManager() error {
 		{
 			APIGroups: []string{""},
 			Resources: []string{"events"},
-			Verbs:     []string{"create"},
+			Verbs:     []string{"create", "patch"},
 		},
 		{
 			APIGroups: []string{"coordination.k8s.io"},
