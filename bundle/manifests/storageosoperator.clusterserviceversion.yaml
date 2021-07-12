@@ -49,8 +49,190 @@ spec:
         name: nfsservers.storageos.com
         version: v1
       - description: StorageOSCluster is the Schema for the storageosclusters API
+        displayName: StorageOS Cluster
         kind: StorageOSCluster
         name: storageosclusters.storageos.com
+        resources:
+        - kind: Namespace
+          name: ''
+          version: v1
+        - kind: ServiceAccount
+          name: ''
+          version: v1
+        - kind: Role
+          name: ''
+          version: rbac.authorization.k8s.io/v1
+        - kind: RoleBinding
+          name: ''
+          version: rbac.authorization.k8s.io/v1
+        - kind: ClusterRole
+          name: ''
+          version: rbac.authorization.k8s.io/v1
+        - kind: ClusterRoleBinding
+          name: ''
+          version: rbac.authorization.k8s.io/v1
+        - kind: Secret
+          name: ''
+          version: v1
+        - kind: DaemonSet
+          name: ''
+          version: apps/v1
+        - kind: Service
+          name: ''
+          version: v1
+        - kind: Ingress
+          name: ''
+          version: extensions/v1beta1
+        - kind: Deployment
+          name: ''
+          version: apps/v1
+        - kind: StatefulSet
+          name: ''
+          version: apps/v1
+        - kind: StorageClass
+          name: ''
+          version: storage.k8s.io/v1
+        - kind: StorageOSCluster
+          name: ''
+          version: v1
+        - kind: Job
+          name: ''
+          version: v1
+        - kind: StorageOSUpgrade
+          name: ''
+          version: v1
+        - kind: NFSServer
+          name: ''
+          version: v1
+        - kind: Node
+          name: ''
+          version: v1
+        - kind: StatefulSet
+          name: ''
+          version: v1
+        - kind: DaemonSet
+          name: ''
+          version: v1
+        specDescriptors:
+        - description: Defines the various container images used in the cluster.
+          displayName: Images
+          path: images
+        - description: The namespace to install the StorageOS cluster into. `kube-system`
+            is recommended so that StorageOS does not get evicted if a node becomes
+            over-allocated.
+          displayName: Namespace
+          path: namespace
+        - description: The name of the secret object that stores the api credentials.
+          displayName: Cluster Secret
+          path: secretRefName
+        - description: The name of the namespace where the secret object that stores
+            the api credentials exists.
+          displayName: Cluster Secret Namespace
+          path: secretRefNamespace
+        - description: The join token is used for cluster discovery.  When used with
+            the Operator, the token will be a comma-separated list of all cluster member
+            IP addresses.  The node that owns the first IP address listed will be responsible
+            for bootsrapping the cluster.
+          displayName: Cluster members
+          path: join
+        - description: KV store configuration to use. Defaults to embedded. `etcd` is
+            recommended for production deployments with the address set to an external
+            etcd instance.
+          displayName: KV Store
+          path: kvBackend
+        - description: Describes the Container Storage Interface (CSI) configuration.
+          displayName: Enable CSI
+          path: csi
+        - description: The cluster Service configuration.
+          displayName: Service configuration
+          path: service
+        - description: The shared directory where storage devices should be created.  This
+            directory must be available to both the StorageOS Node container and the
+            kubelet, and must have mount propagation enabled. When kubelet is running
+            in a container, `/var/lib/kubelet/plugins/kubernetes.io~storageos` should
+            normally be set, otherwise leave empty.
+          displayName: Device directory
+          path: sharedDir
+        - description: Describes the ingress configuration to be configured for the
+            cluster.
+          displayName: Ingress configuration
+          path: ingress
+        - description: The name of the secret object that contains the etcd TLS certificates.
+          displayName: etcd TLS Secret Name
+          path: tlsEtcdSecretRefName
+        - description: The namespace of the secret object that contains the etcd TLS
+            certificates.
+          displayName: etcd TLS Secret Namespace
+          path: tlsEtcdSecretRefNamespace
+        - description: Node selector terms can be set to control the placement of StorageOS
+            pods using node affiinity.
+          displayName: Node Selectors
+          path: nodeSelectorTerms
+        - description: Tolerations can be set to control the placement of StorageOS
+            pods.
+          displayName: Tolerations
+          path: tolerations
+        - description: Name of the Kubernetes distribution in use, e.g. `openshift`.  This
+            will be included in the product telemetry (if enabled), to help focus development
+            efforts.
+          displayName: Kubernetes Distribution Name
+          path: k8sDistro
+        - description: To disable anonymous usage reporting across the cluster, set
+            to true. Defaults to false. To help improve the product, data such as API
+            usage and StorageOS configuration information is collected.
+          displayName: Disable Telemetry
+          path: disableTelemetry
+        - description: When Pod Fencing is disabled, StorageOS will not perform any
+            interaction with Kubernetes when it detects that a node has gone offline.
+            Additionally, the Kubernetes permissions required for Fencing will not be
+            added to the StorageOS role.
+          displayName: Disable Fencing
+          path: disableFencing
+        - description: Disable TCMU can be set to true to disable the TCMU storage driver.  This
+            is required when there are multiple storage systems running on the same
+            node and you wish to avoid conflicts.  Only one TCMU-based storage system
+            can run on a node at a time.  Disabling TCMU will degrade performance.
+          displayName: Disable TCMU
+          path: disableTCMU
+        - description: Force TCMU can be set to true to ensure that TCMU is enabled
+            or cause StorageOS to abort startup.  At startup, StorageOS will automatically
+            fallback to non-TCMU mode if another TCMU-based storage system is running
+            on the node.  Since non-TCMU has performance drawbacks, this may not always
+            be desired.
+          displayName: Force TCMU
+          path: forceTCMU
+        - description: Disable StorageOS scheduler deployment. StorageOS scheduler helps
+            improve the scheduling decision of a pod, considering the location of volumes
+            and their replicas.
+          displayName: Disable Scheduler
+          path: disableScheduler
+        - description: When enabled, the Operator will not perform any actions on the
+            cluster.
+          displayName: Pause Operator
+          path: pause
+        - description: Enables debug logging when set to true.
+          displayName: Enable Debug
+          path: debug
+        statusDescriptors:
+        - description: Set of nodes that are part of the StorageOS Cluster.
+          displayName: Nodes
+          path: nodes
+        - description: The status of each of the members of StorageOS Cluster.
+          displayName: Member Status
+          path: members
+          x-descriptors:
+          - urn:alm:descriptor:com.tectonic.ui:podStatuses
+        - description: The current status of the StorageOS Cluster.
+          displayName: Status
+          path: phase
+          x-descriptors:
+          - urn:alm:descriptor:io.kubernetes.phase
+        - description: Ready Nodes
+          displayName: Ready
+          path: ready
+        - description: Health status of StorageOS nodes.
+          displayName: Node Health Status
+          path: nodeHealthStatus
         version: v1
       - description: StorageOSUpgrade is the Schema for the storageosupgrades API
         kind: StorageOSUpgrade
