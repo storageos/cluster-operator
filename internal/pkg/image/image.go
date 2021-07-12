@@ -4,7 +4,7 @@ import "os"
 
 // Default image constant variables.
 const (
-	DefaultNodeContainerImage                 = "storageos/node:v2.4.0"
+	DefaultNodeContainerImage                 = "storageos/node:v2.4.2"
 	DefaultInitContainerImage                 = "storageos/init:v2.1.0"
 	CSIv1ClusterDriverRegistrarContainerImage = "quay.io/k8scsi/csi-cluster-driver-registrar:v1.0.1"
 	CSIv1NodeDriverRegistrarContainerImage    = "quay.io/k8scsi/csi-node-driver-registrar:v2.1.0"
