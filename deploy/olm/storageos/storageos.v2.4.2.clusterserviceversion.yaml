@@ -7,11 +7,11 @@ metadata:
     capabilities: Deep Insights
     categories: Storage
     description: Cloud-native, persistent storage for containers.
-    containerImage: registry.connect.redhat.com/storageos/cluster-operator:v2.4.2
+    containerImage: storageos/cluster-operator:v2.4.2
     repository: https://github.com/storageos/cluster-operator
     createdAt: "2021-07-12T10:34:28Z"
     support: StorageOS, Inc
-    certified: "true"
+    certified: "false"
     operators.operatorframework.io/internal-objects: |-
       [
         "jobs.storageos.com",
@@ -25,140 +25,62 @@ metadata:
           "kind": "StorageOSCluster",
           "metadata": {
             "name": "example-storageos",
-            "namespace": "openshift-operators"
+            "namespace": "default"
           },
           "spec": {
-            "namespace": "kube-system",
             "secretRefName": "storageos-api",
-            "secretRefNamespace": "openshift-operators",
-            "k8sDistro": "openshift",
-            "csi": {
-              "enable": true,
-              "deploymentStrategy": "deployment"
-            }
-          }
-        },
-        {
-          "apiVersion": "storageos.com/v1",
-          "kind": "Job",
-          "metadata": {
-            "name": "example-job",
-            "namespace": "default"
-          },
-          "spec": {
-            "image": "registry.connect.redhat.com/storageos/cluster-operator:latest",
-            "args": ["/var/lib/storageos"],
-            "mountPath": "/var/lib",
-            "hostPath": "/var/lib",
-            "completionWord": "done"
-          }
-        },
-        {
-          "apiVersion": "storageos.com/v1",
-          "kind": "StorageOSUpgrade",
-          "metadata": {
-            "name": "example-upgrade",
-            "namespace": "default"
-          },
-          "spec": {
-            "newImage": "registry.connect.redhat.com/storageos/node:latest"
-          }
-        },
-        {
-          "apiVersion": "storageos.com/v1",
-          "kind": "NFSServer",
-          "metadata": {
-            "name": "example-nfsserver",
-            "namespace": "default"
-          },
-          "spec": {
-            "resources": {
-              "requests": {
-                "storage": "1Gi"
-              }
+            "secretRefNamespace": "default",
+            "kvBackend": {
+              "address": "http://<etcd-node-address>:2379"
             }
           }
         }
       ]
 spec:
   displayName: StorageOS
-  description: |
-    StorageOS is a cloud native, software-defined storage platform that
-    transforms commodity server or cloud based disk capacity into
-    enterprise-class persistent storage for containers. StorageOS volumes
-    offer high throughput, low latency and consistent performance, and
-    are therefore ideal for deploying databases, message queues, and
-    other mission-critical stateful solutions. StorageOS Project edition
-    also offers ReadWriteMany volumes that are concurrently accessible
-    by multiple applications.
-
-    The StorageOS Operator installs and manages StorageOS within a cluster.
-    Cluster nodes may contribute local or attached disk-based storage into a
-    distributed pool, which is then available to all cluster members via a
-    global namespace.
-
-    Volumes are available across the cluster so if a container gets moved to
-    another node it has immediate access to re-attach its data.
-
-    StorageOS is extremely lightweight - minimum requirements are a
-    reserved CPU core and 2GB of free memory. There are minimal external
-    dependencies, and no custom kernel modules.
-
-    After StorageOS is installed, please register for a free Developer
-    license to enable 5TiB of capacity and HA with synchronous
-    replication by following the instructions
-    [here](https://docs.storageos.com/docs/operations/licensing). For
-    additional capacity, features and support plans contact
-    sales@storageos.com.
-
-    ## Highlighted Features
-
-    * **High Availability** - synchronous replication insulates you from node failure.
-
-    * **Delta Sync** - replicas out of sync due to transient failures only transfer changed blocks.
-
-    * **Multiple AccessModes** - dynamically provision ReadWriteOnce or ReadWriteMany volumes.
-
-    * **Rapid Failover** - quickly detects node failure and automates recovery actions without administrator intervention.
-    
-    * **Data Encryption** - both in transit and at rest.  
-
-    * **Scalability** - disaggregated consensus means no single scheduling point of failure.
-
-    * **Thin provisioning** - Only consume the space you need in a storage pool.
-
-    * **Data reduction** - transparent inline data compression to reduce the amount of storage used in a backing store as well as reducing the network bandwidth requirements for replication.
-
-    * **Flexible configuration** - all features can be enabled per volume, using PVC and StorageClass labels.
-
-    * **Multi-tenancy** - fully supports standard Namespace and RBAC methods.
-
-    * **Observability & instrumentation** - log streams for observability and Prometheus support for instrumentation.
-
-    * **Deployment flexibility** - scale up or scale out storage based on application requirements. Works with any infrastructure – on-premises, VM, bare metal or cloud.
-
-    ## Prerequisites
-
-    [StorageOS Prerequisites Docs](https://docs.storageos.com/docs/prerequisites)
-
-    ## Required Parameters
-
-    * `secretRefName` - the name of a secret that contains keys for the
-    credentials
-    ([documentation](https://docs.storageos.com/docs/reference/cluster-operator/examples))
-    * `secretRefNamespace` - the namespace where the api credentials secret is
-    stored
-    * `kvBackend.address` - address of the etcd cluster
-    ([documentation](https://docs.storageos.com/docs/prerequisites/etcd/))
-
-    ## About StorageOS
-
-    StorageOS is a software-defined cloud native storage platform
-    delivering persistent storage for Kubernetes. StorageOS is built from
-    the ground-up with no legacy restrictions to give enterprises working
-    with cloud native workloads a scalable storage platform with no
-    compromise on performance, availability or security. For additional
-    information, visit [www.storageos.com](www.storageos.com).
+  description: "StorageOS is a cloud native, software-defined storage platform that\ntransforms
+    commodity server or cloud based disk capacity into\nenterprise-class persistent
+    storage for containers. StorageOS volumes\noffer high throughput, low latency
+    and consistent performance, and\nare therefore ideal for deploying databases,
+    message queues, and\nother mission-critical stateful solutions. StorageOS Project
+    edition\nalso offers ReadWriteMany volumes that are concurrently accessible\nby
+    multiple applications.\n\nThe StorageOS Operator installs and manages StorageOS
+    within a cluster.\nCluster nodes may contribute local or attached disk-based storage
+    into a\ndistributed pool, which is then available to all cluster members via a\nglobal
+    namespace.\n\nVolumes are available across the cluster so if a container gets
+    moved to\nanother node it has immediate access to re-attach its data.\n\nStorageOS
+    is extremely lightweight - minimum requirements are a\nreserved CPU core and 2GB
+    of free memory. There are minimal external\ndependencies, and no custom kernel
+    modules.\n\nAfter StorageOS is installed, please register for a free Developer\nlicense
+    to enable 5TiB of capacity and HA with synchronous\nreplication by following the
+    instructions\n[here](https://docs.storageos.com/docs/operations/licensing). For\nadditional
+    capacity, features and support plans contact\nsales@storageos.com.\n\n## Highlighted
+    Features\n\n* **High Availability** - synchronous replication insulates you from
+    node failure.\n\n* **Delta Sync** - replicas out of sync due to transient failures
+    only transfer changed blocks.\n\n* **Multiple AccessModes** - dynamically provision
+    ReadWriteOnce or ReadWriteMany volumes.\n\n* **Rapid Failover** - quickly detects
+    node failure and automates recovery actions without administrator intervention.\n\n*
+    **Data Encryption** - both in transit and at rest.          \n\n* **Scalability**
+    - disaggregated consensus means no single scheduling point of failure.\n\n* **Thin
+    provisioning** - Only consume the space you need in a storage pool.\n\n* **Data
+    reduction** - transparent inline data compression to reduce the amount of storage
+    used in a backing store as well as reducing the network bandwidth requirements
+    for replication.\n\n* **Flexible configuration** - all features can be enabled
+    per volume, using PVC and StorageClass labels.\n\n* **Multi-tenancy** - fully
+    supports standard Namespace and RBAC methods.\n\n* **Observability & instrumentation**
+    - log streams for observability and Prometheus support for instrumentation.\n\n*
+    **Deployment flexibility** - scale up or scale out storage based on application
+    requirements. Works with any infrastructure – on-premises, VM, bare metal or cloud.\n\n##
+    Prerequisites\n\n[StorageOS Prerequisites Docs](https://docs.storageos.com/docs/prerequisites)\n\n##
+    Required Parameters\n\n* `secretRefName` - the name of a secret that contains
+    keys for the\ncredentials\n([documentation](https://docs.storageos.com/docs/reference/cluster-operator/examples))\n*
+    `secretRefNamespace` - the namespace where the api credentials secret is\nstored\n*
+    `kvBackend.address` - address of the etcd cluster\n([documentation](https://docs.storageos.com/docs/prerequisites/etcd/))\n\n##
+    About StorageOS\n\nStorageOS is a software-defined cloud native storage platform\ndelivering
+    persistent storage for Kubernetes. StorageOS is built from\nthe ground-up with
+    no legacy restrictions to give enterprises working\nwith cloud native workloads
+    a scalable storage platform with no\ncompromise on performance, availability or
+    security. For additional\ninformation, visit [www.storageos.com](www.storageos.com).\n"
   keywords:
   - storageos
   - storage
@@ -383,7 +305,7 @@ spec:
               - name: storageos-operator
                 command:
                 - cluster-operator
-                image: registry.connect.redhat.com/storageos/cluster-operator:v2.4.2
+                image: storageos/cluster-operator:v2.4.2
                 env:
                 - name: RELATED_IMAGE_STORAGEOS_NODE
                   value: ""
@@ -663,7 +585,7 @@ spec:
       - kind: Job
         version: batch/v1
       specDescriptors:
-      - description: The StorageOS Node image to upgrade to. e.g. `registry.connect.redhat.com/storageos/node:latest`
+      - description: The StorageOS Node image to upgrade to. e.g. `storageos/node:latest`
         displayName: New Image
         path: newImage
       statusDescriptors:

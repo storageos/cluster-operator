@@ -34,7 +34,7 @@ metadata:
       ]
     repository: https://github.com/storageos/cluster-operator
     support: StorageOS, Inc
-  name: storageosoperator.v2.4.1
+  name: storageosoperator.v2.4.2
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -274,9 +274,9 @@ spec:
     * **Delta Sync** - replicas out of sync due to transient failures only transfer changed blocks.
 
     * **Multiple AccessModes** - dynamically provision ReadWriteOnce or ReadWriteMany volumes.
-    
+
     * **Rapid Failover** - quickly detects node failure and automates recovery actions without administrator intervention.
-    
+
     * **Data Encryption** - both in transit and at rest.
 
     * **Scalability** - disaggregated consensus means no single scheduling point of failure.
@@ -533,11 +533,6 @@ spec:
                         name: operatormetrics
                     resources: {}
                 serviceAccountName: storageoscluster-operator-sa
-                tolerations:
-                  - effect: NoSchedule
-                    key: key
-                    operator: Equal
-                    value: value
     strategy: deployment
   installModes:
     - supported: true
@@ -570,4 +565,4 @@ spec:
   selector:
     matchLabels:
       operated-by: storageosoperator
-  version: 2.4.1
+  version: 2.4.2
