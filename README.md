@@ -1,3 +1,5 @@
+[![Go Report Card](https://goreportcard.com/badge/github.com/storageos/cluster-operator)](https://goreportcard.com/report/github.com/storageos/cluster-operator) [![![Build Status](https://app.travis-ci.com/storageos/cluster-operator.svg?branch=master)](https://app.travis-ci.com/storageos/cluster-operator) [![CircleCI](https://circleci.com/gh/storageos/cluster-operator/tree/master.svg?style=svg)](https://circleci.com/gh/storageos/cluster-operator/tree/master) [![CodeQL](https://github.com/storageos/cluster-operator/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/storageos/cluster-operator/actions/workflows/codeql-analysis.yml) [![Active](http://img.shields.io/badge/Status-Active-green.svg)](https://github.com/storageos/cluster-operator) [![PR's Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)](https://github.com/storageos/cluster-operator/pulls) [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
 # StorageOS cluster-operator
 
 [![Build Status](https://travis-ci.com/storageos/cluster-operator.svg?branch=master)](https://travis-ci.com/storageos/cluster-operator)
