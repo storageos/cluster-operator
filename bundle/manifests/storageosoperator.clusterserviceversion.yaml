@@ -34,7 +34,7 @@ metadata:
       ]
     repository: https://github.com/storageos/cluster-operator
     support: StorageOS, Inc
-  name: storageosoperator.v2.4.2
+  name: storageosoperator.v2.4.3
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -565,4 +565,4 @@ spec:
   selector:
     matchLabels:
       operated-by: storageosoperator
-  version: 2.4.2
+  version: 2.4.3
