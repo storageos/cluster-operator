@@ -11,7 +11,7 @@ env:
     - K8S_VERSION="v1.19.0"
     - MINIKUBE_VERSION="v0.28.2"
     - IMAGE_NAME=storageos/cluster-operator
-    - IMAGE_TAG=test
+    - MANIFESTS_IMAGE_NAME=storageos/operator-manifests
 
 before_install:
   - |
@@ -71,8 +71,7 @@ jobs:
             echo "Docker credentials not set. Skipping docker log in...";
           fi
       script:
-        - make operator-image
-        - OPERATOR_IMAGE=storageos/cluster-operator:$TRAVIS_TAG make install-manifest
+        - OPERATOR_IMAGE=$IMAGE_NAME:$TRAVIS_TAG MANIFESTS_IMG=$MANIFESTS_IMAGE_NAME:cluster-$TRAVIS_TAG make operator-image install-manifest manifests-image
       deploy:
         - provider: script
           script: bash scripts/deploy.sh tagged
