@@ -32,7 +32,6 @@ if [ "$1" = "tagged" ]; then
        tianon/github-hub:2 bash -c "./scripts/create-pr.sh"
 
 elif [ "$1" = "develop" ]; then
-    docker tag "${IMAGE_NAME}:${TRAVIS_TAG}" "${IMAGE_NAME}:develop"
     docker push "${IMAGE_NAME}:develop"
     docker push "${MANIFESTS_IMAGE_NAME}:cluster-develop"
 fi
