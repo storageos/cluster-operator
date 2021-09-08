@@ -8,9 +8,10 @@ set -e
 # publish a canary image.
 
 if [ "$1" = "tagged" ]; then
-    docker tag "${IMAGE_NAME}:${IMAGE_TAG}" "${IMAGE_NAME}:latest"
-    docker tag "${IMAGE_NAME}:${IMAGE_TAG}" "${IMAGE_NAME}:${TRAVIS_TAG}"
-    docker push "${IMAGE_NAME}:latest" && docker push "${IMAGE_NAME}:${TRAVIS_TAG}"
+    docker tag "${IMAGE_NAME}:${TRAVIS_TAG}" "${IMAGE_NAME}:latest"
+    docker push "${IMAGE_NAME}:latest"
+    docker push "${IMAGE_NAME}:${TRAVIS_TAG}"
+    docker push "${MANIFESTS_IMAGE_NAME}:cluster-${TRAVIS_TAG}"
 
     # Trigger a rhel container service build.
     # curl -X POST -k -H 'Content-Type: application/json' -i https://connect.redhat.com/api/v2/projects/$RH_PID/build --data '{"tag": "'"${TRAVIS_TAG}"'"}'
@@ -31,6 +32,6 @@ if [ "$1" = "tagged" ]; then
        tianon/github-hub:2 bash -c "./scripts/create-pr.sh"
 
 elif [ "$1" = "develop" ]; then
-    docker tag "${IMAGE_NAME}:${IMAGE_TAG}" "${IMAGE_NAME}:develop"
     docker push "${IMAGE_NAME}:develop"
+    docker push "${MANIFESTS_IMAGE_NAME}:cluster-develop"
 fi
