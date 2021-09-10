@@ -146,7 +146,7 @@ clean: ## Clean all the generated artifacts.
 
 ##@ Images
 
-.PHONY: operator-image dev-image
+.PHONY: operator-image dev-image manifests-image
 
 operator-image: operator-sdk ## Build the operator image for distribution.
 	docker build \
