@@ -1,6 +1,6 @@
 OPERATOR_IMAGE ?= storageos/cluster-operator:test
 # Image URL for manifest image.
-MANIFESTS_IMG ?= storageos/operator-manifests:cluster-test
+MANIFESTS_IMAGE ?= storageos/operator-manifests:cluster-test
 GO_BUILD_CMD = go build -v
 GO_GENERATE_CMD = go generate -v
 GO_ENV = GOOS=linux CGO_ENABLED=0
@@ -146,7 +146,7 @@ clean: ## Clean all the generated artifacts.
 
 ##@ Images
 
-.PHONY: operator-image dev-image
+.PHONY: operator-image dev-image manifests-image
 
 operator-image: operator-sdk ## Build the operator image for distribution.
 	docker build \
@@ -160,7 +160,7 @@ dev-image: operator-sdk operator-docker ## Build an image quickly for testing (f
 
 # Build the manifests docker image
 manifests-image: ## Build docker image with the manager.
-	docker build -t $(MANIFESTS_IMG) --build-arg OPERATOR_IMAGE=$(OPERATOR_IMAGE) -f build/manifests.Dockerfile .
+	docker build -t $(MANIFESTS_IMAGE) --build-arg OPERATOR_IMAGE=$(OPERATOR_IMAGE) -f build/manifests.Dockerfile .
 
 ##############################
 # Third-party tools          #

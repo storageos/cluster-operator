@@ -72,7 +72,7 @@ jobs:
           fi
       script:
         - |
-          (: ${TRAVIS_TAG:=develop} ; OPERATOR_IMAGE=$IMAGE_NAME:$TRAVIS_TAG MANIFESTS_IMG=$MANIFESTS_IMAGE_NAME:cluster-$TRAVIS_TAG make operator-image install-manifest manifests-image)
+          (: ${TRAVIS_TAG:=develop} ; OPERATOR_IMAGE=$IMAGE_NAME:$TRAVIS_TAG MANIFESTS_IMAGE=$MANIFESTS_IMAGE_NAME:cluster-$TRAVIS_TAG make operator-image install-manifest manifests-image)
       deploy:
         - provider: script
           script: bash scripts/deploy.sh tagged
