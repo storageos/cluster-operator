@@ -8,6 +8,11 @@
 [![PR's Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)](https://github.com/storageos/cluster-operator/pulls)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
+> :warning: **Deprecated**: This project has been replaced by the [StorageOS
+> Operator](https://github.com/storageos/operator) project.  The new project
+> should be used from StorageOS `v2.5.0` onwards.  Please see the [install
+> documentation](https://docs.ondat.io/docs/install/) for instructions.
+
 The StorageOS Cluster Operator deploys and configures a StorageOS cluster on
 Kubernetes.
 
